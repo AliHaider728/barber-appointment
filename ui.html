@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Berger Barbershop - Premium Grooming Services</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Header/Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .logo {
+            color: #d4a373;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #d4a373;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="%23222" width="1200" height="800"/></svg>');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #fff;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        .hero-subtitle {
+            color: #d4a373;
+            font-size: 16px;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-size: 72px;
+            letter-spacing: 8px;
+            margin-bottom: 30px;
+            color: #d4a373;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        .hero-description {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 40px;
+            color: #ddd;
+        }
+
+        .btn {
+            background: #d4a373;
+            color: #000;
+            padding: 15px 40px;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s;
+            border: 2px solid #d4a373;
+        }
+
+        .btn:hover {
+            background: transparent;
+            color: #d4a373;
+        }
+
+        .hero-phone {
+            margin-top: 40px;
+            font-size: 24px;
+            letter-spacing: 2px;
+            color: #d4a373;
+        }
+
+        /* About Section */
+        .about {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 600px;
+        }
+
+        .about-image {
+            background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><rect fill="%23444" width="600" height="600"/></svg>');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .about-content {
+            padding: 100px 80px;
+            background: #f8f5f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .section-title {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #222;
+        }
+
+        .section-text {
+            line-height: 1.8;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Services Section */
+        .services {
+            padding: 100px 50px;
+            background: #fff;
+            text-align: center;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 40px;
+            max-width: 1200px;
+            margin: 60px auto 0;
+        }
+
+        .service-card {
+            padding: 40px 20px;
+            background: #f8f5f0;
+            transition: transform 0.3s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .service-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #d4a373;
+        }
+
+        .service-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .service-description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Testimonials Section */
+        .testimonials {
+            padding: 100px 50px;
+            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect fill="%23333" width="1200" height="600"/></svg>');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            color: #fff;
+        }
+
+        .testimonial-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .testimonial-text {
+            font-size: 20px;
+            line-height: 1.8;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+
+        .testimonial-author {
+            color: #d4a373;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Staff Section */
+        .staff {
+            padding: 100px 50px;
+            background: #f8f5f0;
+            text-align: center;
+        }
+
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            max-width: 1000px;
+            margin: 60px auto 0;
+        }
+
+        .staff-card {
+            background: #fff;
+            padding: 20px;
+        }
+
+        .staff-image {
+            width: 100%;
+            height: 300px;
+            background: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .staff-name {
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .staff-role {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        /* Pricing Section */
+        .pricing {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 600px;
+        }
+
+        .pricing-image {
+            background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><rect fill="%23333" width="600" height="600"/></svg>');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .pricing-content {
+            padding: 100px 80px;
+            background: #fff;
+        }
+
+        .price-list {
+            margin: 40px 0;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .price-name {
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .price-amount {
+            color: #d4a373;
+            font-weight: bold;
+        }
+
+        /* Shop Section */
+        .shop {
+            padding: 100px 50px;
+            background: #f8f5f0;
+            text-align: center;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 40px;
+            max-width: 1200px;
+            margin: 60px auto 0;
+        }
+
+        .shop-item {
+            background: #fff;
+            padding: 20px;
+        }
+
+        .shop-image {
+            width: 100%;
+            height: 200px;
+            background: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .shop-name {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .shop-price {
+            color: #d4a373;
+            font-weight: bold;
+        }
+
+        /* Appointment Section */
+        .appointment {
+            padding: 100px 50px;
+            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect fill="%23222" width="1200" height="600"/></svg>');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            color: #fff;
+        }
+
+        .appointment-form {
+            max-width: 600px;
+            margin: 40px auto 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Footer */
+        .footer {
+            background: #000;
+            color: #888;
+            text-align: center;
+            padding: 30px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .about, .pricing {
+                grid-template-columns: 1fr;
+            }
+
+            .services-grid, .staff-grid, .shop-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 42px;
+            }
+
+            .navbar {
+                padding: 20px;
+            }
+
+            .nav-links {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="logo">BARBERSHOP</div>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="hero-subtitle">★ Est. 1987 ★</div>
+            <h1>BERGER</h1>
+            <div class="hero-subtitle">BARBERSHOP</div>
+            <p class="hero-description">
+                Step into a world where tradition meets precision. Our master barbers deliver 
+                exceptional grooming services in a classic atmosphere.
+            </p>
+            <a href="#appointment" class="btn">Book Appointment</a>
+            <div class="hero-phone">123-456-7890</div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about" id="about">
+        <div class="about-image"></div>
+        <div class="about-content">
+            <h2 class="section-title">Welcome to Berger</h2>
+            <p class="section-text">
+                For over three decades, we've been providing premium grooming services to 
+                discerning gentlemen. Our experienced barbers combine traditional techniques 
+                with modern styles to create the perfect look for every client.
+            </p>
+            <p class="section-text">
+                Whether you're looking for a classic cut, a hot towel shave, or a complete 
+                grooming experience, we're here to serve you with excellence and attention to detail.
+            </p>
+            <a href="#services" class="btn">Our Services</a>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <h2 class="section-title">Our Services</h2>
+        <p class="section-text">Experience premium grooming services crafted by master barbers</p>
+        
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-icon">✂️</div>
+                <h3 class="service-title">Hair Cutting</h3>
+                <p class="service-description">
+                    Professional cuts tailored to your style and personality
+                </p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">💈</div>
+                <h3 class="service-title">Shaving</h3>
+                <p class="service-description">
+                    Traditional hot towel shaves for the smoothest finish
+                </p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🧔</div>
+                <h3 class="service-title">Beard Trim</h3>
+                <p class="service-description">
+                    Expert beard grooming and sculpting services
+                </p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">✨</div>
+                <h3 class="service-title">Styling</h3>
+                <p class="service-description">
+                    Complete styling services for any occasion
+                </p>
+            </div>
+        </div>
+        <a href="#appointment" class="btn" style="margin-top: 40px;">Book Now</a>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <h2 class="section-title">Testimonials</h2>
+        <div class="testimonial-content">
+            <p class="testimonial-text">
+                "Best barbershop in town! The attention to detail is incredible, and the 
+                atmosphere is always welcoming. I've been coming here for years and wouldn't 
+                go anywhere else."
+            </p>
+            <div class="testimonial-author">— James Taylor</div>
+        </div>
+    </section>
+
+    <!-- Staff Section -->
+    <section class="staff">
+        <h2 class="section-title">Our Staff</h2>
+        <p class="section-text">Meet our team of experienced master barbers</p>
+        
+        <div class="staff-grid">
+            <div class="staff-card">
+                <div class="staff-image"></div>
+                <h3 class="staff-name">Mike Johnson</h3>
+                <p class="staff-role">Master Barber</p>
+                <a href="#appointment" class="btn">Book Now</a>
+            </div>
+            <div class="staff-card">
+                <div class="staff-image"></div>
+                <h3 class="staff-name">Edward Davis</h3>
+                <p class="staff-role">Senior Barber</p>
+                <a href="#appointment" class="btn">Book Now</a>
+            </div>
+            <div class="staff-card">
+                <div class="staff-image"></div>
+                <h3 class="staff-name">Daniel Brown</h3>
+                <p class="staff-role">Barber</p>
+                <a href="#appointment" class="btn">Book Now</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing">
+        <div class="pricing-image"></div>
+        <div class="pricing-content">
+            <h2 class="section-title">Prices List</h2>
+            <p class="section-text">
+                Transparent pricing for all our premium services. Quality grooming at fair prices.
+            </p>
+            
+            <div class="price-list">
+                <div class="price-item">
+                    <span class="price-name">Haircut</span>
+                    <span class="price-amount">$35</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-name">Shave</span>
+                    <span class="price-amount">$30</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-name">Haircut + Shave</span>
+                    <span class="price-amount">$55</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-name">Hair Styling</span>
+                    <span class="price-amount">$25</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-name">Beard Trim</span>
+                    <span class="price-amount">$20</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-name">Hot Towel</span>
+                    <span class="price-amount">$15</span>
+                </div>
+            </div>
+            <a href="#appointment" class="btn">Make Appointment</a>
+        </div>
+    </section>
+
+    <!-- Shop Section -->
+    <section class="shop">
+        <h2 class="section-title">From the Shop</h2>
+        <p class="section-text">Premium grooming products for the modern gentleman</p>
+        
+        <div class="shop-grid">
+            <div class="shop-item">
+                <div class="shop-image"></div>
+                <h3 class="shop-name">Premium Beard Oil</h3>
+                <p class="shop-price">$24.99</p>
+            </div>
+            <div class="shop-item">
+                <div class="shop-image"></div>
+                <h3 class="shop-name">Classic Straight Razor</h3>
+                <p class="shop-price">$89.99</p>
+            </div>
+            <div class="shop-item">
+                <div class="shop-image"></div>
+                <h3 class="shop-name">Shaving Cream</h3>
+                <p class="shop-price">$19.99</p>
+            </div>
+            <div class="shop-item">
+                <div class="shop-image"></div>
+                <h3 class="shop-name">Hair Styling Pomade</h3>
+                <p class="shop-price">$29.99</p>
+            </div>
+        </div>
+        <a href="#" class="btn" style="margin-top: 40px;">View All Products</a>
+    </section>
+
+    <!-- Appointment Section -->
+    <section class="appointment" id="appointment">
+        <h2 class="section-title">Make an Appointment</h2>
+        <p class="section-text">Book your grooming session with our expert barbers</p>
+        
+        <form class="appointment-form">
+            <div class="form-group">
+                <input type="text" placeholder="Your Name" required>
+            </div>
+            <div class="form-group">
+                <input type="email" placeholder="Your Email" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" placeholder="Phone Number" required>
+            </div>
+            <div class="form-group">
+                <select required>
+                    <option value="">Select Service</option>
+                    <option value="haircut">Haircut</option>
+                    <option value="shave">Shave</option>
+                    <option value="combo">Haircut + Shave</option>
+                    <option value="beard">Beard Trim</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="date" required>
+            </div>
+            <button type="submit" class="btn">Book Now</button>
+        </form>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 Berger Barbershop. All Rights Reserved. | Designed with Excellence</p>
+    </footer>
+</body>
+</html>
