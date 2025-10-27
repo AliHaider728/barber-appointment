@@ -60,7 +60,7 @@ const StaffCard = ({ staff, onImageClick }) => {
           </button>
 
           <a
-            href={staff.link}
+      
             className="relative bg-white border-2 border-[#d5a353] text-[#d5a353] p-3 rounded-lg transition-all duration-300 hover:bg-[#d5a353] hover:text-white hover:shadow-lg hover:scale-110 overflow-hidden group/btn"
           >
             <span className="absolute inset-0 bg-[#d5a353] transform translate-x-full transition-transform duration-300 group-hover/btn:translate-x-0" />

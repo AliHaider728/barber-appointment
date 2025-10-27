@@ -1,11 +1,13 @@
-import React from "react";
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 const prices = [
-  { service: "Haircut", price: "$25" },
-  { service: "Beard Trim", price: "$15" },
-  { service: "Haircut + Shave", price: "$35" },
-  { service: "Razor Fade", price: "$30" },
-  { service: "Kids Cut", price: "$20" },
+ { name: "Men's Haircut", duration: "30 minutes", price: "£25" },
+  { name: "Beard Trim", duration: "20 minutes", price: "£15" },
+  { name: "Hair Color", duration: "45 minutes", price: "£40" },
+  { name: "Facial & Grooming", duration: "40 minutes", price: "£35" },
+  { name: "Kids Haircut", duration: "25 minutes", price: "£20" },
+  { name: "Head Massage", duration: "30 minutes", price: "£30" },
 ];
 
 const PriceList = () => {
@@ -15,11 +17,10 @@ const PriceList = () => {
         {/* Left Image - Full Edge */}
         <div className="relative h-[500px] lg:h-[700px] w-full overflow-hidden">
           <img
-            src="../../public/Prices-List.jpg"
+            src="/Prices-List.jpg"
             alt="Barber tools"
             className="absolute left-0 top-0 w-full h-full object-cover"
           />
-          {/* Enhanced gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/10 to-transparent"></div>
         </div>
 
@@ -42,10 +43,10 @@ const PriceList = () => {
             {prices.map((item, index) => (
               <div
                 key={index}
-                className="flex justify-between items-center border-b border-gray-200 pb-3 pt-3 text-lg group hover:border-[#D4AF37] transition-all duration-300"
+                className="flex justify-between items-center border-b border-gray-200 pb-3 pt-3 text-lg group hover:bg-gray-50 hover:border-[#D4AF37] transition-all duration-300"
               >
                 <span className="font-semibold text-gray-800 group-hover:text-black transition-colors">
-                  {item.service}
+                  {item.name}
                 </span>
                 <span className="text-[#D4AF37] font-bold text-xl group-hover:scale-110 transition-transform">
                   {item.price}
@@ -54,10 +55,12 @@ const PriceList = () => {
             ))}
           </div>
 
-          {/* Button - Reduced Width */}
-          <button className="w-fit bg-[#D4AF37] text-black font-bold px-5 py-3.5 uppercase tracking-wider text-sm hover:bg-black hover:text-white transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-0.5">
-            Make an Appointment
-          </button>
+          {/* Button - Link to Services Page */}
+          <Link to="/services/all">
+            <button className="w-fit bg-[#D4AF37] text-black font-bold px-5 py-3.5 uppercase tracking-wider text-sm hover:bg-black hover:text-white transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-0.5">
+              View All
+            </button>
+          </Link>
         </div>
       </section>
     </div>

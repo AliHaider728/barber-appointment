@@ -6,12 +6,13 @@ import OurStaff from "../Staffs/OurStaff";
 import PriceList from "../PriceList";
 import LocationMap from "../LocationMap";
 import Services from "../Service/Services";
-
+import BranchesSection from "../branches/BranchesSection";
 
 
 function Home() {
   return (
     <>
+     <SidebarEngles />
       <div className="relative min-h-screen" id="#banner">
         {/* Background Image - Fixed Behind Everything */}
         <div
@@ -23,7 +24,7 @@ function Home() {
             backgroundPosition: "top center",
           }}
         />
-          <SidebarEngles/>
+       
         {/* Hero Content Section */}
         <div className="flex flex-col justify-center items-center text-center min-h-screen pt-32 pb-40 px-4">
           <img src="/logo_home.png" alt="Logo" className="mb-8 max-w-xs" />
@@ -77,12 +78,15 @@ function Home() {
               alt="Barbershop Interior"
               className="absolute left-0 top-0 w-full h-full object-cover md:rounded-r-[0px]"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent"></div>
+            <div className="absolute   inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent"></div>
           </div>
 
           {/* Right Text Content */}
           <div className="flex flex-col justify-center max-w-xl px-8 md:px-20 py-20 bg-[#f8f5f0]">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-black mb-12 leading-tight" style={{fontFamily:"Luckiest Guy cursive" } }>
+            <h1
+              className="text-4xl md:text-5xl font-extrabold text-black mb-12 leading-tight"
+              style={{ fontFamily: "Luckiest Guy cursive" }}
+            >
               Welcome to Berger
             </h1>
 
@@ -91,7 +95,10 @@ function Home() {
               West Side Manhattan
             </p>
 
-            <p className="text-gray-700 text-base leading-relaxed mb-12" style={{fontFamily:"sarif"}} >
+            <p
+              className="text-gray-700 text-base leading-relaxed mb-12"
+              style={{ fontFamily: "sarif" }}
+            >
               Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
               eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
               enim ad minim veniam, quis nostrud exercitation ullamco laboris
@@ -102,37 +109,36 @@ function Home() {
             <NavLink
               to="/about-us"
               className="w-fit bg-[#D4AF37] text-black font-bold px-5 py-3.5 uppercase tracking-wider text-sm hover:bg-black hover:text-white transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-0.5"
-             >
+            >
               More About Us
             </NavLink>
-            
           </div>
         </section>
       </div>
 
       {/* Our Services Section */}
-   <div className="" id="services">
-     <Services/>
-   </div>
+      <div className="" id="services">
+        <Services />
+      </div>
 
       {/* Testimonials */}
-      <div id="Testimonials" >
-         <TestimonialSliderHome/>
+      <div id="Testimonials">
+        <TestimonialSliderHome />
       </div>
-
+      {/* Branches */}
+      <BranchesSection/>
       {/* OverStaff */}
       <div className="overStaf" id="OurStaff">
-        <OurStaff/>
+        <OurStaff />
       </div>
-       {/* Price-List */}
-       <div className="price-liist" id="PriceList">
-        <PriceList/>
-       </div>
-
-       {/* mapLocation */}
-       <div className="map" id="VisitUs">
-        <LocationMap  />
-       </div>
+      {/* Price-List */}
+      <div className="price-liist" id="PriceList">
+        <PriceList />
+      </div>
+      {/* mapLocation */}
+      <div className="map" id="VisitUs">
+        <LocationMap />
+      </div>
     </>
   );
 }

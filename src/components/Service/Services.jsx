@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 
 const Services = () => {
-  const services = [
+ const services = [
     {
       title: "Haircutting",
       description: "Lorem ipsum dolor sit amet, te duo labitur dolores.",
@@ -98,10 +98,10 @@ const Services = () => {
 
         <div className="text-center mt-12">
           <NavLink
-            to="/services"
+            to="/services/all"
             className="inline-block px-8 py-3 bg-[#d5a353] text-black font-semibold uppercase hover:bg-[#c49343] transition-colors shadow-md"
           >
-            Book A Appoientment
+            view all Services
           </NavLink>
         </div>
       </div>

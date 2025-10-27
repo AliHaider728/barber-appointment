@@ -1,9 +1,10 @@
 import { useParams, NavLink } from "react-router-dom";
-import bannerBg from "/gallery5..jpg"; // Import background image
+import bannerBg from "/gallery5..jpg";
 
 const ServiceDetail = () => {
   const { serviceId } = useParams();
 
+  
   const services = [
     {
       id: "haircutting",
@@ -156,7 +157,7 @@ const ServiceDetail = () => {
                 {service.description}
               </p>
 
-              {/* Refined Features Grid */}
+              {/* Refined Features Grid */} 
               {service.features && service.features.length > 0 && (
                 <div className="mb-10">
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">Service Includes</h3>

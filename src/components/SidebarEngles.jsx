@@ -4,43 +4,49 @@ const SidebarEngles = () => {
   const [visible, setVisible] = useState(false);
   const [activeSection, setActiveSection] = useState("");
 
-  
-useEffect(() => {
-  const handleScroll = () => {
-    const banner = document.querySelector("#banner");
-    const footer = document.querySelector("footer");
+  useEffect(() => {
+    const handleScroll = () => {
+      const banner = document.querySelector("#banner");
+      const footer = document.querySelector("footer");
 
-    const bannerHeight = banner ? banner.offsetHeight : 600;
-    const footerTop = footer ? footer.offsetTop : document.body.scrollHeight;
+      const bannerHeight = banner ? banner.offsetHeight : 600;
+      const footerTop = footer ? footer.offsetTop : document.body.scrollHeight;
 
-    const scrollY = window.scrollY;
-    const windowHeight = window.innerHeight;
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
 
-    // Show only between banner end and before footer
-    const isVisible =
-      scrollY > bannerHeight - 100 && scrollY + windowHeight < footerTop - 100;
+      // Show only between banner end and before footer
+      const isVisible =
+        scrollY > bannerHeight - 100 &&
+        scrollY + windowHeight < footerTop - 100;
 
-    setVisible(isVisible);
+      setVisible(isVisible);
 
-    // Determine active section
-    const sections = ["about", "services", "gallery", "contact"];
-    const current = sections.find((id) => {
-      const el = document.querySelector(`#${id}`);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        return rect.top <= 150 && rect.bottom >= 150;
-      }
-      return false;
-    });
+      // Determine active section
+      const sections = [
+        "about",
+        "services",
+        "Testimonials",
+        "OurStaff",
+        "PriceList",
+        "VisitUs",
+      ];
+      const current = sections.find((id) => {
+        const el = document.querySelector(`#${id}`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          return rect.top <= 150 && rect.bottom >= 150;
+        }
+        return false;
+      });
 
-    setActiveSection(current || "");
-  };
+      setActiveSection(current || "");
+    };
 
-  handleScroll(); // Initial check
-  window.addEventListener("scroll", handleScroll);
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
-
+    handleScroll(); // Initial check
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleClick = (e, id) => {
     e.preventDefault();
@@ -57,14 +63,16 @@ useEffect(() => {
     { id: "services", label: "Services" },
     { id: "Testimonials", label: "Testimonials" },
     { id: "OurStaff", label: "Our Staff" },
-    { id:"PriceList",  label:"Price List" },
-    { id:"VisitUs",  label:"Visit Us" }
+    { id: "PriceList", label: "Price List" },
+    { id: "VisitUs", label: "Visit Us" },
   ];
 
   return (
     <nav
-      className={`fixed right-8 md:right-14 top-1/2 -translate-y-1/2 z-50 transition-all duration-500 ${
-        visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none"
+      className={`hidden md:flex fixed right-8 md:right-14 top-1/2 -translate-y-1/2 z-50 transition-all duration-500 ${
+        visible
+          ? "opacity-100 translate-x-0"
+          : "opacity-0 translate-x-8 pointer-events-none"
       }`}
       aria-label="Section navigation"
     >

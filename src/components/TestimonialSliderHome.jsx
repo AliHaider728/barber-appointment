@@ -168,7 +168,7 @@ const TestimonialSliderHome = () => {
             →
           </button>
         </div>
-
+            
         {/* Dots */}
         <div className="flex justify-center gap-3 mt-8">
           {testimonials.map((_, index) => (
