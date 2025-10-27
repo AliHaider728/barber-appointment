@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, X, Scissors, Facebook, Instagram, Twitter, Youtube, Clock, Phone, MapPin } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-
 export default function BarberSideNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check if token exists in localStorage (simulated auth)
+    const token = localStorage.getItem('adminToken');
+    setIsLoggedIn(!!token);
+  }, []);
 
   const navItems = [
     { name: 'Home', href: '/' },
-    { name: 'Branches', href: '#branches' },
-    // { name: 'Services', href: '#services' },
-    // { name: 'About', href: '#about' },
+    { name: 'Branches', href: '/branches' },
     { name: 'Contact', href: '#contact' }
   ];
 
@@ -21,11 +25,17 @@ export default function BarberSideNav() {
     { icon: <Youtube size={20} />, href: '#', label: 'Youtube' }
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    setIsLoggedIn(false);
+    window.location.href = '/admin';
+  };
+
   return (
     <>
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-30 bg-black/95 backdrop-blur-md border-b border-amber-500/10">
-        <div className="container mx-auto px-6 h-24 flex   items-center justify-between">
+        <div className="container mx-auto px-6 h-24 flex items-center justify-between">
           {/* Your Original Logo */}
           <NavLink to="/" className="flex items-center">
             <img src="../../../public/logo.PNG" alt="Logo" className="h-24 w-auto" />
@@ -43,12 +53,12 @@ export default function BarberSideNav() {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-amber-500 group-hover:w-full transition-all duration-300"></span>
               </a>
             ))}
-            <button className="ml-4 py-2 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300">
+            <NavLink to="/booking" className="ml-4 py-2 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300">
               Book now
-            </button>
-             <button className="py-2 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300">
+            </NavLink>
+            <NavLink to="/admin" className="py-2 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300">
               Admin
-            </button>
+            </NavLink>
           </nav>
 
           {/* Mobile Menu Button - Only visible on mobile */}
@@ -95,11 +105,11 @@ export default function BarberSideNav() {
             </button>
           </div>
 
-          {/* Navigation Menu  */}
+          {/* Navigation Menu */}
           <div className="relative flex-1 px-6 py-8 overflow-y-auto">
             <ul className="space-y-1">
               {navItems.map((item, index) => (
-                <li 
+                <li
                   key={index}
                   style={{ animationDelay: `${index * 50}ms` }}
                   className={`${isOpen ? 'animate-fadeIn' : ''}`}
@@ -118,19 +128,29 @@ export default function BarberSideNav() {
                 </li>
               ))}
             </ul>
-
-             
           </div>
 
           {/* Social Media & CTA */}
           <div className="relative px-6 py-6 border-t border-amber-500/20 bg-black/30">
-            <button className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6">
-              BOOK NOW
-            </button>
+            <NavLink to="/booking" onClick={() => setIsOpen(false)}>
               <button className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6">
-               Login
-            </button>
-            
+                BOOK NOW
+              </button>
+            </NavLink>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6"
+              >
+                Logout
+              </button>
+            ) : (
+              <NavLink to="/admin" onClick={() => setIsOpen(false)}>
+                <button className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6">
+                  Login
+                </button>
+              </NavLink>
+            )}
             <div className="space-y-4">
               <p className="text-gray-500 text-xs font-bold tracking-widest">FOLLOW US</p>
               <div className="flex gap-2">

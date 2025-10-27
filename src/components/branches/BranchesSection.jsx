@@ -1,66 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Clock, Phone, ChevronRight, Building2, Scissors } from 'lucide-react';
-
-
-const branches = [
-  {
-    _id: "1",
-    name: "Central London",
-    city: "London",
-    address: "18 Baker Street, Central London, W1U 3EZ",
-   
-    openingHours: "09:00 - 19:00",
-    coordinates: { lat: 51.5173, lng: -0.1567 },
-    image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=600&h=400&fit=crop"
-  },
-  {
-    _id: "2",
-    name: "Deansgate",
-    city: "Manchester",
-    address: "12 Deansgate, Manchester, M3 4EN",
-     
-    openingHours: "09:30 - 18:30",
-    coordinates: { lat: 53.4808, lng: -2.2426 },
-    image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=400&fit=crop"
-  },
-  {
-    _id: "3",
-    name: "City Centre",
-    city: "Birmingham",
-    address: "44 High Street, Birmingham, B2 5PR",
-    
-    openingHours: "10:00 - 19:00",
-    coordinates: { lat: 52.5099, lng: -1.8852 },
-    image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=400&fit=crop"
-  },
-  {
-    _id: "4",
-    name: "Headingley",
-    city: "Leeds",
-    address: "7 Otley Road, Headingley, LS6 3DG",
- 
-    openingHours: "09:00 - 17:00",
-    coordinates: { lat: 53.8235, lng: -1.5547 },
-    image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&h=400&fit=crop"
-  },
-  {
-    _id: "5",
-    name: "Merchant City",
-    city: "Glasgow",
-    address: "25 Ingram Street, Merchant City, G1 1HA",
-    
-    openingHours: "09:30 - 18:00",
-    coordinates: { lat: 55.8642, lng: -4.2518 },
-    image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&h=400&fit=crop"
-  },
-];
+import axios from 'axios';
 
 const BranchesSection = () => {
   const [hoveredId, setHoveredId] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch data from JSON file
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/data/branches.json');
+        setBranches(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load branches. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
-    <section className="max-w-fyll mx-auto px-4 py-20 bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2]">
+    <section className="max-w-full mx-auto px-4 py-20 bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2]">
       {/* Header Section */}
       <div className="text-center mb-16">
         <div className="inline-block mb-6">
@@ -80,67 +47,73 @@ const BranchesSection = () => {
 
       {/* Branches Grid */}
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2  gap-8">
-        {branches.slice(0, 4).map((branch) => (
-          <div
-            key={branch._id}
-            onMouseEnter={() => setHoveredId(branch._id)}
-            onMouseLeave={() => setHoveredId(null)}
-            className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#D4AF37] overflow-hidden"
-          >
-            {/* Image Section */}
-            <div className="relative h-52 overflow-hidden">
-              <img 
-                src={branch.image} 
-                alt={branch.name}
-                className="w-full h-96 object-cover transform group-hover:scale-110 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-              
-              {/* City Badge */}
-              <div className="absolute top-4 right-4 bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold text-sm shadow-lg">
-                {branch.city}
-              </div>
-              
-              {/* Branch Name Overlay */}
-              <div className="absolute bottom-4 left-4">
-                <h3 className="text-2xl font-black text-white uppercase tracking-tight">
-                  {branch.name}
-                </h3>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {loading ? (
+            <div className="text-center py-12 col-span-full">
+              <p className="text-gray-600">Loading branches...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-12 col-span-full">
+              <p className="text-red-600">{error}</p>
+            </div>
+          ) : branches.slice(0, 4).map((branch) => (
+            <div
+              key={branch._id}
+              onMouseEnter={() => setHoveredId(branch._id)}
+              onMouseLeave={() => setHoveredId(null)}
+              className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#D4AF37] overflow-hidden"
+            >
+              {/* Image Section */}
+              <div className="relative h-52 overflow-hidden">
+                <img 
+                  src={branch.image} 
+                  alt={branch.name}
+                  className="w-full h-96 object-cover transform group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                
+                {/* City Badge */}
+                <div className="absolute top-4 right-4 bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold text-sm shadow-lg">
+                  {branch.city}
+                </div>
+                
+                {/* Branch Name Overlay */}
+                <div className="absolute bottom-4 left-4">
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tight">
+                    {branch.name}
+                  </h3>
+                </div>
+              </div>
 
-            {/* Content Section */}
-            <div className="p-6">
-              <div className="space-y-4 mb-6">
-                {/* Address */}
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-[#D4AF37] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-800 font-medium">{branch.address}</p>
+              {/* Content Section */}
+              <div className="p-6">
+                <div className="space-y-4 mb-6">
+                  {/* Address */}
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-[#D4AF37] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-800 font-medium">{branch.address}</p>
+                    </div>
+                  </div>
+
+                  {/* Opening Hours */}
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-[#D4AF37]" />
+                    <p className="text-sm text-gray-800 font-medium">{branch.openingHours}</p>
                   </div>
                 </div>
 
-                
-
-                {/* Opening Hours */}
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-[#D4AF37]" />
-                  <p className="text-sm text-gray-800 font-medium">{branch.openingHours}</p>
-                </div>
+                {/* View Details Button */}
+                <Link to={`/branches/${branch._id}`}>
+                  <button className="w-full bg-gradient-to-r from-gray-100 to-gray-50 hover:from-[#D4AF37] hover:to-[#F4D03F] text-gray-800 hover:text-black font-bold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg">
+                    View Details
+                    <ChevronRight className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </Link>
               </div>
-
-              {/* View Details Button */}
-              <Link to={`/branches/${branch._id}`}>
-                <button className="w-full bg-gradient-to-r from-gray-100 to-gray-50 hover:from-[#D4AF37] hover:to-[#F4D03F] text-gray-800 hover:text-black font-bold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg">
-                  View Details
-                  <ChevronRight className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" />
-                </button>
-              </Link>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       </div>
 
       {/* View All Branches CTA */}

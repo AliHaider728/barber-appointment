@@ -1,0 +1,107 @@
+[
+  {
+    "_id": "1",
+    "name": "James Cole",
+    "experience_years": 8,
+    "specialties": ["Haircuts", "Styling"],
+    "branch": "1"
+  },
+  {
+    "_id": "2",
+    "name": "Ryan Smith",
+    "experience_years": 5,
+    "specialties": ["Beard Trim", "Shave"],
+    "branch": "1"
+  },
+  {
+    "_id": "3",
+    "name": "Omar Ali",
+    "experience_years": 6,
+    "specialties": ["Hair Color", "Grooming"],
+    "branch": "1"
+  },
+  {
+    "_id": "4",
+    "name": "Michael Brown",
+    "experience_years": 4,
+    "specialties": ["Haircuts", "Styling"],
+    "branch": "2"
+  },
+  {
+    "_id": "5",
+    "name": "Liam Johnson",
+    "experience_years": 4,
+    "specialties": ["Beard Trim", "Shave"],
+    "branch": "2"
+  },
+  {
+    "_id": "6",
+    "name": "Noor Patel",
+    "experience_years": 5,
+    "specialties": ["Hair Color", "Grooming"],
+    "branch": "2"
+  },
+  {
+    "_id": "7",
+    "name": "Ethan White",
+    "experience_years": 6,
+    "specialties": ["Haircuts", "Styling"],
+    "branch": "3"
+  },
+  {
+    "_id": "8",
+    "name": "Aiden Clarke",
+    "experience_years": 3,
+    "specialties": ["Beard Trim", "Shave"],
+    "branch": "3"
+  },
+  {
+    "_id": "9",
+    "name": "Zara Khan",
+    "experience_years": 5,
+    "specialties": ["Hair Color", "Grooming"],
+    "branch": "3"
+  },
+  {
+    "_id": "10",
+    "name": "Oliver Green",
+    "experience_years": 5,
+    "specialties": ["Haircuts", "Styling"],
+    "branch": "4"
+  },
+  {
+    "_id": "11",
+    "name": "Luke Martin",
+    "experience_years": 4,
+    "specialties": ["Beard Trim", "Shave"],
+    "branch": "4"
+  },
+  {
+    "_id": "12",
+    "name": "Priya Singh",
+    "experience_years": 6,
+    "specialties": ["Hair Color", "Grooming"],
+    "branch": "4"
+  },
+  {
+    "_id": "13",
+    "name": "Callum Ross",
+    "experience_years": 7,
+    "specialties": ["Haircuts", "Styling"],
+    "branch": "5"
+  },
+  {
+    "_id": "14",
+    "name": "Sean MacLeod",
+    "experience_years": 5,
+    "specialties": ["Beard Trim", "Shave"],
+    "branch": "5"
+  },
+  {
+    "_id": "15",
+    "name": "Hamza Ahmed",
+    "experience_years": 4,
+    "specialties": ["Hair Color", "Grooming"],
+    "branch": "5"
+  }
+]

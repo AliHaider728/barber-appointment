@@ -1,22 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Scissors, Clock, Sparkles, Baby, HandMetal, Droplets, Wind, Palette, User } from 'lucide-react';
-
-const services = [
-  { name: "Men's Haircut", duration: "30 minutes", price: "£25", Icon: Scissors },
-  { name: "Beard Trim", duration: "20 minutes", price: "£15", Icon: Wind },
-  { name: "Hair Color", duration: "45 minutes", price: "£40", Icon: Palette },
-  { name: "Facial & Grooming", duration: "40 minutes", price: "£35", Icon: Sparkles },
-  { name: "Kids Haircut", duration: "25 minutes", price: "£20", Icon: Baby },
-  { name: "Head Massage", duration: "30 minutes", price: "£30", Icon: HandMetal },
-  { name: "Hair Wash", duration: "10 minutes", price: "£10", Icon: Droplets },
-  { name: "Shave", duration: "20 minutes", price: "£18", Icon: Wind },
-  { name: "Hair Styling", duration: "25 minutes", price: "£22", Icon: User },
-  { name: "Waxing", duration: "15 minutes", price: "£12", Icon: Sparkles },
-];
+import axios from 'axios';
 
 const ServicesAvailable = () => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch data from JSON file
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/data/services.json');
+        setServices(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load services. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Map Icon components to service names
+  const iconMap = {
+    "Men's Haircut": Scissors,
+    "Beard Trim": Wind,
+    "Hair Color": Palette,
+    "Facial & Grooming": Sparkles,
+    "Kids Haircut": Baby,
+    "Head Massage": HandMetal,
+    "Hair Wash": Droplets,
+    "Shave": Wind,
+    "Hair Styling": User,
+    "Waxing": Sparkles,
+  };
 
   return (
     <div className="bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] min-h-screen" id="ServicesAvailable">
@@ -39,8 +61,16 @@ const ServicesAvailable = () => {
         </div>
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {services.map((service, index) => {
-            const ServiceIcon = service.Icon;
+          {loading ? (
+            <div className="text-center py-12 col-span-full">
+              <p className="text-gray-600">Loading services...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 col-span-full">
+              <p className="text-red-600">{error}</p>
+            </div>
+          ) : services.map((service, index) => {
+            const ServiceIcon = iconMap[service.name] || Scissors; // Fallback to Scissors if icon not found
             return (
               <div
                 key={index}

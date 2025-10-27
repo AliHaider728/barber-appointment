@@ -1,24 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Clock, Phone, ChevronRight, Star, Award, Calendar, ArrowLeft, Scissors } from 'lucide-react';
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-
-// Importing data from separate files
-import branches from "../../data/branches";
-import barbers from "../../data/barbers";
-import services from '../../data/services';
+import axios from 'axios';
 
 const BranchDetailPage = () => {
   const { branchId } = useParams();
-  const branch = branches.find(b => b._id === branchId);
-  const branchBarbers = barbers.filter(b => b.branch === branchId);
-  const allServices = services;
-
+  const [branch, setBranch] = useState(null);
+  const [branchBarbers, setBranchBarbers] = useState([]);
+  const [allServices, setAllServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [hoveredBarber, setHoveredBarber] = useState(null);
   const [hoveredService, setHoveredService] = useState(null);
 
-  if (!branch) {
+  // Fetch data from JSON files
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [branchesResponse, barbersResponse, servicesResponse] = await Promise.all([
+          axios.get('/data/branches.json'),
+          axios.get('/data/barbers.json'),
+          axios.get('/data/services.json'),
+        ]);
+
+        const branchesData = branchesResponse.data;
+        const barbersData = barbersResponse.data;
+        const servicesData = servicesResponse.data;
+
+        const foundBranch = branchesData.find(b => b._id === branchId);
+        setBranch(foundBranch);
+        setBranchBarbers(barbersData.filter(b => b.branch === branchId));
+        setAllServices(servicesData);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load data. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [branchId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error || !branch) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
         <div className="text-center">

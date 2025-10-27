@@ -4,24 +4,36 @@ import { MapPin, Clock, Phone, Search, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
-// Importing branches data
-import branches from '../../data/branches';
+import axios from 'axios';
 
 const AllBranchesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [error, setError] = useState(null);
+
+  // Fetch data from JSON file
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/data/branches.json');
+        setBranches(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load branches. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const filteredBranches = branches.filter(branch =>
     branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     branch.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
     branch.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  useEffect(() => {
-    setLoading(true);
-    // Simulate API call delay
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   return (
     <div className="bg-[#faf7f2] min-h-screen">
@@ -46,6 +58,10 @@ const AllBranchesPage = () => {
         {loading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Loading branches...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">{error}</p>
           </div>
         ) : filteredBranches.length === 0 ? (
           <div className="text-center py-12">

@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "s1",
+    "name": "Men's Haircut",
+    "duration": "30 minutes",
+    "price": "£25"
+  },
+  {
+    "_id": "s2",
+    "name": "Beard Trim",
+    "duration": "20 minutes",
+    "price": "£15"
+  },
+  {
+    "_id": "s3",
+    "name": "Hair Color",
+    "duration": "45 minutes",
+    "price": "£40"
+  },
+  {
+    "_id": "s4",
+    "name": "Facial & Grooming",
+    "duration": "40 minutes",
+    "price": "£35"
+  },
+  {
+    "_id": "s5",
+    "name": "Kids Haircut",
+    "duration": "25 minutes",
+    "price": "£20"
+  },
+  {
+    "_id": "s6",
+    "name": "Head Massage",
+    "duration": "30 minutes",
+    "price": "£30"
+  },
+  {
+    "_id": "s7",
+    "name": "Hair Wash",
+    "duration": "10 minutes",
+    "price": "£10"
+  },
+  {
+    "_id": "s8",
+    "name": "Shave",
+    "duration": "20 minutes",
+    "price": "£18"
+  },
+  {
+    "_id": "s9",
+    "name": "Hair Styling",
+    "duration": "25 minutes",
+    "price": "£22"
+  },
+  {
+    "_id": "s10",
+    "name": "Waxing",
+    "duration": "15 minutes",
+    "price": "£12"
+  }
+]
