@@ -27,9 +27,11 @@ const SidebarEngles = () => {
         "about",
         "services",
         "Testimonials",
+        "Branches",
         "OurStaff",
         "PriceList",
         "VisitUs",
+        
       ];
       const current = sections.find((id) => {
         const el = document.querySelector(`#${id}`);
@@ -43,6 +45,7 @@ const SidebarEngles = () => {
       setActiveSection(current || "");
     };
 
+    
     handleScroll(); // Initial check
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -62,9 +65,11 @@ const SidebarEngles = () => {
     { id: "about", label: "About" },
     { id: "services", label: "Services" },
     { id: "Testimonials", label: "Testimonials" },
+    { id: "Branches", label: "Branches" },
     { id: "OurStaff", label: "Our Staff" },
     { id: "PriceList", label: "Price List" },
-    { id: "VisitUs", label: "Visit Us" },
+    { id: "VisitUs", label: "Visit Us" }, 
+
   ];
 
   return (

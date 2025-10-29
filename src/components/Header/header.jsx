@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Menu, X, Scissors, Facebook, Instagram, Twitter, Youtube, Clock, Phone, MapPin } from 'lucide-react';
+import { Menu, X, Scissors, Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export default function BarberSideNav() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    // Check if token exists in localStorage (simulated auth)
     const token = localStorage.getItem('adminToken');
     setIsLoggedIn(!!token);
+
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const navItems = [
     { name: 'Home', href: '/' },
     { name: 'Branches', href: '/branches' },
-    { name: 'Contact', href: '#contact' }
+    { name: 'About', href: '/About' }
   ];
 
   const socialIcons = [
@@ -34,132 +41,179 @@ export default function BarberSideNav() {
   return (
     <>
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-30 bg-black/95 backdrop-blur-md border-b border-amber-500/10">
+      <header className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-black/95 backdrop-blur-lg shadow-lg shadow-[#D4AF37]/10' 
+          : 'bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm'
+      }`}>
         <div className="container mx-auto px-6 h-24 flex items-center justify-between">
-          {/* Your Original Logo */}
-          <NavLink to="/" className="flex items-center">
-            <img src="../../../public/logo.PNG" alt="Logo" className="h-24 w-auto" />
+          {/* Logo */}
+          <NavLink to="/" className="flex items-center group">
+            <div className="relative">
+              <img 
+                src="http://localhost:5173/public/logo.PNG" 
+                alt="Logo" 
+                className="h-20 w-auto transition-transform duration-300 group-hover:scale-105" 
+              />
+              <div className="absolute inset-0 bg-[#D4AF37]/0 group-hover:bg-[#D4AF37]/5 rounded-lg transition-all duration-300"></div>
+            </div>
           </NavLink>
 
-          {/* Desktop Horizontal Navigation - Hidden on Mobile */}
-          <nav className="hidden lg:flex items-center gap-8">
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-2">
             {navItems.map((item, index) => (
-              <a
+              <NavLink
                 key={index}
-                href={item.href}
-                className="relative text-white hover:text-amber-500 font-medium transition-colors duration-300 group py-2"
+                to={item.href}
+                className={({ isActive }) =>
+                  `relative px-6 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-300 group ${
+                    isActive 
+                      ? 'text-[#D4AF37]' 
+                      : 'text-white hover:text-[#D4AF37]'
+                  }`
+                }
               >
                 {item.name}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-amber-500 group-hover:w-full transition-all duration-300"></span>
-              </a>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] group-hover:w-full transition-all duration-300"></span>
+              </NavLink>
             ))}
-            <NavLink to="/booking" className="ml-4 py-2 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300">
-              Book now
-            </NavLink>
-            <NavLink to="/admin" className="py-2 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300">
-              Admin
-            </NavLink>
+            
+            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-700">
+              <NavLink to="/booking">
+                <button className="px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] text-black font-bold rounded-full uppercase tracking-wider text-sm hover:from-black hover:to-gray-900 hover:text-white transition-all duration-300 shadow-lg hover:shadow-[#D4AF37]/50 transform hover:scale-105">
+                  Book Now
+                </button>
+              </NavLink>
+              
+              {isLoggedIn ? (
+                <button
+                  onClick={handleLogout}
+                  className="px-6 py-3 bg-white/10 text-white font-bold rounded-full uppercase tracking-wider text-sm hover:bg-red-600 hover:text-white transition-all duration-300 border border-white/20 hover:border-red-600"
+                >
+                  Logout
+                </button>
+              ) : (
+                <NavLink to="/admin">
+                  <button className="px-6 py-3 bg-white/10 text-white font-bold rounded-full uppercase tracking-wider text-sm hover:bg-[#D4AF37] hover:text-black transition-all duration-300 border border-white/20 hover:border-[#D4AF37]">
+                    Admin
+                  </button>
+                </NavLink>
+              )}
+            </div>
           </nav>
 
-          {/* Mobile Menu Button - Only visible on mobile */}
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden relative w-12 h-12 flex items-center justify-center text-white hover:text-amber-500 transition-colors duration-300 group"
+            className="lg:hidden relative w-12 h-12 flex items-center justify-center text-white hover:text-[#D4AF37] transition-colors duration-300 group"
           >
-            <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/10 rounded-lg transition-all duration-300"></div>
+            <div className="absolute inset-0 bg-[#D4AF37]/0 group-hover:bg-[#D4AF37]/10 rounded-xl transition-all duration-300"></div>
             {isOpen ? <X size={28} className="relative z-10" /> : <Menu size={28} className="relative z-10" />}
           </button>
         </div>
       </header>
 
-      {/* Mobile Side Navbar Overlay */}
+      {/* Mobile Overlay */}
       <div
-        className={`fixed inset-0 bg-black/90 backdrop-blur-sm z-40 transition-all duration-500 lg:hidden ${
+        className={`fixed inset-0 bg-black/90 backdrop-blur-md z-40 transition-all duration-500 lg:hidden ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsOpen(false)}
       />
 
-      {/* Mobile Side Navbar */}
+      {/* Mobile Side Navigation */}
       <nav
-        className={`fixed top-0 right-0 h-full w-80 sm:w-96 bg-gradient-to-b from-zinc-900 via-zinc-900 to-black z-50 transform transition-all duration-500 ease-out shadow-2xl lg:hidden ${
+        className={`fixed top-0 right-0 h-full w-80 sm:w-96 bg-gradient-to-b from-black via-gray-900 to-black z-50 transform transition-all duration-500 ease-out shadow-2xl lg:hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full relative overflow-hidden">
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-600/5 rounded-full blur-3xl"></div>
+          {/* Decorative Background Elements */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-[#D4AF37]/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#F4D03F]/10 rounded-full blur-3xl"></div>
 
-          {/* Close Button */}
-          <div className="relative flex justify-between items-center p-6 border-b border-amber-500/20">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-              <span className="text-amber-500 text-sm font-semibold tracking-wider">MENU</span>
+          {/* Header */}
+          <div className="relative flex justify-between items-center p-6 border-b border-[#D4AF37]/20">
+            <div className="flex items-center gap-3">
+              <Scissors className="w-6 h-6 text-[#D4AF37]" />
+              <span className="text-[#D4AF37] text-sm font-black tracking-widest uppercase">Menu</span>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all duration-300"
+              className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-xl transition-all duration-300"
             >
               <X size={24} />
             </button>
           </div>
 
-          {/* Navigation Menu */}
+          {/* Navigation Links */}
           <div className="relative flex-1 px-6 py-8 overflow-y-auto">
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               {navItems.map((item, index) => (
                 <li
                   key={index}
                   style={{ animationDelay: `${index * 50}ms` }}
                   className={`${isOpen ? 'animate-fadeIn' : ''}`}
                 >
-                  <a
-                    href={item.href}
+                  <NavLink
+                    to={item.href}
                     onClick={() => setIsOpen(false)}
-                    className="group block relative py-4 px-6 text-lg font-semibold text-gray-300 hover:text-white rounded-xl transition-all duration-300 overflow-hidden"
+                    className={({ isActive }) =>
+                      `group block relative py-4 px-6 text-lg font-bold uppercase tracking-wider rounded-2xl transition-all duration-300 overflow-hidden ${
+                        isActive
+                          ? 'text-black bg-gradient-to-r from-[#D4AF37] to-[#F4D03F]'
+                          : 'text-gray-300 hover:text-white'
+                      }`
+                    }
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/10 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-amber-500 group-hover:h-full transition-all duration-300 rounded-r"></div>
-                    <span className="relative z-10 group-hover:translate-x-2 inline-block transition-transform duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 via-[#D4AF37]/10 to-[#D4AF37]/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-[#D4AF37] group-hover:h-full transition-all duration-300 rounded-r"></div>
+                    <span className="relative z-10 group-hover:translate-x-2 inline-flex items-center gap-3 transition-transform duration-300">
+                      <Scissors className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                       {item.name}
                     </span>
-                  </a>
+                  </NavLink>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Social Media & CTA */}
-          <div className="relative px-6 py-6 border-t border-amber-500/20 bg-black/30">
+          {/* Bottom Section - CTAs & Social */}
+          <div className="relative px-6 py-8 border-t border-[#D4AF37]/20 bg-black/50 backdrop-blur-sm space-y-4">
+            {/* Book Now Button */}
             <NavLink to="/booking" onClick={() => setIsOpen(false)}>
-              <button className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6">
-                BOOK NOW
+              <button className="w-full py-4 px-6 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] text-black font-black rounded-2xl hover:shadow-lg hover:shadow-[#D4AF37]/50 transform hover:scale-105 transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2">
+                <Scissors className="w-5 h-5" />
+                Book Now
               </button>
             </NavLink>
+
+            {/* Admin/Logout Button */}
             {isLoggedIn ? (
               <button
                 onClick={handleLogout}
-                className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6"
+                className="w-full py-4 px-6 bg-red-600/20 text-red-500 font-black rounded-2xl hover:bg-red-600 hover:text-white border-2 border-red-600/30 hover:border-red-600 transition-all duration-300 uppercase tracking-wider"
               >
                 Logout
               </button>
             ) : (
               <NavLink to="/admin" onClick={() => setIsOpen(false)}>
-                <button className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transform hover:scale-105 transition-all duration-300 mb-6">
-                  Login
+                <button className="w-full py-4 px-6 bg-white/5 text-white font-black rounded-2xl hover:bg-white/10 border-2 border-white/10 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all duration-300 uppercase tracking-wider">
+                  Admin Login
                 </button>
               </NavLink>
             )}
-            <div className="space-y-4">
-              <p className="text-gray-500 text-xs font-bold tracking-widest">FOLLOW US</p>
+
+            {/* Social Media */}
+            <div className="pt-4">
+              <p className="text-gray-500 text-xs font-black tracking-widest mb-4 uppercase">Follow Us</p>
               <div className="flex gap-2">
                 {socialIcons.map((social, index) => (
                   <a
                     key={index}
                     href={social.href}
                     aria-label={social.label}
-                    className="flex-1 h-12 rounded-lg bg-zinc-800/50 flex items-center justify-center text-gray-400 hover:bg-amber-500 hover:text-black transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-amber-500/30 border border-zinc-700 hover:border-amber-500"
+                    className="flex-1 h-12 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:bg-gradient-to-br hover:from-[#D4AF37] hover:to-[#F4D03F] hover:text-black transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#D4AF37]/30 border border-white/10 hover:border-[#D4AF37]"
                   >
                     {social.icon}
                   </a>
@@ -169,6 +223,7 @@ export default function BarberSideNav() {
           </div>
         </div>
       </nav>
+
       <style>{`
         @keyframes fadeIn {
           from {

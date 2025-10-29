@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header/header.jsx";
 import Home from "./components/Home/Home";
 import Services from "./components/Service/Services.jsx";
@@ -11,30 +11,63 @@ import AllBranchesPage from "./components/branches/AllBranchesPage.jsx";
 import BranchDetailPage from "./components/branches/BranchDetailPage.jsx";
 import BookingPage from "./components/Booking/BookingPage.jsx"; 
 import AdminLoginSignup from "./components/Admin/AdminLoginSignup.jsx"; 
-import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
+import AdminLayout from "./components/Admin/AdminLayout.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
+import AboutPage from "./components/aboutPage.jsx";
 
-function App() {
+
+// Admin Pages
+import Overview from "./components/Admin/Overview.jsx"
+import Appointments from "./components/Admin/Appointments.jsx";
+import Barbers from "./components/Admin/Barbers.jsx";
+import Branches from "./components/Admin/Branches.jsx";
+import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
+
+function AppContent() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
-    <BrowserRouter>
-    <ScrollToTop/>
-      <Header />
-      <main className="pt-16">
+    <>
+      <ScrollToTop />
+      {/* Header & Footer sirf non-admin routes pe */}
+      {!isAdminRoute && <Header />}
+      <main className={!isAdminRoute ? "pt-16" : ""}>
         <Routes>
+          {/* User Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<Services />} />
           <Route path="/services/:serviceId" element={<ServiceDetail />} />
           <Route path="/pricelist" element={<PriceList />} />
           <Route path="/services/all" element={<ServicesAvailable />} />
-          <Route path="/barbers" element={<BarbersPage/>} />
+          <Route path="/barbers" element={<BarbersPage />} />
           <Route path="/branches" element={<AllBranchesPage />} />
           <Route path="/branches/:branchId" element={<BranchDetailPage />} />
-          <Route path="/booking" element={<BookingPage/>} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/About" element={<AboutPage />} />
+          {/* Admin Login */}
           <Route path="/admin" element={<AdminLoginSignup />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+          {/* Admin Dashboard with Layout */}
+          <Route path="/admin/dashboard" element={<AdminLayout />}>
+            <Route index element={<Overview />} />
+            <Route path="overview" element={<Overview />} />
+            <Route path="appointments" element={<Appointments />} />
+            <Route path="barbers" element={<Barbers />} />
+            <Route path="branches" element={<Branches />} />
+            <Route path="services" element={<ServicesAdmin />} />
+          </Route>
         </Routes>
       </main>
-      <AnimatedFooter />
+      {!isAdminRoute && <AnimatedFooter />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

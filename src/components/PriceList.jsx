@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+
+
 const prices = [
  { name: "Men's Haircut", duration: "30 minutes", price: "£25" },
   { name: "Beard Trim", duration: "20 minutes", price: "£15" },
