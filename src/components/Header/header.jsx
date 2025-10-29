@@ -51,7 +51,7 @@ export default function BarberSideNav() {
           <NavLink to="/" className="flex items-center group">
             <div className="relative">
               <img 
-                src="http://localhost:5173/public/logo.PNG" 
+                src="./logo.png" 
                 alt="Logo" 
                 className="h-20 w-auto transition-transform duration-300 group-hover:scale-105" 
               />
