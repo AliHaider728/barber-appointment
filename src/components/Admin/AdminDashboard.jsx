@@ -18,6 +18,7 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     window.location.href = '/admin';
   };
+  
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

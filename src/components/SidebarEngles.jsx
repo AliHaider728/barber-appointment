@@ -46,6 +46,7 @@ const SidebarEngles = () => {
     };
 
     
+    
     handleScroll(); // Initial check
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);

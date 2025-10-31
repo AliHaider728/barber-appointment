@@ -18,8 +18,8 @@ const AdminLoginSignup = () => {
     setError('');
 
     const url = isLogin 
-      ? 'http://localhost:5000/api/auth/login'
-      : 'http://localhost:5000/api/auth/signup';
+   ? 'https://barber-appointment-backend-444aioy78-alis-projects-58e3c939.vercel.app/api/auth/login'
+  : 'https://barber-appointment-backend-444aioy78-alis-projects-58e3c939.vercel.app/api/auth/signup';
 
     try {
       const res = await axios.post(url, form);
