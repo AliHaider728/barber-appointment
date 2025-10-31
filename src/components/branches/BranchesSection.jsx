@@ -24,12 +24,21 @@ const BranchesSection = () => {
   }, []);
 
   // Helper to get full image URL
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return 'https://via.placeholder.com/400x300?text=No+Image';
-    return imagePath.startsWith('http') 
-      ? imagePath 
-      : `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
-  };
+const getImageUrl = (imagePath) => {
+  if (!imagePath)
+    return "https://via.placeholder.com/400x300?text=No+Image";
+
+  // Automatically select backend URL based on environment
+  const baseURL =
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000"
+      : "https://barber-appointment-backend.vercel.app";
+
+  // Return the correct image URL
+  return imagePath.startsWith("http")
+    ? imagePath
+    : `${baseURL}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
+};
 
   return (
     <section className="max-w-full mx-auto px-4 py-20 bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2]">
