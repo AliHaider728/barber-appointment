@@ -13,32 +13,31 @@ const AdminLoginSignup = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();   
+  setError('');
 
-    const url = isLogin 
-      ? 'http://localhost:5000/api/auth/login'
-      : 'http://localhost:5000/api/auth/signup';
+  const url = isLogin 
+    ? 'https://barber-appointment-backend.vercel.app/api/auth/login'
+    : 'https://barber-appointment-backend.vercel.app/api/auth/signup';
 
-    try {
-      const res = await axios.post(url, form);
-      
-      if (isLogin) {
-        const { token, role } = res.data;
-        if (role !== 'admin') {
-          return setError('Access denied. Admins only.');
-        }
-        localStorage.setItem('adminToken', token);
-        navigate('/admin/dashboard');
-      } else {
-        alert('Admin created! Now login.');
-        setIsLogin(true);
+  try {
+    const res = await axios.post(url, form);
+    
+    if (isLogin) {
+      const { token, role } = res.data;
+      if (role !== 'admin') {
+        return setError('Access denied. Admins only.');
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong');
+      localStorage.setItem('adminToken', token);
+      navigate('/admin/dashboard');
+    } else {
+      alert('Admin created! Now login.');
+      setIsLogin(true);
     }
-  };
-
+  } catch (err) {
+    setError(err.response?.data?.message || 'Something went wrong');
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] to-[#f5f1ea] flex items-center justify-center px-4">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
