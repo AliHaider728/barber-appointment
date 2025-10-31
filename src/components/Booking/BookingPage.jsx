@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { MapPin, Calendar, Clock, User, CheckCircle, ChevronRight, Scissors } from 'lucide-react';
+import { MapPin, Calendar, Clock, User, ChevronRight, Scissors } from 'lucide-react';
 
 // Reusable Components
 const Button = ({ children, className = '', variant = 'default', onClick, ...props }) => {
@@ -56,12 +56,10 @@ const BookingPage = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  // Backend Data
   const [branches, setBranches] = useState([]);
   const [services, setServices] = useState([]);
   const [barbers, setBarbers] = useState([]);
 
-  // Fetch Data from Backend
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,7 +82,6 @@ const BookingPage = () => {
     fetchData();
   }, []);
 
-  // Generate time slots
   const generateTimeSlots = (openingHours) => {
     const [open, close] = openingHours.split(' - ');
     const [openHour, openMin] = open.split(':').map(Number);
@@ -104,7 +101,7 @@ const BookingPage = () => {
 
   const selectedBranchData = branches.find(b => b._id === selectedBranch);
   const timeSlots = selectedBranchData ? generateTimeSlots(selectedBranchData.openingHours) : [];
-  const branchBarbers = selectedBranch ? barbers.filter(b => b.branch === selectedBranch) : [];
+  const branchBarbers = selectedBranch ? barbers.filter(b => b.branch?._id === selectedBranch) : [];
 
   const totalPrice = selectedServices.reduce((sum, id) => {
     const service = services.find(s => s._id === id);
@@ -130,24 +127,32 @@ const BookingPage = () => {
     if (step === 5 && (!userDetails.fullName || !userDetails.email || !userDetails.phone)) return alert('Please fill all details.');
 
     if (step === 5) {
-      // Final Step: Submit to Backend
       setLoading(true);
       try {
+        // Build selected services array with name & price
+        const selectedServicesData = selectedServices.map(id => {
+          const service = services.find(s => s._id === id);
+          return {
+            serviceRef: id,
+            name: service.name,
+            price: service.price
+          };
+        });
+
         const bookingData = {
           customerName: userDetails.fullName,
           email: userDetails.email,
           phone: userDetails.phone,
-          date: new Date(`${selectedDate}T${selectedTime}:00`),
-          service: selectedServices.map(id => services.find(s => s._id === id)?.name).join(', '),
+          date: `${selectedDate}T${selectedTime}:00`,
+          selectedServices: selectedServicesData,
           barber: barbers.find(b => b._id === selectedBarber)?.name,
-          branch: selectedBranch,
-          status: 'confirmed',
+          branch: selectedBranch
         };
 
         await axios.post('http://localhost:5000/api/appointments', bookingData);
         
-        alert('Booking confirmed! You will receive a confirmation email.');
-        // Reset form
+        alert('Booking confirmed!');
+        // Reset
         setStep(1);
         setSelectedBranch('');
         setSelectedServices([]);
@@ -171,7 +176,7 @@ const BookingPage = () => {
   if (fetching) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
-        <p className="text-xl text-gray-600">Loading booking system...</p>
+        <p className="text-xl text-gray-600">Loading...</p>
       </div>
     );
   }
@@ -194,7 +199,7 @@ const BookingPage = () => {
               <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 font-bold transition ${
                 step > i + 1 ? 'bg-[#D4AF37] text-black' : step === i + 1 ? 'bg-[#D4AF37] text-black' : 'bg-gray-200 text-gray-500'
               }`}>
-                {step > i + 1 ? '✓' : i + 1}
+                {step > i + 1 ? 'Check' : i + 1}
               </div>
               <p className="text-xs font-semibold text-gray-700">{label}</p>
             </div>
@@ -212,7 +217,10 @@ const BookingPage = () => {
                   className={`p-5 cursor-pointer border-2 rounded-xl transition ${
                     selectedBranch === branch._id ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-gray-200 hover:border-[#D4AF37]'
                   }`}
-                  onClick={() => setSelectedBranch(branch._id)}
+                  onClick={() => {
+                    setSelectedBranch(branch._id);
+                    setSelectedBarber('');
+                  }}
                 >
                   <div className="flex gap-3">
                     <MapPin className="w-5 h-5 text-[#D4AF37] mt-1" />
@@ -267,7 +275,7 @@ const BookingPage = () => {
           <Card className="p-8 border-2 border-gray-100">
             <h2 className="text-2xl font-bold mb-6">Select a Barber</h2>
             {branchBarbers.length === 0 ? (
-              <p className="text-gray-600">No barbers available.</p>
+              <p className="text-gray-600 text-center py-8">No barbers available.</p>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {branchBarbers.map(barber => (
@@ -341,7 +349,6 @@ const BookingPage = () => {
           </Card>
         )}
 
-        {/* Navigation */}
         <div className="flex justify-between mt-8">
           {step > 1 && (
             <Button variant="outline" onClick={() => setStep(s => s - 1)}>Previous</Button>

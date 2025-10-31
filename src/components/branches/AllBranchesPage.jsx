@@ -5,37 +5,40 @@ import axios from 'axios';
 
 const AllBranchesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
   const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
 
-  // Fetch data from JSON file
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return 'https://via.placeholder.com/600x400?text=No+Image';
+    return imagePath.startsWith('http')
+      ? imagePath
+      : `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        const response = await axios.get('/data/branches.json');
+        const response = await axios.get('http://localhost:5000/api/branches');
         setBranches(response.data);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load branches. Please try again later.');
+        setError('Failed to load branches.');
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
   const filteredBranches = branches.filter(branch =>
-    branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    branch.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    branch.address.toLowerCase().includes(searchTerm.toLowerCase())
+    branch.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    branch.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    branch.address?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] min-h-screen">
-      {/* Hero Header Section */}
       <section className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
           <div className="inline-block mb-6">
@@ -49,11 +52,10 @@ const AllBranchesPage = () => {
             All Branches
           </h1>
           <p className="text-gray-700 text-lg max-w-2xl mx-auto leading-relaxed">
-            Find your nearest premium barber shop and experience excellence
+            Find your nearest premium barber shop
           </p>
         </div>
 
-        {/* Search Bar */}
         <div className="max-w-2xl mx-auto">
           <div className="relative">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-[#D4AF37]" />
@@ -68,7 +70,6 @@ const AllBranchesPage = () => {
         </div>
       </section>
 
-      {/* Branches Grid Section */}
       <section className="max-w-7xl mx-auto px-4 pb-20">
         {loading ? (
           <div className="text-center py-20">
@@ -82,7 +83,7 @@ const AllBranchesPage = () => {
         ) : filteredBranches.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl shadow-lg max-w-md mx-auto p-8">
             <Scissors className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-medium text-lg">No branches found matching your search.</p>
+            <p className="text-gray-600 font-medium text-lg">No branches found.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -93,21 +94,17 @@ const AllBranchesPage = () => {
                 onMouseLeave={() => setHoveredId(null)}
                 className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#D4AF37] overflow-hidden"
               >
-                {/* Image Section */}
                 <div className="relative h-56 overflow-hidden">
-                  <img 
-                    src={branch.image} 
+                  <img
+                    src={getImageUrl(branch.image)}
                     alt={branch.name}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => e.target.src = 'https://via.placeholder.com/600x400?text=Image+Not+Found'}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                  
-                  {/* City Badge */}
                   <div className="absolute top-4 right-4 bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold text-sm shadow-lg">
                     {branch.city}
                   </div>
-                  
-                  {/* Branch Name Overlay */}
                   <div className="absolute bottom-4 left-4 right-4">
                     <h3 className="text-2xl font-black text-white uppercase tracking-tight leading-tight">
                       {branch.name}
@@ -115,36 +112,24 @@ const AllBranchesPage = () => {
                   </div>
                 </div>
 
-                {/* Content Section */}
                 <div className="p-6">
                   <div className="space-y-4 mb-6">
-                    {/* Address */}
                     <div className="flex items-start gap-3">
                       <MapPin className="w-5 h-5 text-[#D4AF37] mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-gray-800 font-medium leading-relaxed">
-                        {branch.address}
-                      </p>
+                      <p className="text-sm text-gray-800 font-medium leading-relaxed">{branch.address}</p>
                     </div>
-
-                    {/* Opening Hours */}
                     <div className="flex items-center gap-3">
                       <Clock className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
                       <p className="text-sm text-gray-800 font-medium">{branch.openingHours}</p>
                     </div>
-
-                    {/* Phone */}
                     <div className="flex items-center gap-3">
                       <Phone className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
-                      <a 
-                        href={`tel:${branch.phone}`}
-                        className="text-sm text-gray-800 font-medium hover:text-[#D4AF37] transition-colors"
-                      >
+                      <a href={`tel:${branch.phone}`} className="text-sm text-gray-800 font-medium hover:text-[#D4AF37] transition-colors">
                         {branch.phone}
                       </a>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="flex gap-3">
                     <Link to={`/branches/${branch._id}`} className="flex-1">
                       <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm">
