@@ -14,6 +14,7 @@ import AdminLoginSignup from "./components/Admin/AdminLoginSignup.jsx";
 import AdminLayout from "./components/Admin/AdminLayout.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
+import axios from "axios";
 // In any component
 import { API_URL } from '../config/api.js';
 axios.get(`${API_URL}/branches`)
