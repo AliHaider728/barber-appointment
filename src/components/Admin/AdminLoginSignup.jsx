@@ -1,4 +1,3 @@
-// src/components/Admin/AdminLoginSignup.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -18,8 +17,8 @@ const AdminLoginSignup = () => {
     setError('');
 
     const url = isLogin 
-   ? 'https://barber-appointment-backend-444aioy78-alis-projects-58e3c939.vercel.app/api/auth/login'
-  : 'https://barber-appointment-backend-444aioy78-alis-projects-58e3c939.vercel.app/api/auth/signup';
+      ? 'http://localhost:5000/api/auth/login'
+      : 'http://localhost:5000/api/auth/signup';
 
     try {
       const res = await axios.post(url, form);
