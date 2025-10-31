@@ -13,7 +13,7 @@ const Branches = () => {
   }, []);
 
   const fetchBranches = async () => {
-    const res = await axios.get('http://localhost:5000/api/branches');
+    const res = await axios.get('https://barber-appointment-backend.vercel.app/api/branches');
     setBranches(res.data);
   };
 
@@ -35,9 +35,9 @@ const Branches = () => {
 
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/branches/${editingId}`, formData);
+        await axios.put(`https://barber-appointment-backend.vercel.app/api/branches/${editingId}`, formData);
       } else {
-        await axios.post('http://localhost:5000/api/branches', formData);
+        await axios.post('https://barber-appointment-backend.vercel.app/api/branches', formData);
       }
       resetForm();
       fetchBranches();
@@ -61,7 +61,7 @@ const Branches = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Delete this branch?')) {
-      await axios.delete(`http://localhost:5000/api/branches/${id}`);
+      await axios.delete(`https://barber-appointment-backend.vercel.app/api/branches/${id}`);
       fetchBranches();
     }
   };

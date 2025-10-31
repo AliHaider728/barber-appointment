@@ -12,7 +12,7 @@ const BranchesSection = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/branches');
+        const response = await axios.get('https://barber-appointment-backend.vercel.app/api/branches');
         setBranches(response.data);
         setLoading(false);
       } catch (err) {

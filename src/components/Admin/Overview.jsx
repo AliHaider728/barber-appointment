@@ -18,9 +18,9 @@ const Overview = () => {
   const fetchStats = async () => {
     try {
       const [apptRes, barberRes, branchRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/appointments'),
-        axios.get('http://localhost:5000/api/barbers'),
-        axios.get('http://localhost:5000/api/branches')
+        axios.get('https://barber-appointment-backend.vercel.app/api/appointments'),
+        axios.get('https://barber-appointment-backend.vercel.app/api/barbers'),
+        axios.get('https://barber-appointment-backend.vercel.app/api/branches')
       ]);
 
       const appointments = apptRes.data;

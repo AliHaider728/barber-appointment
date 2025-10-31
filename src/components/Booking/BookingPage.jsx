@@ -65,9 +65,9 @@ const BookingPage = () => {
       try {
         setFetching(true);
         const [branchRes, serviceRes, barberRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/branches'),
-          axios.get('http://localhost:5000/api/services'),
-          axios.get('http://localhost:5000/api/barbers'),
+          axios.get('https://barber-appointment-backend.vercel.app/api/branches'),
+          axios.get('https://barber-appointment-backend.vercel.app/api/services'),
+          axios.get('https://barber-appointment-backend.vercel.app/api/barbers'),
         ]);
         setBranches(branchRes.data);
         setServices(serviceRes.data);
@@ -149,7 +149,7 @@ const BookingPage = () => {
           branch: selectedBranch
         };
 
-        await axios.post('http://localhost:5000/api/appointments', bookingData);
+        await axios.post('https://barber-appointment-backend.vercel.app/api/appointments', bookingData);
         
         alert('Booking confirmed!');
         // Reset

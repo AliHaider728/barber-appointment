@@ -12,7 +12,7 @@ const BarbersPage = () => {
     const fetchBarbers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5000/api/barbers');
+        const response = await axios.get('https://barber-appointment-backend.vercel.app/api/barbers');
         setBarbers(response.data);
       } catch (err) {
         setError('Failed to load barbers.');

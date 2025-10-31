@@ -14,7 +14,7 @@ const ServicesAvailable = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get('http://localhost:5000/api/services');
+        const response = await axios.get('https://barber-appointment-backend.vercel.app/api/services');
         setServices(response.data);
       } catch (err) {
         setError('Failed to load services. Please try again later.');

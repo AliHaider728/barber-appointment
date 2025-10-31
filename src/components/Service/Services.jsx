@@ -8,7 +8,7 @@ const Services = () => {
       icon: "/cutting.PNG",
       bgImage:
         "https://berger.themerex.net/wp-content/uploads/2016/07/1-370x493.jpg",
-      link: "/services/haircutting",
+     
     },
     {
       title: "Shaving",
@@ -17,7 +17,7 @@ const Services = () => {
       icon: "/shaving.PNG",
       bgImage:
         "https://berger.themerex.net/wp-content/uploads/2016/07/3-370x493.jpg",
-      link: "/services/shaving",
+       
     },
     {
       title: "Styling",
@@ -25,7 +25,7 @@ const Services = () => {
       icon: "/styling.PNG",
       bgImage:
         "https://berger.themerex.net/wp-content/uploads/2016/07/4-370x493.jpg",
-      link: "/services/styling",
+   
     },
     {
       title: "Trimming",
@@ -34,7 +34,7 @@ const Services = () => {
       icon: "/triming.PNG",
       bgImage:
         "https://berger.themerex.net/wp-content/uploads/2016/07/2-370x493.jpg",
-      link: "/services/trimming",
+       
     },
   ];
 
@@ -77,12 +77,12 @@ const Services = () => {
                 <p className="text-gray-600 text-sm mb-4 group-hover:text-gray-100 transition-colors duration-300">
                   {service.description}
                 </p>
-                <NavLink
-                  to={service.link}
+                <button
+                
                   className="inline-block text-[#d5a353] font-medium group-hover:text-[#F4D03F] transition-colors duration-300"
                 >
                   Read more →
-                </NavLink>
+                </button>
               </div>
 
               {/* Background Image on Hover */}

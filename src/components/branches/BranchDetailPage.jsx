@@ -16,19 +16,30 @@ const BranchDetailPage = () => {
 
   // Image URL Helper
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return 'https://via.placeholder.com/1200x600?text=Branch+Image';
-    return imagePath.startsWith('http')
+    if (!imagePath)
+      return "https://via.placeholder.com/1200x600?text=Branch+Image";
+
+    // Automatically switch base URL
+    const baseURL =
+      import.meta.env.MODE === "development"
+        ? "http://localhost:5000"
+        : "https://barber-appointment-backend.vercel.app";
+
+    // Return correct image URL
+    return imagePath.startsWith("http")
       ? imagePath
-      : `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+      : `${baseURL}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
   };
+
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [branchRes, barberRes, serviceRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/branches/${branchId}`),
-          axios.get('http://localhost:5000/api/barbers'), // Ensure this returns branch populated
-          axios.get('http://localhost:5000/api/services')
+          axios.get(`https://barber-appointment-backend.vercel.app/api/branches/${branchId}`),
+          axios.get('https://barber-appointment-backend.vercel.app/api/barbers'), // Ensure this returns branch populated
+          axios.get('https://barber-appointment-backend.vercel.app/api/services')
         ]);
 
         const branchData = branchRes.data;

@@ -17,7 +17,7 @@ const Barbers = () => {
 
   const fetchBarbers = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/barbers');
+      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/barbers');
       setBarbers(res.data);
       setError(null);
     } catch (err) {
@@ -28,7 +28,7 @@ const Barbers = () => {
 
   const fetchBranches = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/branches');
+      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/branches');
       setBranches(res.data);
     } catch (err) {
       console.error('Branches fetch error:', err);
@@ -57,10 +57,10 @@ const Barbers = () => {
       setLoading(true);
       setError(null);
       if (editingId) {
-        const res = await axios.put(`http://localhost:5000/api/barbers/${editingId}`, data);
+        const res = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
         console.log('Update response:', res.data);
       } else {
-        const res = await axios.post('http://localhost:5000/api/barbers', data);
+        const res = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
         console.log('Create response:', res.data);
       }
       resetForm();
@@ -90,7 +90,7 @@ const Barbers = () => {
     if (window.confirm('Delete this barber?')) {
       try {
         setLoading(true);
-        await axios.delete(`http://localhost:5000/api/barbers/${id}`);
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barbers/${id}`);
         fetchBarbers();
       } catch (err) {
         alert('Delete failed: ' + (err.response?.data?.error || err.message));

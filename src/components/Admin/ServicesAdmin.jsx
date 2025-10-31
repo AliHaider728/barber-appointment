@@ -9,16 +9,16 @@ const ServicesAdmin = () => {
   useEffect(() => { fetchServices(); }, []);
 
   const fetchServices = async () => {
-    const res = await axios.get('http://localhost:5000/api/services');
+    const res = await axios.get('https://barber-appointment-backend.vercel.app/api/services');
     setServices(res.data);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingId) {
-      await axios.put(`http://localhost:5000/api/services/${editingId}`, form);
+      await axios.put(`https://barber-appointment-backend.vercel.app/api/services/${editingId}`, form);
     } else {
-      await axios.post('http://localhost:5000/api/services', form);
+      await axios.post('https://barber-appointment-backend.vercel.app/api/services', form);
     }
     setForm({ name: '', duration: '', price: '' });
     setEditingId(null);
@@ -32,7 +32,7 @@ const ServicesAdmin = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Delete this service?')) {
-      await axios.delete(`http://localhost:5000/api/services/${id}`);
+      await axios.delete(`https://barber-appointment-backend.vercel.app/api/services/${id}`);
       fetchServices();
     }
   };

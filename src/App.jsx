@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header/header.jsx";
 import Home from "./components/Home/Home";
 import Services from "./components/Service/Services.jsx";
-import ServiceDetail from "./components/Service/ServiceDetail.jsx";
 import AnimatedFooter from "./components/Footer/footer.jsx";
 import ServicesAvailable from "./components/Service/ServicesAvailable.jsx";
 import PriceList from "./components/PriceList.jsx";
@@ -35,7 +34,6 @@ function AppContent() {
           {/* User Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<Services />} />
-          <Route path="/services/:serviceId" element={<ServiceDetail />} />
           <Route path="/pricelist" element={<PriceList />} />
           <Route path="/services/all" element={<ServicesAvailable />} />
           <Route path="/barbers" element={<BarbersPage />} />
