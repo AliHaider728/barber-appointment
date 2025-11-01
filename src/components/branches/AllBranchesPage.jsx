@@ -10,22 +10,12 @@ const AllBranchesPage = () => {
   const [error, setError] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
 
-const getImageUrl = (imagePath) => {
-  if (!imagePath)
-    return "https://via.placeholder.com/600x400?text=No+Image";
-
-  // Base backend URL (auto switch for local or production)
-  const baseURL =
-    import.meta.env.MODE === "development"
-      ? "http://localhost:5000"
-      : "https://barber-appointment-backend.vercel.app";
-
-  // Return complete image URL
-  return imagePath.startsWith("http")
-    ? imagePath
-    : `${baseURL}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
-};
-
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return 'https://via.placeholder.com/600x400?text=No+Image';
+    return imagePath.startsWith('http')
+      ? imagePath
+      : `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  };
 
   useEffect(() => {
     const fetchData = async () => {

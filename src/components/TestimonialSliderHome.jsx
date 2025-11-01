@@ -107,90 +107,86 @@ const TestimonialSliderHome = () => {
   };
 
   return (
-    <section
-      className="w-full py-16 relative overflow-hidden"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/gallery5.jpg')",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        backgroundRepeat: "no-repeat",
-        
-      }}
-      id="Testimonials"
-    >
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center text-white">
-        <h3 className="text-xl text-[#D4AF37] font-semibold mb-2 uppercase tracking-wider">
-          Testimonials
-        </h3>
-        <h1 className="text-4xl md:text-5xl font-bold mb-10">
-          What Our Clients Say
-        </h1>
+  <section
+  className="w-full py-16 relative overflow-hidden bg-fixed bg-center bg-cover"
+  style={{
+     backgroundImage: "url('https://images.pexels.com/photos/1570806/pexels-photo-1570806.jpeg')", 
+    backgroundAttachment: "fixed",
+    backgroundPosition: "center",
+    backgroundSize: "cover",
+    backgroundRepeat: "no-repeat",
+  }}
+  id="Testimonials"
+>
+  <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center text-white">
+    <h3 className="text-xl text-[#D4AF37] font-semibold mb-2 uppercase tracking-wider">
+      Testimonials
+    </h3>
+    <h1 className="text-4xl md:text-5xl font-bold mb-10">
+      What Our Clients Say
+    </h1>
 
-        {/* Slider Container */}
-        <div className="relative w-full h-[340px] flex justify-center items-center overflow-hidden">
-          {testimonials.map((testimonial, index) => (
-            <div
-              key={index}
-              className="slider-item absolute w-[320px] sm:w-[360px] md:w-[460px] h-[260px] sm:h-[280px] rounded-xl p-6 transition-all duration-500 ease-out cursor-pointer border border-[#D4AF37]/20 flex flex-col justify-center items-center text-center"
-              onClick={() => goToSlide(index)}
-            >
-              <p className="text-base leading-relaxed italic line-clamp-4 mb-6">
-                “{testimonial.text}”
-              </p>
-              <h2 className="text-lg font-bold">{testimonial.name}</h2>
-            </div>
-          ))}
-
-          {/* Prev Button */}
-          <button
-            onClick={prevSlide}
-            className="absolute top-1/2 -translate-y-1/2 left-6 md:left-10 text-white w-12 h-12 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300 z-30"
-            style={{
-              background:
-                "linear-gradient(135deg, #D4AF37 0%, #B76E79 100%)",
-              boxShadow: "0 6px 20px rgba(212,175,55,0.4)",
-            }}
-          >
-            ←
-          </button>
-
-          {/* Next Button */}
-          <button
-            onClick={nextSlide}
-            className="absolute top-1/2 -translate-y-1/2 right-6 md:right-10 text-white w-12 h-12 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300 z-30"
-            style={{
-              background:
-                "linear-gradient(135deg, #D4AF37 0%, #B76E79 100%)",
-              boxShadow: "0 6px 20px rgba(212,175,55,0.4)",
-            }}
-          >
-            →
-          </button>
+    {/* Slider Container */}
+    <div className="relative w-full h-[340px] flex justify-center items-center overflow-hidden">
+      {testimonials.map((testimonial, index) => (
+        <div
+          key={index}
+          className="slider-item absolute w-[320px] sm:w-[360px] md:w-[460px] h-[260px] sm:h-[280px] rounded-xl p-6 transition-all duration-500 ease-out cursor-pointer border border-[#D4AF37]/20 flex flex-col justify-center items-center text-center"
+          onClick={() => goToSlide(index)}
+        >
+          <p className="text-base leading-relaxed italic line-clamp-4 mb-6">
+            “{testimonial.text}”
+          </p>
+          <h2 className="text-lg font-bold">{testimonial.name}</h2>
         </div>
-            
-        {/* Dots */}
-        <div className="flex justify-center gap-3 mt-8">
-          {testimonials.map((_, index) => (
-            <div
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-300 ${
-                active === index ? "scale-125" : "scale-100"
-              }`}
-              style={{
-                backgroundColor:
-                  active === index ? "#D4AF37" : "rgba(255,255,255,0.4)",
-                boxShadow:
-                  active === index
-                    ? "0 4px 12px rgba(212,175,55,0.6)"
-                    : "none",
-              }}
-            ></div>
-          ))}
-        </div>
-      </div>
-    </section>
+      ))}
+
+      {/* Prev Button */}
+      <button
+        onClick={prevSlide}
+        className="absolute top-1/2 -translate-y-1/2 left-6 md:left-10 text-white w-12 h-12 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300 z-30"
+        style={{
+          background: "linear-gradient(135deg, #D4AF37 0%, #B76E79 100%)",
+          boxShadow: "0 6px 20px rgba(212,175,55,0.4)",
+        }}
+      >
+        ←
+      </button>
+
+      {/* Next Button */}
+      <button
+        onClick={nextSlide}
+        className="absolute top-1/2 -translate-y-1/2 right-6 md:right-10 text-white w-12 h-12 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300 z-30"
+        style={{
+          background: "linear-gradient(135deg, #D4AF37 0%, #B76E79 100%)",
+          boxShadow: "0 6px 20px rgba(212,175,55,0.4)",
+        }}
+      >
+        →
+      </button>
+    </div>
+
+    {/* Dots */}
+    <div className="flex justify-center gap-3 mt-8">
+      {testimonials.map((_, index) => (
+        <div
+          key={index}
+          onClick={() => goToSlide(index)}
+          className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-300 ${
+            active === index ? "scale-125" : "scale-100"
+          }`}
+          style={{
+            backgroundColor:
+              active === index ? "#D4AF37" : "rgba(255,255,255,0.4)",
+            boxShadow:
+              active === index ? "0 4px 12px rgba(212,175,55,0.6)" : "none",
+          }}
+        ></div>
+      ))}
+    </div>
+  </div>
+</section>
+
   );
 };
 

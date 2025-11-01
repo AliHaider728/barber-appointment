@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Menu, X, Scissors, Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-export default function BarberSideNav() {
+export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     setIsLoggedIn(!!token);
@@ -22,15 +23,13 @@ export default function BarberSideNav() {
   const navItems = [
     { name: 'Home', href: '/' },
     { name: 'Branches', href: '/branches' },
-    { name: 'About', href: '/About' }
-  ];
+    { name: 'About', href: '/About' },
 
-  const socialIcons = [
-    { icon: <Facebook size={20} />, href: '#', label: 'Facebook' },
-    { icon: <Instagram size={20} />, href: '#', label: 'Instagram' },
-    { icon: <Twitter size={20} />, href: '#', label: 'Twitter' },
-    { icon: <Youtube size={20} />, href: '#', label: 'Youtube' }
+    
   ];
+  
+
+ 
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -158,18 +157,12 @@ export default function BarberSideNav() {
                   <NavLink
                     to={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={({ isActive }) =>
-                      `group block relative py-4 px-6 text-lg font-bold uppercase tracking-wider rounded-2xl transition-all duration-300 overflow-hidden ${
-                        isActive
-                          ? 'text-black bg-gradient-to-r from-[#D4AF37] to-[#F4D03F]'
-                          : 'text-gray-300 hover:text-white'
-                      }`
-                    }
+                   
+                                        className="group block relative py-3.5 px-6 text-base font-semibold uppercase tracking-wider rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5"
+
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 via-[#D4AF37]/10 to-[#D4AF37]/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-[#D4AF37] group-hover:h-full transition-all duration-300 rounded-r"></div>
-                    <span className="relative z-10 group-hover:translate-x-2 inline-flex items-center gap-3 transition-transform duration-300">
-                      <Scissors className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0.5 bg-[#D4AF37] group-hover:w-8 transition-all duration-300"></div>
+                    <span className="relative z-10 pl-10 group-hover:translate-x-1 transition-transform duration-300">
                       {item.name}
                     </span>
                   </NavLink>
@@ -182,7 +175,7 @@ export default function BarberSideNav() {
           <div className="relative px-6 py-8 border-t border-[#D4AF37]/20 bg-black/50 backdrop-blur-sm space-y-4">
             {/* Book Now Button */}
             <NavLink to="/booking" onClick={() => setIsOpen(false)}>
-              <button className="w-full py-4 px-6 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] text-black font-black rounded-2xl hover:shadow-lg hover:shadow-[#D4AF37]/50 transform hover:scale-105 transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2">
+              <button className="w-full py-4  mb-3 px-6 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] text-black font-black rounded-2xl hover:shadow-lg hover:shadow-[#D4AF37]/50 transform hover:scale-105 transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2">
                 <Scissors className="w-5 h-5" />
                 Book Now
               </button>
@@ -204,22 +197,7 @@ export default function BarberSideNav() {
               </NavLink>
             )}
 
-            {/* Social Media */}
-            <div className="pt-4">
-              <p className="text-gray-500 text-xs font-black tracking-widest mb-4 uppercase">Follow Us</p>
-              <div className="flex gap-2">
-                {socialIcons.map((social, index) => (
-                  <a
-                    key={index}
-                    href={social.href}
-                    aria-label={social.label}
-                    className="flex-1 h-12 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:bg-gradient-to-br hover:from-[#D4AF37] hover:to-[#F4D03F] hover:text-black transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#D4AF37]/30 border border-white/10 hover:border-[#D4AF37]"
-                  >
-                    {social.icon}
-                  </a>
-                ))}
-              </div>
-            </div>
+            
           </div>
         </div>
       </nav>

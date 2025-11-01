@@ -118,98 +118,78 @@ const Appointments = () => {
       </div>
 
       {/* Desktop Table */}
+      {/* Desktop Table */}
       <div className="hidden xl:block bg-white rounded-xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Customer</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date & Time</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Services</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Barber</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Branch</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                <th className="w-[10%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Customer</th>
+                <th className="w-[14%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Contact</th>
+                <th className="w-[10%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Date & Time</th>
+                <th className="w-[15%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Services</th>
+                <th className="w-[9%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Barber</th>
+                <th className="w-[9%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Branch</th>
+                <th className="w-[7%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Total</th>
+                <th className="w-[9%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                <th className="w-[17%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredAppointments.map(apt => (
                 <tr key={apt._id} className="hover:bg-gray-50 transition">
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-2">
-                      
-                    
-                      <span className="font-medium text-sm text-gray-900">{apt.customerName}</span>
+                    <span className="font-medium text-sm text-gray-900 line-clamp-2">{apt.customerName}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="space-y-1 text-xs text-gray-600">
+                      <div className="truncate">{apt.email}</div>
+                      <div className="truncate">{apt.phone}</div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Mail className="w-3 h-3" />
-                        {apt.email}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Phone className="w-3 h-3" />
-                        {apt.phone}
-                      </div>
+                    <div className="space-y-1 text-xs">
+                      <div className="text-gray-900 font-medium whitespace-nowrap">{new Date(apt.date).toLocaleDateString()}</div>
+                      <div className="text-gray-600 whitespace-nowrap">{new Date(apt.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-xs text-gray-900 font-medium">
-                        <Calendar className="w-3 h-3 text-[#D4AF37]" />
-                        {new Date(apt.date).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Clock className="w-3 h-3 text-[#D4AF37]" />
-                        {new Date(apt.date).toLocaleTimeString()}
-                      </div>
+                    <div className="text-xs text-gray-700 line-clamp-2">
+                      {apt.services?.map(s => s.name).filter(Boolean).join(', ') || 'N/A'}
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-1 text-xs text-gray-700">
-                      <Scissors className="w-3 h-3 text-[#D4AF37] flex-shrink-0" />
-                      <span className="line-clamp-2">{apt.services?.map(s => s.name).filter(Boolean).join(', ') || 'N/A'}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 font-medium">{apt.barber}</td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-1 text-xs text-gray-700">
-                      <MapPin className="w-3 h-3 text-[#D4AF37]" />
-                      {apt.branch?.name || 'N/A'}
-                    </div>
+                    <span className="text-sm text-gray-900 line-clamp-2">{apt.barber}</span>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4 text-[#D4AF37]" />
-                      <span className="font-bold text-[#D4AF37]">£{apt.totalPrice?.toFixed(2) || '0.00'}</span>
-                    </div>
+                    <span className="text-sm text-gray-700 line-clamp-2">{apt.branch?.name || 'N/A'}</span>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span className="font-bold text-sm text-[#D4AF37]">£{apt.totalPrice?.toFixed(2) || '0.00'}</span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                       apt.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                       apt.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
-                      {apt.status}
+                      {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-4">
                     {apt.status === 'pending' && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5">
                         <button 
                           onClick={() => updateStatus(apt._id, 'confirmed')} 
                           disabled={updatingId === apt._id}
-                          className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-600 transition disabled:opacity-50"
+                          className="bg-green-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-green-600 transition disabled:opacity-50 whitespace-nowrap"
                         >
                           {updatingId === apt._id ? '...' : 'Approve'}
                         </button>
                         <button 
                           onClick={() => updateStatus(apt._id, 'rejected')} 
                           disabled={updatingId === apt._id}
-                          className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition disabled:opacity-50"
+                          className="bg-red-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition disabled:opacity-50 whitespace-nowrap"
                         >
                           {updatingId === apt._id ? '...' : 'Reject'}
                         </button>
@@ -307,7 +287,7 @@ const Appointments = () => {
                   <DollarSign className="w-4 h-4 text-[#D4AF37]" />
                   <span className="text-xs font-medium">Total Price</span>
                 </div>
-                <p className="text-2xl font-black text-[#D4AF37]">£{apt.totalPrice?.toFixed(2) || '0.00'}</p>
+                <p className="text-2xl font-black text-[#D4AF37]">{apt.totalPrice?.toFixed(2) || '0.00'}</p>
               </div>
 
               {apt.status === 'pending' && (
