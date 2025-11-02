@@ -19,7 +19,7 @@ const AboutPage = () => {
   return (
     <div className="bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2]">
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28 mb-10">
+      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28 mb-16">
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40"></div>
         <div
           className="absolute inset-0 bg-cover bg-center"
