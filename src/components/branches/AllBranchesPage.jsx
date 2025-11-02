@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { MapPin, Clock, Phone, Search, ChevronRight, Building2, Scissors } from 'lucide-react';
 import axios from 'axios';
 
+// API URL configuration
+const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
+
 const AllBranchesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [branches, setBranches] = useState([]);
@@ -10,20 +13,25 @@ const AllBranchesPage = () => {
   const [error, setError] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return 'https://via.placeholder.com/600x400?text=No+Image';
-    return imagePath.startsWith('http')
-      ? imagePath
-      : `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  // Smart image URL resolver - handles Base64, full URLs, and relative paths
+  const getImageSrc = (image) => {
+    if (!image) return 'https://via.placeholder.com/600x400?text=No+Image';
+    // If it's already a Base64 string
+    if (image.startsWith('data:')) return image;
+    // If it's a full URL
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    // If it's a relative path from old system
+    return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('https://barber-appointment-backend.vercel.app/api/branches');
+        const response = await axios.get(`${API_URL}/api/branches`);
         setBranches(response.data);
         setLoading(false);
       } catch (err) {
+        console.error('Fetch error:', err);
         setError('Failed to load branches.');
         setLoading(false);
       }
@@ -84,6 +92,9 @@ const AllBranchesPage = () => {
           <div className="text-center py-20 bg-white rounded-2xl shadow-lg max-w-md mx-auto p-8">
             <Scissors className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 font-medium text-lg">No branches found.</p>
+            {searchTerm && (
+              <p className="text-gray-500 text-sm mt-2">Try adjusting your search term</p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -92,14 +103,14 @@ const AllBranchesPage = () => {
                 key={branch._id}
                 onMouseEnter={() => setHoveredId(branch._id)}
                 onMouseLeave={() => setHoveredId(null)}
-                className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#D4AF37] overflow-hidden"
+                className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#D4AF37] overflow-hidden transform hover:-translate-y-2"
               >
                 <div className="relative h-56 overflow-hidden">
                   <img
-                    src={getImageUrl(branch.image)}
+                    src={getImageSrc(branch.image)}
                     alt={branch.name}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                    onError={(e) => e.target.src = 'https://via.placeholder.com/600x400?text=Image+Not+Found'}
+                    onError={(e) => e.target.src = 'https://via.placeholder.com/600x400?text=Branch+Image'}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                   <div className="absolute top-4 right-4 bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold text-sm shadow-lg">

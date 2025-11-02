@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { MapPin, Clock, Phone, ChevronRight, Building2, Scissors } from 'lucide-react';
 import axios from 'axios';
 
+// API URL configuration
+const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
+
 const BranchesSection = () => {
   const [hoveredId, setHoveredId] = useState(null);
   const [branches, setBranches] = useState([]);
@@ -12,7 +15,7 @@ const BranchesSection = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('https://barber-appointment-backend.vercel.app/api/branches');
+        const response = await axios.get(`${API_URL}/api/branches`);
         setBranches(response.data);
         setLoading(false);
       } catch (err) {
@@ -23,12 +26,15 @@ const BranchesSection = () => {
     fetchData();
   }, []);
 
-  // Helper to get full image URL
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return 'https://via.placeholder.com/400x300?text=No+Image';
-    return imagePath.startsWith('http') 
-      ? imagePath 
-      : `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  // Smart image URL resolver - same as admin panel
+  const getImageSrc = (image) => {
+    if (!image) return 'https://via.placeholder.com/400x300?text=No+Image';
+    // If it's already a Base64 string
+    if (image.startsWith('data:')) return image;
+    // If it's a full URL
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    // If it's a relative path from old system
+    return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
   };
 
   // Loading Skeleton Component
@@ -94,9 +100,12 @@ const BranchesSection = () => {
               >
                 <div className="relative h-44 sm:h-52 overflow-hidden">
                   <img
-                    src={getImageUrl(branch.image)}
+                    src={getImageSrc(branch.image)}
                     alt={branch.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
 

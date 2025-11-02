@@ -4,6 +4,9 @@ import { MapPin, Clock, Phone, ChevronRight, Star, Award, Calendar, ArrowLeft, S
 import { Button } from "../ui/button";
 import axios from 'axios';
 
+// API URL configuration
+const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
+
 const BranchDetailPage = () => {
   const { branchId } = useParams();
   const [branch, setBranch] = useState(null);
@@ -14,32 +17,24 @@ const BranchDetailPage = () => {
   const [hoveredBarber, setHoveredBarber] = useState(null);
   const [hoveredService, setHoveredService] = useState(null);
 
-  // Image URL Helper
-  const getImageUrl = (imagePath) => {
-    if (!imagePath)
-      return "https://via.placeholder.com/1200x600?text=Branch+Image";
-
-    // Automatically switch base URL
-    const baseURL =
-      import.meta.env.MODE === "development"
-        ? "http://localhost:5000"
-        : "https://barber-appointment-backend.vercel.app";
-
-    // Return correct image URL
-    return imagePath.startsWith("http")
-      ? imagePath
-      : `${baseURL}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
+  // Smart image URL resolver - handles Base64, full URLs, and relative paths
+  const getImageSrc = (image) => {
+    if (!image) return 'https://via.placeholder.com/1200x600?text=No+Image';
+    // If it's already a Base64 string
+    if (image.startsWith('data:')) return image;
+    // If it's a full URL
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    // If it's a relative path from old system
+    return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
   };
-
-
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [branchRes, barberRes, serviceRes] = await Promise.all([
-          axios.get(`https://barber-appointment-backend.vercel.app/api/branches/${branchId}`),
-          axios.get('https://barber-appointment-backend.vercel.app/api/barbers'), // Ensure this returns branch populated
-          axios.get('https://barber-appointment-backend.vercel.app/api/services')
+          axios.get(`${API_URL}/api/branches/${branchId}`),
+          axios.get(`${API_URL}/api/barbers`),
+          axios.get(`${API_URL}/api/services`)
         ]);
 
         const branchData = branchRes.data;
@@ -47,7 +42,7 @@ const BranchDetailPage = () => {
 
         setBranch(branchData);
 
-        // Fix: Ensure barber.branch is populated or compare by ID string
+        // Filter barbers by branch
         const barbers = barberRes.data.filter(barber => {
           if (!barber.branch) return false;
           return barber.branch._id === branchId || barber.branch === branchId;
@@ -69,7 +64,10 @@ const BranchDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
-        <p className="text-gray-600 text-xl">Loading branch details...</p>
+        <div className="text-center">
+          <div className="inline-block w-16 h-16 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600 text-xl">Loading branch details...</p>
+        </div>
       </div>
     );
   }
@@ -78,7 +76,7 @@ const BranchDetailPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4">Not Found</div>
+          <div className="text-6xl mb-4">❌</div>
           <h2 className="text-3xl font-black text-black mb-4">Branch Not Found</h2>
           <Link to="/branches">
             <Button className="bg-[#D4AF37] text-black font-bold hover:bg-black hover:text-white">
@@ -95,10 +93,10 @@ const BranchDetailPage = () => {
       {/* Hero Section */}
       <div className="relative h-96 overflow-hidden">
         <img
-          src={getImageUrl(branch.image)}
+          src={getImageSrc(branch.image)}
           alt={branch.name}
           className="w-full h-full object-cover"
-          onError={(e) => e.target.src = 'https://via.placeholder.com/1200x600?text=Image+Not+Found'}
+          onError={(e) => e.target.src = 'https://via.placeholder.com/1200x600?text=Branch+Image'}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
 
@@ -194,9 +192,9 @@ const BranchDetailPage = () => {
                   <div className="relative h-64 overflow-hidden bg-gray-100">
                     {barber.image ? (
                       <img
-                        src={getImageUrl(barber.image)}
+                        src={getImageSrc(barber.image)}
                         alt={barber.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         onError={(e) => e.target.src = 'https://via.placeholder.com/300?text=Barber'}
                       />
                     ) : (
@@ -205,7 +203,7 @@ const BranchDetailPage = () => {
                       </div>
                     )}
                     {hoveredBarber === barber._id && (
-                      <div className="absolute inset-0 bg-[#D4AF37]/90 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-[#D4AF37]/90 flex items-center justify-center transition-all duration-300">
                         <Calendar className="w-16 h-16 text-black" />
                       </div>
                     )}
@@ -218,7 +216,7 @@ const BranchDetailPage = () => {
                     <div className="flex items-center gap-2 mb-4">
                       <Star className="w-4 h-4 text-[#D4AF37] fill-[#D4AF37]" />
                       <p className="text-sm font-bold text-gray-600">
-                        {barber.experience_years} Years Experience
+                        {barber.experienceYears || barber.experience_years || 0} Years Experience
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
