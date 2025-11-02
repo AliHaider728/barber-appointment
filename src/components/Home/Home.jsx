@@ -12,7 +12,7 @@ function Home() {
   return (
     <>
       <SidebarEngles />
-      
+
       {/* Hero Banner Section */}
       <div className="relative min-h-screen flex flex-col" id="banner">
         {/* Background Image with Fixed Attachment */}
@@ -31,23 +31,41 @@ function Home() {
         <div className="fixed top-0 left-0 w-full h-full -z-10 bg-black/40"></div>
 
         {/* Hero Content - Takes full space */}
-        <div className="flex-1 flex flex-col justify-center items-center text-center px-4 sm:px-6 py-24 sm:py-32 md:py-40">
+        <div className="flex-1 flex flex-col justify-center items-center text-center px-4 sm:px-6 py-24 sm:py-32 md:py-32 mb-16">
           <img
             src="/logo_home.png"
             alt="Logo"
-            className="mb-6 sm:mb-8 md:mb-10 w-40 sm:w-48 md:w-56 lg:w-64 max-w-full drop-shadow-2xl animate-fadeIn"
+            className="mb-6 sm:mb-8 md:mb-1 w-40 sm:w-48 md:w-56 lg:w-64 max-w-full drop-shadow-2xl animate-fadeIn"
           />
 
           <div className="space-y-6 sm:space-y-8 animate-fadeInUp">
             <h4 className="text-white text-base sm:text-lg md:text-xl lg:text-2xl max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl mx-auto drop-shadow-2xl px-4 leading-relaxed font-medium">
               Premium Barbershop is the prime spot for your hair grooming needs in your city
             </h4>
-            <NavLink
-              to="/booking"
-              className="inline-block px-8 sm:px-10 md:px-12 py-3.5 sm:py-4 md:py-4.5 bg-[#d5a353] text-black text-sm sm:text-base md:text-lg uppercase font-bold tracking-wider hover:bg-[#c49343] hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-[#d5a353]/50"
-            >
-              Make an Appointment
-            </NavLink>
+            <div>
+
+              <NavLink to="/booking">
+                <button className="group relative px-8 py-5 bg-transparent text-[#d5a353] text-md uppercase font-bold tracking-wider overflow-hidden transition-all duration-700 hover:text-black">
+                  {/* Liquid background */}
+                  <span className="absolute inset-0 bg-gradient-to-r from-[#d5a353] via-[#f0c674] to-[#d5a353] translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-out"></span>
+
+                  {/* Border */}
+                  <span className="absolute inset-0 border-2 border-[#d5a353] group-hover:border-transparent transition-colors duration-700"></span>
+
+                  {/* Particles effect */}
+                  <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                    <span className="absolute top-1/2 left-1/4 w-2 h-2 bg-white rounded-full animate-ping"></span>
+                    <span className="absolute top-1/3 right-1/4 w-1.5 h-1.5 bg-white rounded-full animate-ping animation-delay-150"></span>
+                    <span className="absolute bottom-1/3 left-1/3 w-1 h-1 bg-white rounded-full animate-ping animation-delay-300"></span>
+                  </span>
+
+                  <span className="relative z-10  group-hover:scale-110 inline-block transition-transform duration-300">
+                    Make an Appointment
+                  </span>
+                </button>
+              </NavLink>
+            </div>
+
           </div>
         </div>
 
@@ -77,7 +95,7 @@ function Home() {
           </div>
         </div>
       </div>
-      
+
       <style>{`
         @keyframes fadeIn {
           from {
