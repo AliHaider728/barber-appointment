@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Loader2 } from 'lucide-react';
+import { Clock, Loader2 ,Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 const ServicesAvailable = () => {
@@ -34,7 +34,7 @@ const ServicesAvailable = () => {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-4 mb-6">
             <div className="w-16 h-0.5 bg-[#D4AF37]"></div>
-            <div className="w-10 h-10 bg-[#D4AF37] rounded-full"></div>
+            <Sparkles className="w-5 h-5 sm:w-7 sm:h-7 text-[#D4AF37]" />
             <div className="w-16 h-0.5 bg-[#D4AF37]"></div>
           </div>
           <h2 className="text-5xl lg:text-7xl font-black text-black mb-6 uppercase tracking-tight">

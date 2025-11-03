@@ -158,11 +158,10 @@ function Home() {
               className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed mb-8 sm:mb-10 md:mb-12"
               style={{ fontFamily: "serif" }}
             >
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
-              enim ad minim veniam, quis nostrud exercitation ullamco laboris
-              nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
-              reprehenderit in.
+              Step into Berger Barbershop — where modern style meets classic grooming. Our expert barbers are dedicated
+              to delivering precision cuts, clean fades, and sharp beard styling in a relaxing atmosphere. Whether you’re
+              preparing for an event or just need a refresh, we ensure you leave looking confident and feeling your best.
+              Experience the perfect blend of skill, comfort, and style — only at Berger.
             </p>
 
             <NavLink
@@ -172,6 +171,7 @@ function Home() {
               More About Us
             </NavLink>
           </div>
+
         </section>
       </div>
 
