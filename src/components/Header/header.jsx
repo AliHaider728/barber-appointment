@@ -50,7 +50,7 @@ export default function Header() {
           <NavLink to="/" className="flex items-center group">
             <div className="relative">
               <img
-                src="./logo.png"
+                src="https://berger.themerex.net/wp-content/uploads/2016/07/logo.png"
                 alt="Logo"
                 className="h-20 w-auto transition-transform duration-300 group-hover:scale-105"
               />
@@ -195,6 +195,7 @@ export default function Header() {
           </div>
         </div>
       </nav>
+
 
       {/* Animation Styles */}
       <style>{`
