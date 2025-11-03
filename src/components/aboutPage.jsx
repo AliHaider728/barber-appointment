@@ -16,6 +16,7 @@ const AboutPage = () => {
     { icon: Award, title: "Excellence Standard", description: "We maintain the highest standards in grooming and customer service" },
   ];
 
+  
   return (
     <div className="bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2]">
       {/* Hero Section */}
@@ -54,7 +55,7 @@ const AboutPage = () => {
             return (
               <div 
                 key={i} 
-                className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-6 text-center shadow-lg border border-gray-100 hover:border-[#D4AF37] transition-all hover:scale-105"
+                className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-6 text-center shadow-lg border border-gray-100 hover:border-[#D4AF37] transition-all duration-300 hover:scale-105"
               >
                 <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-[#D4AF37] mx-auto mb-2 sm:mb-3" />
                 <div className="text-2xl sm:text-3xl font-black text-black mb-1">{stat.number}</div>
@@ -99,14 +100,14 @@ const AboutPage = () => {
                 <img 
                   src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400" 
                   alt="Barbershop interior" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform" 
+                  className="w-full h-full object-cover hover:scale-105 transition-all duration-300 " 
                 />
               </div>
               <div className="h-32 sm:h-36 rounded-lg sm:rounded-xl overflow-hidden shadow-md">
                 <img 
                   src="https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400" 
                   alt="Barber tools" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform" 
+                  className="w-full h-full object-cover hover:scale-105 transition-all duration-300 " 
                 />
               </div>
             </div>
@@ -115,14 +116,14 @@ const AboutPage = () => {
                 <img 
                   src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400" 
                   alt="Grooming products" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform" 
+                  className="w-full h-full object-cover hover:scale-105 transition-all duration-300 " 
                 />
               </div>
               <div className="h-40 sm:h-48 rounded-lg sm:rounded-xl overflow-hidden shadow-md">
                 <img 
                   src="https://images.unsplash.com/photo-1598971639058-fab3c3109a00?w=400" 
                   alt="Barber at work" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform" 
+                  className="w-full h-full object-cover hover:scale-105 transition-all duration-300 " 
                 />
               </div>
             </div>
@@ -150,7 +151,7 @@ const AboutPage = () => {
               return (
                 <div 
                   key={i} 
-                  className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg sm:rounded-xl p-5 sm:p-6 border border-gray-700 hover:border-[#D4AF37] transition-all hover:scale-105"
+                  className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg sm:rounded-xl p-5 sm:p-6 border border-gray-700 hover:border-[#D4AF37] transition-all duration-300 hover:scale-105"
                 >
                   <div className="bg-[#D4AF37] w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-3 sm:mb-4 mx-auto sm:mx-0">
                     <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
