@@ -195,7 +195,7 @@ const Appointments = () => {
                         </button>
                       </div>
                     )}
-                  </td>
+                  </td> 
                 </tr>
               ))}
             </tbody>
@@ -203,6 +203,7 @@ const Appointments = () => {
         </div>
       </div>
 
+              
       {/* Mobile/Tablet Cards */}
       <div className="xl:hidden space-y-4">
         {filteredAppointments.map(apt => (
