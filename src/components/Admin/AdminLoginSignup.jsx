@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+
 const AdminLoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '' });
@@ -50,7 +51,7 @@ const AdminLoginSignup = () => {
       }
     } catch (err) {
       setLoading(false);
-      setError(err.response?.data?.message || 'Something went wrong');
+      setError(err.response?.data?.message || 'Something went wrong ');
     }
   };
 
@@ -109,7 +110,6 @@ const AdminLoginSignup = () => {
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">

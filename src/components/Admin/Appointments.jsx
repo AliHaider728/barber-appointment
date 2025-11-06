@@ -117,8 +117,7 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Desktop Table */}
-      {/* Desktop Table */}
+       {/* Desktop Table */}
       <div className="hidden xl:block bg-white rounded-xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
@@ -203,8 +202,7 @@ const Appointments = () => {
         </div>
       </div>
 
-              
-      {/* Mobile/Tablet Cards */}
+      {/* Responsivenes Mobile Screen */}
       <div className="xl:hidden space-y-4">
         {filteredAppointments.map(apt => (
           <div key={apt._id} className="bg-white rounded-xl shadow-md overflow-hidden border-l-4 border-[#D4AF37]">

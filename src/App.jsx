@@ -44,7 +44,7 @@ function AppContent() {
           {/* Admin Login */}
           <Route path="/admin" element={<AdminLoginSignup />} />
 
-          {/* Admin Dashboard with Layout */}
+          {/* Admin dashboard with layout */}
           <Route path="/admin/dashboard" element={<AdminLayout />}>
             <Route index element={<Overview />} />
             <Route path="overview" element={<Overview />} />
@@ -52,7 +52,7 @@ function AppContent() {
             <Route path="barbers" element={<Barbers />} />
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
-          </Route>
+           </Route>
         </Routes>
       </main>
       {!isAdminRoute && <AnimatedFooter />}

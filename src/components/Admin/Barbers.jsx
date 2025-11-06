@@ -16,6 +16,7 @@ const Barbers = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  
   useEffect(() => {
     fetchData();
   }, []);
@@ -85,6 +86,7 @@ const Barbers = () => {
     }
   };
 
+  
   const handleEdit = (b) => {
     setForm({
       name: b.name,

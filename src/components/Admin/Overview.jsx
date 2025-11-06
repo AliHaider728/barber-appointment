@@ -146,7 +146,7 @@ const Overview = () => {
     return (
       <div className="flex items-center justify-center py-12 sm:py-20 px-4">
         <div className="text-center">
-          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-gray-200 border-t-[#d4af37] rounded-full animate-spin"></div>
           <p className="mt-4 text-sm sm:text-base text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -328,8 +328,9 @@ const Overview = () => {
 
                 <button
                   onClick={exportToCSV}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#c9a332] transition text-sm font-medium"
+                  className="w-full flex items-center justify-center hover:translate-y-2 duration-300   gap-2 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#c9a332] transition text-sm font-medium"
                   disabled={filteredAppointments.length === 0}
+                  
                 >
                   <Download className="w-4 h-4" />
                   Export to CSV
