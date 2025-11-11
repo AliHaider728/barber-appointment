@@ -8,8 +8,8 @@ import PriceList from "./components/PriceList.jsx";
 import BarbersPage from "./components/barbers/barberpage.jsx";
 import AllBranchesPage from "./components/branches/AllBranchesPage.jsx";
 import BranchDetailPage from "./components/branches/BranchDetailPage.jsx";
-import BookingPage from "./components/Booking/BookingPage.jsx"; 
-import AdminLoginSignup from "./components/Admin/AdminLoginSignup.jsx"; 
+import BookingPage from "./components/Booking/BookingPage.jsx";
+import AdminLoginSignup from "./components/Admin/AdminLoginSignup.jsx";
 import AdminLayout from "./components/Admin/AdminLayout.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
@@ -19,7 +19,7 @@ import Appointments from "./components/Admin/Appointments.jsx";
 import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
-
+ 
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -52,7 +52,8 @@ function AppContent() {
             <Route path="barbers" element={<Barbers />} />
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
-           </Route>
+             
+          </Route>
         </Routes>
       </main>
       {!isAdminRoute && <AnimatedFooter />}

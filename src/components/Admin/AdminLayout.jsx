@@ -1,7 +1,7 @@
 // src/components/Admin/AdminLayout.jsx
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -11,7 +11,7 @@ const AdminLayout = () => {
   const menuItems = [
     { path: '/admin/dashboard/overview', label: 'Overview', icon: BarChart2 },
     { path: '/admin/dashboard/appointments', label: 'Appointments', icon: Calendar },
-    { path: '/admin/dashboard/barbers', label: 'Barbers', icon: Users },
+    { path: '/admin/dashboard/barbers', label: 'Barbers & Shifts', icon: Users },
     { path: '/admin/dashboard/branches', label: 'Branches', icon: MapPin },
     { path: '/admin/dashboard/services', label: 'Services', icon: Scissors },
   ];
@@ -249,8 +249,6 @@ const AdminLayout = () => {
                     </p>
                   </div>
                 </div>
-
- 
               </div>
             </footer>
           </div>

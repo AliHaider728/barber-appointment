@@ -2,18 +2,17 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { MapPin, Plus, Edit2, Trash2, X, Clock, Phone, Image as ImageIcon, Building2 } from 'lucide-react';
 
-// Vite environment variable (MUST be prefixed with VITE_)
 const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
 
 const Branches = () => {
   const [branches, setBranches] = useState([]);
-  const [form, setForm] = useState({ 
-    name: '', 
-    city: '', 
-    address: '', 
-    openingHours: '', 
-    phone: '', 
-    image: null 
+  const [form, setForm] = useState({
+    name: '',
+    city: '',
+    address: '',
+    openingHours: '',
+    phone: '',
+    image: null // base64 ya Cloudinary URL
   });
   const [editingId, setEditingId] = useState(null);
   const [preview, setPreview] = useState('');
@@ -39,48 +38,41 @@ const Branches = () => {
     }
   };
 
-  // Image compression function
+  // Image compression
   const compressImage = (file, callback) => {
-    const img = new Image();
     const reader = new FileReader();
-
     reader.onload = (e) => {
+      const img = new Image();
       img.src = e.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const MAX_WIDTH = 800;
         let { width, height } = img;
-
         if (width > MAX_WIDTH) {
           height = (height * MAX_WIDTH) / width;
           width = MAX_WIDTH;
         }
-
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-
         canvas.toBlob((blob) => {
           const compressedReader = new FileReader();
           compressedReader.onloadend = () => callback(compressedReader.result);
           compressedReader.readAsDataURL(blob);
-        }, 'image/jpeg', 0.7);
+        }, 'image/jpeg', 0.75);
       };
     };
-
     reader.readAsDataURL(file);
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) {
-      alert('Please select an image under 5MB');
+      alert('Image must be under 5MB');
       return;
     }
-
     compressImage(file, (base64) => {
       setForm({ ...form, image: base64 });
       setPreview(base64);
@@ -89,80 +81,69 @@ const Branches = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!form.name || !form.city || !form.address || !form.openingHours || !form.phone) {
       alert('All fields are required!');
       return;
     }
 
-    // Prepare data - agar edit mode mein hai aur new image nahi select ki toh purani image rakho
     const data = {
       name: form.name.trim(),
       city: form.city.trim(),
       address: form.address.trim(),
       openingHours: form.openingHours.trim(),
-      phone: form.phone.trim()
+      phone: form.phone.trim(),
     };
 
-    // Agar new image hai (base64 string) toh use karo, warna purani image rakhna (undefined bhejne se backend existing image rakhega)
+    // Sirf nayi image bhejo (base64)
     if (form.image && form.image.startsWith('data:')) {
       data.image = form.image;
-    } else if (editingId && form.image) {
-      // Edit mode mein agar image URL hai (purani image) toh usko bhi bhejo
-      data.image = form.image;
     }
+    // Edit mode mein purani image backend pe rahegi
 
     try {
       setLoading(true);
       setError(null);
-
       if (editingId) {
-        await axios.put(`${API_URL}/api/branches/${editingId}`, data, {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        await axios.put(`${API_URL}/api/branches/${editingId}`, data);
       } else {
-        await axios.post(`${API_URL}/api/branches`, data, {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        await axios.post(`${API_URL}/api/branches`, data);
       }
-
       resetForm();
       fetchBranches();
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
-      setError('Save failed: ' + errorMsg);
-      console.error('Save error:', err);
+      const msg = err.response?.data?.error || err.message;
+      setError('Save failed: ' + msg);
+      console.error('Submit error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (b) => {
+  const handleEdit = (branch) => {
     setForm({
-      name: b.name,
-      city: b.city,
-      address: b.address,
-      openingHours: b.openingHours,
-      phone: b.phone,
-      image: b.image // ✅ Purani image ko save rakho
+      name: branch.name,
+      city: branch.city,
+      address: branch.address,
+      openingHours: branch.openingHours,
+      phone: branch.phone,
+      image: branch.image // Cloudinary URL
     });
-    setEditingId(b._id);
-    setPreview(getImageSrc(b.image) || '');
+    setEditingId(branch._id);
+    setPreview(branch.image || '');
     setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this branch?')) {
-      try {
-        setLoading(true);
-        await axios.delete(`${API_URL}/api/branches/${id}`);
-        fetchBranches();
-      } catch (err) {
-        alert('Delete failed: ' + (err.response?.data?.error || err.message));
-      } finally {
-        setLoading(false);
-      }
+    if (!confirm('Delete this branch?')) return;
+    try {
+      setLoading(true);
+      await axios.delete(`${API_URL}/api/branches/${id}`);
+      fetchBranches();
+    } catch (err) {
+      alert('Delete failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -173,12 +154,16 @@ const Branches = () => {
     setError(null);
   };
 
-  // Smart image URL resolver
+  const removeImage = () => {
+    setPreview('');
+    setForm({ ...form, image: editingId ? form.image : null });
+  };
+
   const getImageSrc = (image) => {
     if (!image) return null;
     if (image.startsWith('data:')) return image;
-    if (image.startsWith('http://') || image.startsWith('https://')) return image;
-    return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+    if (image.startsWith('http')) return image;
+    return image;
   };
 
   if (initialLoading) {
@@ -205,13 +190,11 @@ const Branches = () => {
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 flex items-start gap-3">
-          <div className="flex-1">
-            <p className="text-xs sm:text-sm text-red-800">{error}</p>
-          </div>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+          <div className="flex-1"><p className="text-xs sm:text-sm text-red-800">{error}</p></div>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
@@ -225,9 +208,10 @@ const Branches = () => {
             {editingId ? 'Edit Branch' : 'Add New Branch'}
           </h3>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-4 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            {/* Name */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Branch Name *</label>
               <input
@@ -240,11 +224,12 @@ const Branches = () => {
               />
             </div>
 
+            {/* City */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">City *</label>
               <input
                 type="text"
-                placeholder="e.g. London"
+                placeholder="e.g. Lahore"
                 value={form.city}
                 onChange={e => setForm({ ...form, city: e.target.value })}
                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
@@ -252,11 +237,12 @@ const Branches = () => {
               />
             </div>
 
+            {/* Address */}
             <div className="md:col-span-2">
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Address *</label>
               <input
                 type="text"
-                placeholder="e.g. 123 High Street, Downtown"
+                placeholder="e.g. 123 Gulberg Road, Lahore"
                 value={form.address}
                 onChange={e => setForm({ ...form, address: e.target.value })}
                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
@@ -264,11 +250,12 @@ const Branches = () => {
               />
             </div>
 
+            {/* Hours */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Opening Hours *</label>
               <input
                 type="text"
-                placeholder="e.g. Mon-Fri: 9AM-6PM"
+                placeholder="e.g. Mon-Sat: 10AM-8PM"
                 value={form.openingHours}
                 onChange={e => setForm({ ...form, openingHours: e.target.value })}
                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
@@ -276,11 +263,12 @@ const Branches = () => {
               />
             </div>
 
+            {/* Phone */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
               <input
                 type="tel"
-                placeholder="e.g. +44 20 1234 5678"
+                placeholder="e.g. +92 300 1234567"
                 value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })}
                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
@@ -288,9 +276,10 @@ const Branches = () => {
               />
             </div>
 
+            {/* Image */}
             <div className="md:col-span-2">
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Branch Image {editingId && '(Leave empty to keep existing image)'}
+                Branch Image {editingId && '(Leave empty to keep existing)'}
               </label>
               <input
                 type="file"
@@ -298,22 +287,19 @@ const Branches = () => {
                 onChange={handleImageChange}
                 className="w-full text-xs sm:text-sm text-gray-500 file:mr-3 sm:file:mr-4 file:py-2 file:px-3 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-[#D4AF37] file:text-white hover:file:bg-[#C5A028] file:cursor-pointer"
               />
-              <p className="text-xs text-gray-500 mt-1">Max 5MB. Images are compressed automatically.</p>
-              
+              <p className="text-xs text-gray-500 mt-1">Max 5MB. Auto-compressed.</p>
+
               {preview && (
                 <div className="mt-3 sm:mt-4 relative inline-block">
-                  <img 
-                    src={preview} 
-                    alt="Preview" 
-                    className="h-32 sm:h-40 w-auto rounded-lg border border-gray-200 object-cover" 
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="h-32 sm:h-40 w-auto rounded-lg border border-gray-200 object-cover"
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      setPreview('');
-                      setForm({ ...form, image: editingId ? null : null }); // Edit mode mein null set karna means no change
-                    }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
                   >
                     <X className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
@@ -322,19 +308,24 @@ const Branches = () => {
             </div>
           </div>
 
+          {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 bg-[#D4AF37] text-white font-medium text-sm sm:text-base rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 bg-[#D4AF37] text-white font-medium text-sm sm:text-base rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? 'Saving...' : editingId ? 'Update Branch' : 'Add Branch'}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : editingId ? 'Update Branch' : 'Add Branch'}
             </button>
-            
             {editingId && (
-              <button 
-                type="button" 
-                onClick={resetForm} 
+              <button
+                type="button"
+                onClick={resetForm}
                 className="w-full sm:w-auto px-5 sm:px-6 py-2 sm:py-2.5 bg-gray-200 text-gray-700 font-medium text-sm sm:text-base rounded-lg hover:bg-gray-300 transition"
               >
                 Cancel
@@ -344,7 +335,7 @@ const Branches = () => {
         </form>
       </div>
 
-      {/* Branches List */}
+      {/* List */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
@@ -354,35 +345,36 @@ const Branches = () => {
             </span>
           </div>
         </div>
-        
+
         <div className="p-4 sm:p-6">
           {branches.length === 0 ? (
             <div className="text-center py-8 sm:py-12">
               <Building2 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
               <p className="text-sm sm:text-base text-gray-600 font-medium">No branches added yet</p>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">Add your first branch location using the form above</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">Add your first branch using the form above</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {branches.map(branch => {
                 const imgSrc = getImageSrc(branch.image);
                 return (
-                  <div 
-                    key={branch._id} 
+                  <div
+                    key={branch._id}
                     className="border border-gray-200 rounded-lg overflow-hidden hover:border-[#D4AF37] hover:shadow-md transition"
                   >
                     {imgSrc ? (
-                      <img 
-                        src={imgSrc} 
+                      <img
+                        src={imgSrc}
                         alt={branch.name}
                         className="w-full h-40 sm:h-48 object-cover"
-                        onError={(e) => {
+                        onError={e => {
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
                         }}
                       />
                     ) : null}
-                    <div 
+
+                    <div
                       className="w-full h-40 sm:h-48 bg-gray-100 hidden items-center justify-center"
                       style={{ display: imgSrc ? 'none' : 'flex' }}
                     >
@@ -391,7 +383,6 @@ const Branches = () => {
 
                     <div className="p-3 sm:p-4">
                       <h4 className="font-bold text-base sm:text-lg text-gray-900 mb-2 sm:mb-3">{branch.name}</h4>
-                      
                       <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                         <div className="flex items-start gap-2">
                           <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -400,12 +391,10 @@ const Branches = () => {
                             <p className="text-gray-600">{branch.city}</p>
                           </div>
                         </div>
-                        
                         <div className="flex items-center gap-2">
                           <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                           <span className="text-gray-900">{branch.openingHours}</span>
                         </div>
-                        
                         <div className="flex items-center gap-2">
                           <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                           <span className="text-gray-900">{branch.phone}</span>
@@ -413,19 +402,17 @@ const Branches = () => {
                       </div>
 
                       <div className="flex gap-2 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
-                        <button 
-                          onClick={() => handleEdit(branch)} 
+                        <button
+                          onClick={() => handleEdit(branch)}
                           className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-xs sm:text-sm font-medium"
                         >
-                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          Edit
+                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Edit
                         </button>
-                        <button 
-                          onClick={() => handleDelete(branch._id)} 
+                        <button
+                          onClick={() => handleDelete(branch._id)}
                           className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-xs sm:text-sm font-medium"
                         >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          Delete
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Delete
                         </button>
                       </div>
                     </div>

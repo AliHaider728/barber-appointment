@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign } from 'lucide-react';
+import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign, User } from 'lucide-react';
 
 const ServicesAdmin = () => {
   const [services, setServices] = useState([]);
-  const [form, setForm] = useState({ name: '', duration: '', price: '' });
+  const [form, setForm] = useState({ name: '', duration: '', price: '', gender: '' });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -31,7 +31,7 @@ const ServicesAdmin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.name || !form.duration || !form.price) {
+    if (!form.name.trim() || !form.duration.trim() || !form.price.trim() || !form.gender) {
       alert('All fields are required!');
       return;
     }
@@ -39,7 +39,8 @@ const ServicesAdmin = () => {
     const data = {
       name: form.name.trim(),
       duration: form.duration.trim(),
-      price: form.price.trim()
+      price: `£${form.price}`, // Backend expects £ symbol
+      gender: form.gender.toLowerCase()
     };
 
     try {
@@ -48,15 +49,18 @@ const ServicesAdmin = () => {
 
       if (editingId) {
         await axios.put(`https://barber-appointment-backend.vercel.app/api/services/${editingId}`, data);
+        alert('Service updated!');
       } else {
         await axios.post('https://barber-appointment-backend.vercel.app/api/services', data);
+        alert('Service added!');
       }
 
       resetForm();
       fetchServices();
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
-      setError('Save failed: ' + errorMsg);
+      const msg = err.response?.data?.message || err.message;
+      setError('Save failed: ' + msg);
+      alert('Error: ' + msg);
       console.error('Save error:', err);
     } finally {
       setLoading(false);
@@ -64,10 +68,13 @@ const ServicesAdmin = () => {
   };
 
   const handleEdit = (s) => {
-    setForm({ 
-      name: s.name, 
-      duration: s.duration, 
-      price: s.price 
+    // Remove £ symbol when editing
+    const priceWithoutSymbol = s.price.replace('£', '');
+    setForm({
+      name: s.name,
+      duration: s.duration,
+      price: priceWithoutSymbol,
+      gender: s.gender
     });
     setEditingId(s._id);
     setError(null);
@@ -81,7 +88,7 @@ const ServicesAdmin = () => {
         await axios.delete(`https://barber-appointment-backend.vercel.app/api/services/${id}`);
         fetchServices();
       } catch (err) {
-        alert('Delete failed: ' + (err.response?.data?.error || err.message));
+        alert('Delete failed: ' + (err.response?.data?.message || err.message));
       } finally {
         setLoading(false);
       }
@@ -89,10 +96,13 @@ const ServicesAdmin = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: '', duration: '', price: '' });
+    setForm({ name: '', duration: '', price: '', gender: '' });
     setEditingId(null);
     setError(null);
   };
+
+  const maleServices = services.filter(s => s.gender === 'male');
+  const femaleServices = services.filter(s => s.gender === 'female');
 
   if (initialLoading) {
     return (
@@ -113,7 +123,7 @@ const ServicesAdmin = () => {
           <Scissors className="w-8 h-8 text-[#D4AF37]" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Services Management</h2>
-            <p className="text-sm text-gray-600">Manage your barbershop services and pricing</p>
+            <p className="text-sm text-gray-600">Add, edit, or remove barber services</p>
           </div>
         </div>
       </div>
@@ -138,14 +148,12 @@ const ServicesAdmin = () => {
             {editingId ? 'Edit Service' : 'Add New Service'}
           </h3>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Service Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service Name *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Service Name *</label>
               <input
                 type="text"
                 placeholder="e.g. Haircut"
@@ -158,12 +166,10 @@ const ServicesAdmin = () => {
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Duration *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duration *</label>
               <input
                 type="text"
-                placeholder="e.g. 30 mins"
+                placeholder="e.g. 30 minutes"
                 value={form.duration}
                 onChange={e => setForm({ ...form, duration: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
@@ -173,34 +179,53 @@ const ServicesAdmin = () => {
 
             {/* Price */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price *
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. £25"
-                value={form.price}
-                onChange={e => setForm({ ...form, price: e.target.value })}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-gray-500 font-medium">£</span>
+                <input
+                  type="text"
+                  placeholder="25"
+                  value={form.price}
+                  onChange={e => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setForm({ ...form, price: value });
+                  }}
+                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+              <select
+                value={form.gender}
+                onChange={e => setForm({ ...form, gender: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
                 required
-              />
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-3 mt-6">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="px-6 py-2 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : editingId ? 'Update Service' : 'Add Service'}
             </button>
-            
+
             {editingId && (
-              <button 
-                type="button" 
-                onClick={resetForm} 
+              <button
+                type="button"
+                onClick={resetForm}
                 className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition"
               >
                 Cancel
@@ -210,75 +235,90 @@ const ServicesAdmin = () => {
         </form>
       </div>
 
-      {/* Services List */}
+      {/* Male Services */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">All Services</h3>
-            <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
-              {services.length} Total
-            </span>
-          </div>
+        <div className="border-b border-gray-200 px-6 py-4 bg-blue-50">
+          <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+            <User className="w-5 h-5" /> Male Services ({maleServices.length})
+          </h3>
         </div>
-        
         <div className="p-6">
-          {services.length === 0 ? (
-            <div className="text-center py-12">
-              <Scissors className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 font-medium">No services added yet</p>
-              <p className="text-sm text-gray-500 mt-1">Add your first service using the form above</p>
-            </div>
+          {maleServices.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No male services yet</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {services.map(service => (
-                <div 
-                  key={service._id} 
-                  className="border border-gray-200 rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition"
-                >
-                  {/* Service Header */}
-                  <div className="flex items-start gap-3 mb-3">
-                     
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-gray-900 truncate">{service.name}</h4>
-                    </div>
-                  </div>
-
-                  {/* Service Details */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="text-gray-900 font-medium">{service.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-600">Price:</span>
-                      <span className="text-gray-900 font-medium">{service.price}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t border-gray-100">
-                    <button 
-                      onClick={() => handleEdit(service)} 
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(service._id)} 
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
+              {maleServices.map(service => (
+                <ServiceCard key={service._id} service={service} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
           )}
         </div>
+      </div>
+
+      {/* Female Services */}
+      <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="border-b border-gray-200 px-6 py-4 bg-pink-50">
+          <h3 className="text-lg font-semibold text-pink-900 flex items-center gap-2">
+            <User className="w-5 h-5" /> Female Services ({femaleServices.length})
+          </h3>
+        </div>
+        <div className="p-6">
+          {femaleServices.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No female services yet</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {femaleServices.map(service => (
+                <ServiceCard key={service._id} service={service} onEdit={handleEdit} onDelete={handleDelete} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ServiceCard = ({ service, onEdit, onDelete }) => {
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-10 h-10 bg-[#D4AF37]/10 rounded-full flex items-center justify-center flex-shrink-0">
+          <Scissors className="w-5 h-5 text-[#D4AF37]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-gray-900 truncate">{service.name}</h4>
+          <p className="text-xs text-gray-500 capitalize">{service.gender}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="w-4 h-4 text-gray-400" />
+          <span className="text-gray-600">Duration:</span>
+          <span className="text-gray-900 font-medium">{service.duration}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span className="text-gray-600">Price:</span>
+          <span className="text-[#D4AF37] font-bold">{service.price}</span>
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-3 border-t border-gray-100">
+        <button
+          onClick={() => onEdit(service)}
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+        >
+          <Edit2 className="w-4 h-4" />
+          Edit
+        </button>
+        <button
+          onClick={() => onDelete(service._id)}
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete
+        </button>
       </div>
     </div>
   );
