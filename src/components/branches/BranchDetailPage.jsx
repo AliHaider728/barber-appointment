@@ -4,7 +4,6 @@ import { MapPin, Clock, Phone, ChevronRight, Star, Award, Calendar, ArrowLeft, S
 import { Button } from "../ui/button";
 import axios from 'axios';
 
-// API URL configuration
 const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
 
 const BranchDetailPage = () => {
@@ -17,15 +16,10 @@ const BranchDetailPage = () => {
   const [hoveredBarber, setHoveredBarber] = useState(null);
   const [hoveredService, setHoveredService] = useState(null);
 
-  // Smart image URL resolver - handles Base64, full URLs, and relative paths
   const getImageSrc = (image) => {
     if (!image) return 'https://via.placeholder.com/1200x600?text=No+Image';
-    // If it's already a Base64 string
-    if (image.startsWith('data:')) return image;
-    // If it's a full URL
-    if (image.startsWith('http://') || image.startsWith('https://')) return image;
-    // If it's a relative path from old system
-    return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+    if (image.startsWith('data:') || image.startsWith('http')) return image;
+    return image;
   };
 
   useEffect(() => {
@@ -37,23 +31,18 @@ const BranchDetailPage = () => {
           axios.get(`${API_URL}/api/services`)
         ]);
 
-        const branchData = branchRes.data;
-        if (!branchData) throw new Error("Branch not found");
+        if (!branchRes.data) throw new Error("Branch not found");
+        setBranch(branchRes.data);
 
-        setBranch(branchData);
-
-        // Filter barbers by branch
-        const barbers = barberRes.data.filter(barber => {
-          if (!barber.branch) return false;
-          return barber.branch._id === branchId || barber.branch === branchId;
-        });
+        const barbers = barberRes.data.filter(barber =>
+          barber.branch && (barber.branch._id === branchId || barber.branch === branchId)
+        );
 
         setBranchBarbers(barbers);
         setAllServices(serviceRes.data);
-        setLoading(false);
       } catch (err) {
-        console.error("Fetch error:", err);
-        setError('Failed to load branch details.');
+        setError(err.response?.data?.error || 'Failed to load branch details');
+      } finally {
         setLoading(false);
       }
     };
@@ -65,8 +54,8 @@ const BranchDetailPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-16 h-16 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600 text-xl">Loading branch details...</p>
+          <div className="w-16 h-16 border-4 border-t-[#D4AF37] border-gray-300 rounded-full animate-spin mb-4"></div>
+          <p className="text-xl text-gray-600">Loading branch details...</p>
         </div>
       </div>
     );
@@ -76,8 +65,8 @@ const BranchDetailPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4">❌</div>
           <h2 className="text-3xl font-black text-black mb-4">Branch Not Found</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
           <Link to="/branches">
             <Button className="bg-[#D4AF37] text-black font-bold hover:bg-black hover:text-white">
               Back to Branches
@@ -96,14 +85,13 @@ const BranchDetailPage = () => {
           src={getImageSrc(branch.image)}
           alt={branch.name}
           className="w-full h-full object-cover"
-          onError={(e) => e.target.src = 'https://via.placeholder.com/1200x600?text=Branch+Image'}
+          onError={(e) => e.target.src = 'https://via.placeholder.com/1200x600?text=No+Image'}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
 
         <Link to="/branches" className="absolute top-8 left-8 z-10">
           <button className="flex items-center gap-2 bg-white/90 backdrop-blur-sm text-black font-bold px-6 py-3 rounded-full hover:bg-white transition-all duration-300 shadow-lg">
-            <ArrowLeft className="w-5 h-5" />
-            Back
+            <ArrowLeft className="w-5 h-5" /> Back
           </button>
         </Link>
 
