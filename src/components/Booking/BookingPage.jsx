@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapPin, Calendar, Clock, ChevronRight, Scissors, Check, Home, CalendarPlus, User, Package, CreditCard } from 'lucide-react';
+import { MapPin, Calendar, Clock, ChevronRight, Scissors, Check, Home, CalendarPlus, User, Package, CreditCard, X } from 'lucide-react';
 
 const parseTime = (t) => {
   const [h, m] = t.split(':').map(Number);
@@ -60,8 +60,23 @@ const BookingPage = () => {
   const [services, setServices] = useState([]);
   const [branchBarbers, setBranchBarbers] = useState([]);
   const [barberSpecialties, setBarberSpecialties] = useState([]);
-  const [shifts, setShifts] = useState([]);
+  const [barberShift, setBarberShift] = useState(null);
   const [existingBookings, setExistingBookings] = useState([]);
+
+  // TOTAL PRICE & MINUTES (FIXED - DEFINED AT TOP)
+  const totalMinutes = useMemo(() => {
+    return selectedServices.reduce((sum, id) => {
+      const s = services.find(x => x._id === id);
+      return sum + (parseInt(s?.duration?.match(/\d+/)?.[0]) || 0);
+    }, 0);
+  }, [selectedServices, services]);
+
+  const totalPrice = useMemo(() => {
+    return selectedServices.reduce((sum, id) => {
+      const s = services.find(x => x._id === id);
+      return sum + parseFloat(s?.price.replace('£', '') || 0);
+    }, 0);
+  }, [selectedServices, services]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -73,14 +88,10 @@ const BookingPage = () => {
           fetch('https://barber-appointment-backend.vercel.app/api/barbers')
         ]);
         const [b, s, barb] = await Promise.all([bRes.json(), sRes.json(), barbRes.json()]);
-        
-        console.log('Fetched data:', { branches: b, services: s, barbers: barb });
-        
         setBranches(b || []);
         setServices(s || []);
         setBarbers(barb || []);
       } catch (err) {
-        console.error('Fetch error:', err);
         alert('Failed to load data');
       } finally {
         setFetching(false);
@@ -91,16 +102,9 @@ const BookingPage = () => {
 
   useEffect(() => {
     if (selectedBranch && gender) {
-      console.log('Filtering barbers:', { selectedBranch, gender, totalBarbers: barbers.length });
-      
-      const filtered = barbers.filter(b => {
-        const branchMatch = b.branch?._id === selectedBranch || b.branch === selectedBranch;
-        const genderMatch = b.gender === gender;
-        console.log('Barber check:', { name: b.name, branchMatch, genderMatch, branch: b.branch });
-        return branchMatch && genderMatch;
-      });
-      
-      console.log('Filtered barbers:', filtered);
+      const filtered = barbers.filter(b => 
+        (b.branch?._id === selectedBranch || b.branch === selectedBranch) && b.gender === gender
+      );
       setBranchBarbers(filtered);
       setSelectedBarber('');
       setSelectedServices([]);
@@ -119,62 +123,56 @@ const BookingPage = () => {
   }, [selectedBarber, barbers, services, gender]);
 
   useEffect(() => {
-    if (selectedBarber && selectedDate && shifts.length === 0) {
-      setShifts([{ startTime: "09:00", endTime: "19:00" }]);
+    if (selectedBarber && selectedDate) {
+      const fetchShift = async () => {
+        try {
+          const res = await fetch(
+            `https://barber-appointment-backend.vercel.app/api/barber-shifts/barber/${selectedBarber}/date/${selectedDate}`
+          );
+          const data = await res.json();
+          setBarberShift(data);
+        } catch (err) {
+          setBarberShift({ isOff: true });
+        }
+      };
+      fetchShift();
+    } else {
+      setBarberShift(null);
     }
-  }, [selectedBarber, selectedDate, shifts]);
+  }, [selectedBarber, selectedDate]);
 
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       fetch(`https://barber-appointment-backend.vercel.app/api/appointments/barber/${selectedBarber}/date/${selectedDate}`)
-        .then(r => {
-          if (!r.ok) throw new Error('No bookings');
-          return r.json();
-        })
-        .then(data => {
-          console.log('Existing bookings:', data);
-          setExistingBookings(Array.isArray(data) ? data : []);
-        })
+        .then(r => r.ok ? r.json() : [])
+        .then(setExistingBookings)
         .catch(() => setExistingBookings([]));
     }
   }, [selectedBarber, selectedDate]);
 
-  const totalMinutes = useMemo(() => {
-    return selectedServices.reduce((sum, id) => {
-      const s = services.find(x => x._id === id);
-      return sum + (parseInt(s?.duration?.match(/\d+/)?.[0]) || 0);
-    }, 0);
-  }, [selectedServices, services]);
-
-  const totalPrice = useMemo(() => {
-    return selectedServices.reduce((sum, id) => {
-      const s = services.find(x => x._id === id);
-      return sum + parseFloat(s?.price.replace('£', '') || 0);
-    }, 0);
-  }, [selectedServices, services]);
-
-  // FIXED: Slots jump by total service duration (no overlap)
   const timeSlots = useMemo(() => {
-    if (!selectedDate || !selectedBarber || totalMinutes === 0 || shifts.length === 0) return [];
+    if (!selectedDate || !selectedBarber || totalMinutes === 0 || !barberShift) return [];
 
-    const shift = shifts[0];
-    const shiftStart = parseTime(shift.startTime || "09:00");
-    const shiftEnd = parseTime(shift.endTime || "19:00");
+    if (barberShift.isOff) return [];
+
+    const now = new Date();
+    const selected = new Date(selectedDate);
+    const isToday = selected.toDateString() === now.toDateString();
+
+    const shiftStart = parseTime(barberShift.startTime || "09:00");
+    const shiftEnd = parseTime(barberShift.endTime || "19:00");
+    const startTime = isToday ? new Date(Math.max(now, shiftStart)) : shiftStart;
 
     const slots = [];
-    let current = new Date(shiftStart);
+    let current = new Date(startTime);
 
-    // Generate slots - jump by TOTAL service duration
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
       const slotEnd = addMinutes(current, totalMinutes);
 
-      // Check if this slot overlaps with any existing booking
       const hasConflict = existingBookings.some(booking => {
-        const bookingStart = new Date(booking.date);
-        const bookingEnd = addMinutes(bookingStart, booking.duration);
-        
-        // Check if slots overlap
-        return (current < bookingEnd && slotEnd > bookingStart);
+        const bStart = new Date(booking.date);
+        const bEnd = addMinutes(bStart, booking.duration);
+        return current < bEnd && slotEnd > bStart;
       });
 
       if (!hasConflict) {
@@ -185,12 +183,11 @@ const BookingPage = () => {
         });
       }
 
-      // FIXED: Jump by total service time (not 30 min)
       current = addMinutes(current, totalMinutes);
     }
 
     return slots;
-  }, [selectedDate, selectedBarber, totalMinutes, shifts, existingBookings]);
+  }, [selectedDate, selectedBarber, totalMinutes, barberShift, existingBookings]);
 
   const handleServiceToggle = id => {
     setSelectedServices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -204,7 +201,7 @@ const BookingPage = () => {
 
     if (step === 3) {
       const slot = timeSlots.find(s => s.start === selectedTime);
-      if (!slot?.available) return alert('Selected slot is not available');
+      if (!slot) return alert('Selected time is not available');
     }
 
     if (step === 4) {
@@ -235,7 +232,6 @@ const BookingPage = () => {
         setBookingRef(data._id);
         setBookingComplete(true);
       } catch (err) {
-        console.error('Booking error:', err);
         alert('Booking failed. Please try again.');
       } finally {
         setLoading(false);
@@ -247,7 +243,6 @@ const BookingPage = () => {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Get selected data for preview
   const selectedBranchData = branches.find(b => b._id === selectedBranch);
   const selectedBarberData = barbers.find(b => b._id === selectedBarber);
   const selectedServicesData = selectedServices.map(id => services.find(s => s._id === id));
@@ -279,11 +274,8 @@ const BookingPage = () => {
           <h1 className="text-4xl font-black uppercase">Book Appointment</h1>
         </div>
 
-        {/* Desktop Layout: Form + Live Preview */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* LEFT: Form Steps */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Progress Steps */}
             <div className="flex justify-between bg-white p-4 rounded-xl">
               {['Branch', 'Services', 'Date & Time', 'Confirm'].map((l, i) => (
                 <div key={i} className="flex flex-col items-center">
@@ -295,7 +287,6 @@ const BookingPage = () => {
               ))}
             </div>
 
-            {/* STEP 1 */}
             {step === 1 && (
               <Card>
                 <h2 className="text-xl font-bold mb-4">Select Branch</h2>
@@ -315,7 +306,6 @@ const BookingPage = () => {
               </Card>
             )}
 
-            {/* STEP 2 */}
             {step === 2 && (
               <Card>
                 <h2 className="text-xl font-bold mb-4">Select Services</h2>
@@ -372,12 +362,22 @@ const BookingPage = () => {
               </Card>
             )}
 
-            {/* STEP 3 */}
             {step === 3 && (
               <Card>
                 <h2 className="text-xl font-bold mb-4">Select Date & Time</h2>
                 <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} min={today} className="mb-4" />
-                {selectedDate && timeSlots.length > 0 && (
+
+                {selectedDate && barberShift?.isOff && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4 flex items-center gap-3">
+                    <X className="w-6 h-6 text-red-600" />
+                    <div>
+                      <p className="font-bold text-red-800">Barber is OFF on this day</p>
+                      <p className="text-sm text-red-600">Please select another date</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedDate && !barberShift?.isOff && timeSlots.length > 0 && (
                   <div>
                     <h3 className="font-bold mb-3 text-sm">Available Slots ({totalMinutes} min)</h3>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
@@ -394,13 +394,13 @@ const BookingPage = () => {
                     </div>
                   </div>
                 )}
-                {selectedDate && timeSlots.length === 0 && (
-                  <p className="text-red-600 text-sm">No available slots. Try a different date or fewer services.</p>
+
+                {selectedDate && !barberShift?.isOff && timeSlots.length === 0 && (
+                  <p className="text-red-600 text-sm">No slots available. Try reducing services or another date.</p>
                 )}
               </Card>
             )}
 
-            {/* STEP 4 */}
             {step === 4 && (
               <Card>
                 <h2 className="text-xl font-bold mb-4">Your Details</h2>
@@ -412,7 +412,6 @@ const BookingPage = () => {
               </Card>
             )}
 
-            {/* Navigation Buttons */}
             <div className="flex justify-between">
               {step > 1 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
               <Button onClick={handleNext} disabled={loading} className="ml-auto">
@@ -421,14 +420,12 @@ const BookingPage = () => {
             </div>
           </div>
 
-          {/* RIGHT: Live Preview Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6 border-2 border-[#D4AF37]">
               <h3 className="text-lg font-black mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#D4AF37]" />
                 Booking Summary
               </h3>
-              
               <div className="space-y-4 text-sm">
                 {selectedBranchData && (
                   <div>
@@ -513,4 +510,4 @@ const BookingPage = () => {
   );
 };
 
-export default BookingPage; 
+export default BookingPage;

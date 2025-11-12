@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, Scissors } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, Scissors, User } from 'lucide-react';
 
 const Barbers = () => {
   const [barbers, setBarbers] = useState([]);
@@ -18,7 +18,7 @@ const Barbers = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('barbers'); // 'barbers' or 'shifts'
+  const [activeTab, setActiveTab] = useState('barbers');
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [shiftForm, setShiftForm] = useState({
     dayOfWeek: 1,
@@ -83,7 +83,6 @@ const Barbers = () => {
       const res = await axios.get(`https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`);
       setShifts(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      // If 404, it means no shifts exist yet - this is normal
       if (err.response?.status === 404) {
         setShifts([]);
       } else {
@@ -292,7 +291,6 @@ const Barbers = () => {
             
             <form onSubmit={handleSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
@@ -305,7 +303,6 @@ const Barbers = () => {
                   />
                 </div>
 
-                {/* Experience */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years) *</label>
                   <input
@@ -319,7 +316,6 @@ const Barbers = () => {
                   />
                 </div>
 
-                {/* Gender */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
                   <select
@@ -334,7 +330,6 @@ const Barbers = () => {
                   </select>
                 </div>
 
-                {/* Branch */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
                   <select
@@ -389,7 +384,6 @@ const Barbers = () => {
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex gap-3 mt-6">
                 <button 
                   type="submit" 
@@ -453,26 +447,58 @@ const Barbers = () => {
                         </div>
                       </div>
 
-                      {/* Details */}
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-start gap-2 text-sm">
-                          <Scissors className="w-4 h-4 text-gray-400 mt-0.5" />
+                      {/* Branch */}
+                      <div className="flex items-center gap-2 text-sm mb-3">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-600">Branch:</span>
+                        <span className="text-gray-900 font-medium">
+                          {barber.branch?.name || 'Not Assigned'}
+                        </span>
+                      </div>
+
+                      {/* Services - Gender Wise */}
+                      <div className="space-y-3 mb-4">
+                        {barber.gender === 'male' && barber.specialties?.length > 0 && (
                           <div>
-                            <span className="text-gray-600">Services:</span>
-                            <p className="text-gray-900 font-medium">
-                              {Array.isArray(barber.specialties) 
-                                ? barber.specialties.join(', ') 
-                                : barber.specialties}
-                            </p>
+                            <div className="flex items-center gap-1 text-xs font-semibold text-blue-700 mb-1">
+                              <User className="w-3 h-3" />
+                              <span>Male Services ({barber.specialties.length})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {barber.specialties.map((service, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded-full"
+                                >
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-600">Branch:</span>
-                          <span className="text-gray-900 font-medium">
-                            {barber.branch?.name || 'Not Assigned'}
-                          </span>
-                        </div>
+                        )}
+
+                        {barber.gender === 'female' && barber.specialties?.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-1 text-xs font-semibold text-pink-700 mb-1">
+                              <User className="w-3 h-3" />
+                              <span>Female Services ({barber.specialties.length})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {barber.specialties.map((service, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 text-xs bg-pink-50 text-pink-700 rounded-full"
+                                >
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(!barber.specialties || barber.specialties.length === 0) && (
+                          <p className="text-xs text-gray-400 italic">No services assigned</p>
+                        )}
                       </div>
 
                       {/* Actions */}
@@ -514,7 +540,6 @@ const Barbers = () => {
       {/* Shifts Tab */}
       {activeTab === 'shifts' && (
         <>
-          {/* Barber Selection */}
           <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Barber to Manage Shifts *
@@ -538,7 +563,6 @@ const Barbers = () => {
 
           {selectedBarber && (
             <>
-              {/* Add Shift Form */}
               <div className="bg-white rounded-lg shadow border border-gray-200">
                 <div className="border-b border-gray-200 px-6 py-4">
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -607,7 +631,6 @@ const Barbers = () => {
                 </form>
               </div>
 
-              {/* Shifts Calendar View */}
               <div className="bg-white rounded-lg shadow border border-gray-200">
                 <div className="border-b border-gray-200 px-6 py-4">
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
