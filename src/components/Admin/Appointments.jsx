@@ -25,6 +25,7 @@ const Appointments = () => {
     }
   };
 
+  
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
     try {

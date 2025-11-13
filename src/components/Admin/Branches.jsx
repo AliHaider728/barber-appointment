@@ -4,6 +4,13 @@ import { MapPin, Plus, Edit2, Trash2, X, Clock, Phone, Image as ImageIcon, Build
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
 
+// Predefined Cloudinary Images
+const PRESET_IMAGES = [
+  'https://res.cloudinary.com/dn2bcvcvg/image/upload/v1762862312/Headingley_cazu9x.jpg',
+  'https://res.cloudinary.com/dn2bcvcvg/image/upload/v1762862311/Deansgate_qbpjw4.jpg',
+  'https://res.cloudinary.com/dn2bcvcvg/image/upload/v1762862311/Central_London_r7a1gd.jpg'
+];
+
 const Branches = () => {
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({
@@ -72,6 +79,11 @@ const Branches = () => {
     });
   };
 
+  const handlePresetImage = (url) => {
+    setForm({ ...form, image: url });
+    setPreview(url);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.city || !form.address || !form.openingHours || !form.phone) {
@@ -87,8 +99,9 @@ const Branches = () => {
       phone: form.phone.trim(),
     };
 
-    // Only send base64 if new image selected
     if (form.image && form.image.startsWith('data:')) {
+      data.image = form.image;
+    } else if (form.image && form.image.startsWith('http')) {
       data.image = form.image;
     }
 
@@ -150,7 +163,7 @@ const Branches = () => {
   };
 
   const getImageSrc = (image) => {
-    if (!image) return 'https://via.placeholder.com/600x400?text=No+Image';
+    if (!image) return 'https://placehold.co/600x400/cccccc/666666/png?text=No+Image';
     if (image.startsWith('data:') || image.startsWith('http')) return image;
     return image;
   };
@@ -168,16 +181,18 @@ const Branches = () => {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Header */}
       <div className="bg-white rounded-lg shadow border p-6">
         <div className="flex items-center gap-3">
           <Building2 className="w-8 h-8 text-[#D4AF37]" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Branches Management</h2>
-            <p className="text-sm text-gray-600">Manage your barbershop locations</p>
+            <p className="text-sm text-gray-600">Add, edit, or delete your barbershop locations</p>
           </div>
         </div>
       </div>
 
+      {/* Error Alert */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <p className="text-sm text-red-800">{error}</p>
@@ -187,6 +202,7 @@ const Branches = () => {
         </div>
       )}
 
+      {/* Form */}
       <div className="bg-white rounded-lg shadow border">
         <div className="border-b px-6 py-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -195,7 +211,7 @@ const Branches = () => {
           </h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name *</label>
@@ -211,39 +227,61 @@ const Branches = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours *</label>
-              <input type="text" value={form.openingHours} onChange={e => setForm({ ...form, openingHours: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none" required />
+              <input type="text" value={form.openingHours} onChange={e => setForm({ ...form, openingHours: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none" placeholder="e.g. 09:00 - 19:00" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
               <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none" required />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch Image {editingId && '(Leave empty to keep existing)'}
-              </label>
-              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#D4AF37] file:text-white hover:file:bg-[#C5A028]" />
-              <p className="text-xs text-gray-500 mt-1">Max 5MB. Auto-compressed.</p>
-
-              {preview && (
-                <div className="mt-4 relative inline-block">
-                  <img src={preview} alt="Preview" className="h-40 w-auto rounded-lg border object-cover" />
-                  <button type="button" onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
+          {/* Image Upload */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">
+              Branch Image {editingId && '(Leave empty to keep existing)'}
+            </label>
+            <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#D4AF37] file:text-white hover:file:bg-[#C5A028]" />
+            <p className="text-xs text-gray-500">Max 5MB. Auto-compressed to 800px width.</p>
+
+            {/* Preset Images */}
+            <div className="flex gap-2 mt-3">
+              {PRESET_IMAGES.map((url, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handlePresetImage(url)}
+                  className="relative group overflow-hidden rounded-lg border-2 border-gray-300 hover:border-[#D4AF37] transition"
+                >
+                  <img src={url} alt={`Preset ${i + 1}`} className="w-20 h-20 object-cover" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">Use</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Preview */}
+            {preview && (
+              <div className="mt-4 relative inline-block">
+                <img src={preview} alt="Preview" className="h-40 w-auto rounded-lg border object-cover shadow-md" />
+                <button type="button" onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3">
             <button type="submit" disabled={loading} className="px-6 py-2.5 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] disabled:opacity-50 flex items-center gap-2">
-              {loading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Saving...</> : editingId ? 'Update' : 'Add'}
+              {loading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Saving...</> : editingId ? 'Update Branch' : 'Add Branch'}
             </button>
             {editingId && <button type="button" onClick={resetForm} className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>}
           </div>
         </form>
       </div>
 
+      {/* Branches List */}
       <div className="bg-white rounded-lg shadow border">
         <div className="border-b px-6 py-4 flex justify-between items-center">
           <h3 className="text-lg font-semibold">All Branches</h3>
@@ -263,7 +301,12 @@ const Branches = () => {
                 return (
                   <div key={branch._id} className="border rounded-lg overflow-hidden hover:border-[#D4AF37] hover:shadow-md transition">
                     {imgSrc ? (
-                      <img src={imgSrc} alt={branch.name} className="w-full h-48 object-cover" onError={e => e.target.src = 'https://via.placeholder.com/600x400?text=No+Image'} />
+                      <img
+                        src={imgSrc}
+                        alt={branch.name}
+                        className="w-full h-48 object-cover"
+                        onError={e => e.target.src = 'https://placehold.co/600x400/cccccc/666666/png?text=No+Image'}
+                      />
                     ) : (
                       <div className="h-48 bg-gray-100 flex items-center justify-center">
                         <ImageIcon className="w-12 h-12 text-gray-400" />
