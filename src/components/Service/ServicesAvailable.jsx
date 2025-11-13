@@ -27,6 +27,7 @@ const ServicesAvailable = () => {
     fetchServices();
   }, []);
 
+  
   // Filter by gender
   const maleServices = services.filter(s => s.gender === 'male');
   const femaleServices = services.filter(s => s.gender === 'female');
