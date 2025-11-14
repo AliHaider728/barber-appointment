@@ -9,6 +9,7 @@ const Appointments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
 
+  
   useEffect(() => {
     fetchAppointments();
   }, []);
@@ -158,7 +159,9 @@ const Appointments = () => {
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <span className="text-sm text-gray-900 line-clamp-2">{apt.barber}</span>
+                    <span className="text-sm text-gray-900 line-clamp-2">
+                      {apt.barber?.name || 'N/A'}
+                    </span>
                   </td>
                   <td className="px-4 py-4">
                     <span className="text-sm text-gray-700 line-clamp-2">{apt.branch?.name || 'N/A'}</span>
@@ -202,7 +205,7 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Responsivenes Mobile Screen */}
+      {/* Mobile Screen */}
       <div className="xl:hidden space-y-4">
         {filteredAppointments.map(apt => (
           <div key={apt._id} className="bg-white rounded-xl shadow-md overflow-hidden border-l-4 border-[#D4AF37]">
@@ -250,7 +253,7 @@ const Appointments = () => {
                     <Clock className="w-4 h-4 text-[#D4AF37]" />
                     <span className="text-xs font-medium">Time</span>
                   </div>
-                  <p className="text-sm font-bold text-gray-900">{new Date(apt.date).toLocaleTimeString()}</p>
+                  <p className="text-sm font-bold text-gray-900">{new Date(apt.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</p>
                 </div>
               </div>
 
@@ -270,7 +273,9 @@ const Appointments = () => {
                     <User className="w-4 h-4 text-[#D4AF37]" />
                     <span className="text-xs font-medium">Barber</span>
                   </div>
-                  <p className="text-sm font-bold text-gray-900">{apt.barber}</p>
+                  <p className="text-sm font-bold text-gray-900">
+                    {apt.barber?.name || 'N/A'}
+                  </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-gray-500 mb-1">
@@ -286,7 +291,7 @@ const Appointments = () => {
                   <DollarSign className="w-4 h-4 text-[#D4AF37]" />
                   <span className="text-xs font-medium">Total Price</span>
                 </div>
-                <p className="text-2xl font-black text-[#D4AF37]">{apt.totalPrice?.toFixed(2) || '0.00'}</p>
+                <p className="text-2xl font-black text-[#D4AF37]">£{apt.totalPrice?.toFixed(2) || '0.00'}</p>
               </div>
 
               {apt.status === 'pending' && (
