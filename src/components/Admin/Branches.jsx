@@ -4,13 +4,6 @@ import { MapPin, Plus, Edit2, Trash2, X, Clock, Phone, Image as ImageIcon, Build
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://barber-appointment-backend.vercel.app';
 
-// Predefined Cloudinary Images
-const PRESET_IMAGES = [
-  'https://res.cloudinary.com/dn2bcvcvg/image/upload/v1762862312/Headingley_cazu9x.jpg',
-  'https://res.cloudinary.com/dn2bcvcvg/image/upload/v1762862311/Deansgate_qbpjw4.jpg',
-  'https://res.cloudinary.com/dn2bcvcvg/image/upload/v1762862311/Central_London_r7a1gd.jpg'
-];
-
 const Branches = () => {
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({
@@ -79,11 +72,7 @@ const Branches = () => {
     });
   };
 
-  const handlePresetImage = (url) => {
-    setForm({ ...form, image: url });
-    setPreview(url);
-  };
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.city || !form.address || !form.openingHours || !form.phone) {
@@ -235,32 +224,20 @@ const Branches = () => {
             </div>
           </div>
 
-          {/* Image Upload */}
+          {/* Image Upload - Only Custom Upload */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700">
               Branch Image {editingId && '(Leave empty to keep existing)'}
             </label>
-            <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#D4AF37] file:text-white hover:file:bg-[#C5A028]" />
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageChange} 
+              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#D4AF37] file:text-white hover:file:bg-[#C5A028]" 
+            />
             <p className="text-xs text-gray-500">Max 5MB. Auto-compressed to 800px width.</p>
 
-            {/* Preset Images */}
-            <div className="flex gap-2 mt-3">
-              {PRESET_IMAGES.map((url, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handlePresetImage(url)}
-                  className="relative group overflow-hidden rounded-lg border-2 border-gray-300 hover:border-[#D4AF37] transition"
-                >
-                  <img src={url} alt={`Preset ${i + 1}`} className="w-20 h-20 object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">Use</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Preview */}
+            {/* Image Preview */}
             {preview && (
               <div className="mt-4 relative inline-block">
                 <img src={preview} alt="Preview" className="h-40 w-auto rounded-lg border object-cover shadow-md" />

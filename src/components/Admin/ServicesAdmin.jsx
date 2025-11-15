@@ -278,6 +278,7 @@ const ServicesAdmin = () => {
   );
 };
 
+
 const ServiceCard = ({ service, onEdit, onDelete }) => {
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition">
