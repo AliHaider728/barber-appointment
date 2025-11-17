@@ -1,113 +1,143 @@
-// src/components/PaymentOptions.jsx
 import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, CheckCircle } from 'lucide-react';
+import { CreditCard, Loader } from 'lucide-react';
 
-const PaymentOptions = ({ appointmentData, onBookFree, onSuccess }) => {
+const PaymentOptions = ({ appointmentData, onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handlePayOnline = async () => {
-    if (!stripe || !elements) return;
+  const handleCardPayment = async (e) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      setError('Stripe has not loaded yet. Please wait.');
+      return;
+    }
 
     setLoading(true);
     setError('');
 
     try {
-      // Step 1: Create appointment
-      const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
+      // Step 1: Create Payment Intent
+      const intentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...appointmentData, payOnline: true })
+        body: JSON.stringify({
+          totalPrice: appointmentData.totalPrice,
+          customerEmail: appointmentData.email,
+          customerName: appointmentData.customerName
+        })
       });
 
-      if (!res.ok) throw new Error('Booking failed');
-      const appointment = await res.json();
-
-      // Step 2: Create Payment Intent
-      const intentRes = await fetch('https://barber-appointment-backend.vercel.app/api/stripe/create-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId: appointment._id })
-      });
-
-      const { clientSecret } = await intentRes.json();
-
-      // Step 3: Confirm Payment
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: elements.getElement(CardElement) }
-      });
-
-      if (result.error) {
-        setError(result.error.message);
-      } else {
-        onSuccess(appointment._id);
+      if (!intentResponse.ok) {
+        throw new Error('Failed to create payment intent');
       }
+
+      const { clientSecret, paymentIntentId } = await intentResponse.json();
+
+      // Step 2: Confirm Card Payment
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: elements.getElement(CardElement),
+          billing_details: {
+            name: appointmentData.customerName,
+            email: appointmentData.email,
+            phone: appointmentData.phone
+          }
+        }
+      });
+
+      if (stripeError) {
+        throw new Error(stripeError.message);
+      }
+
+      if (paymentIntent.status === 'succeeded') {
+        // Step 3: Create Appointment with Payment
+        const appointmentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...appointmentData,
+            paymentIntentId: paymentIntent.id,
+            payOnline: true
+          })
+        });
+
+        if (!appointmentResponse.ok) {
+          throw new Error('Booking failed after payment. Please contact support.');
+        }
+
+        const result = await appointmentResponse.json();
+        
+        // Success!
+        onSuccess(result.appointment._id);
+      }
+
     } catch (err) {
-      setError(err.message || 'Payment failed');
+      console.error('Payment error:', err);
+      setError(err.message || 'Payment failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const CARD_ELEMENT_OPTIONS = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#424770',
+        '::placeholder': {
+          color: '#aab7c4',
+        },
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      },
+      invalid: {
+        color: '#9e2146',
+      },
+    },
+  };
+
   return (
-    <div className="mt-6 p-5 bg-gradient-to-br from-yellow-50 to-white rounded-xl border-2 border-[#D4AF37]/20">
-      <h3 className="font-black text-lg mb-4 flex items-center gap-2">
-        <CreditCard className="w-5 h-5 text-[#D4AF37]" />
-        Payment Options
-      </h3>
+    <div className="mt-6">
+      <form onSubmit={handleCardPayment}>
+        <div className="border-2 border-gray-300 rounded-lg p-4 mb-4 bg-white">
+          <div className="flex items-center gap-2 mb-3">
+            <CreditCard className="w-5 h-5 text-[#D4AF37]" />
+            <h3 className="font-bold text-sm">Card Details</h3>
+          </div>
+          <CardElement options={CARD_ELEMENT_OPTIONS} />
+        </div>
 
-      <div className="mb-4 p-4 bg-white rounded-lg border-2 border-gray-200">
-        <CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#000',
-                '::placeholder': { color: '#aab7c4' },
-              },
-            },
-          }}
-        />
-      </div>
-
-      {error && (
-        <p className="text-red-600 text-sm mb-3 flex items-center gap-1">
-          <span>✗</span> {error}
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={onBookFree}
-          disabled={loading}
-          className="py-3 px-4 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
-        >
-          Book Free
-          <span className="text-xs">(Pay at Shop)</span>
-        </button>
+        {error && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 mb-4">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
 
         <button
-          onClick={handlePayOnline}
-          disabled={loading || !stripe}
-          className="py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold rounded-lg hover:from-green-700 hover:to-green-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          type="submit"
+          disabled={!stripe || loading}
+          className="w-full bg-[#D4AF37] text-black font-bold py-3 rounded-lg hover:bg-black hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? (
-            'Processing...'
+            <>
+              <Loader className="w-5 h-5 animate-spin" />
+              Processing Payment...
+            </>
           ) : (
             <>
-              Pay £{appointmentData.totalPrice.toFixed(2)}
-              <CheckCircle className="w-4 h-4" />
+              <CreditCard className="w-5 h-5" />
+              Pay £{appointmentData.totalPrice.toFixed(2)} & Book
             </>
           )}
         </button>
-      </div>
 
-      <p className="text-xs text-gray-500 mt-3 text-center">
-        Test Card: <code className="bg-gray-100 px-1 rounded">4242 4242 4242 4242</code>
-      </p>
+        <p className="text-xs text-gray-500 text-center mt-3">
+           Secure payment powered by Stripe
+        </p>
+      </form>
     </div>
   );
 };

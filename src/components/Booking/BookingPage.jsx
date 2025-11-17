@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Calendar, Clock, ChevronRight, Scissors, Check, Home, CalendarPlus, User, Package, CreditCard, AlertCircle } from 'lucide-react';
+import PaymentOptions from '../Admin/PaymentOptions';
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from '@stripe/react-stripe-js';
+ 
+
+// Add fallback and validation for Stripe key
+const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+
+// Only initialize Stripe if key exists
+const stripePromise = STRIPE_PUBLIC_KEY ? loadStripe(STRIPE_PUBLIC_KEY) : null;
+
+if (!STRIPE_PUBLIC_KEY) {
+  console.error(' VITE_STRIPE_PUBLIC_KEY is not defined in environment variables');
+}
 
 const parseTime = (t) => {
   const [h, m] = t.split(':').map(Number);
@@ -7,6 +21,7 @@ const parseTime = (t) => {
   d.setHours(h, m, 0, 0);
   return d;
 };
+
 const formatTime = (d) => d.toTimeString().slice(0, 5);
 const addMinutes = (date, mins) => new Date(date.getTime() + mins * 60000);
 
@@ -17,6 +32,7 @@ const MaleIcon = () => (
     <path d="M8 14h8v8H8z" />
   </svg>
 );
+
 const FemaleIcon = () => (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="6" r="4" />
@@ -37,8 +53,14 @@ const Card = ({ children, className = '', onClick }) => (
   <div className={`bg-white rounded-xl shadow-sm p-6 ${className}`} onClick={onClick}>{children}</div>
 );
 
-const Input = ({ className = '', ...props }) => (
-  <input className={`w-full px-4 py-3 rounded-lg border-2 focus:ring-2 focus:ring-[#D4AF37] ${className}`} {...props} />
+const Input = ({ className = '', error, ...props }) => (
+  <div className="w-full">
+    <input 
+      className={`w-full px-4 py-3 rounded-lg border-2 focus:ring-2 focus:ring-[#D4AF37] ${error ? 'border-red-500' : 'border-gray-300'} ${className}`} 
+      {...props} 
+    />
+    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+  </div>
 );
 
 const BookingPage = () => {
@@ -50,10 +72,12 @@ const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [userDetails, setUserDetails] = useState({ fullName: '', email: '', phone: '' });
+  const [errors, setErrors] = useState({ fullName: '', email: '', phone: '' });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(''); // 'card' or 'pay-later'
 
   const [branches, setBranches] = useState([]);
   const [barbers, setBarbers] = useState([]);
@@ -74,7 +98,7 @@ const BookingPage = () => {
           fetch('https://barber-appointment-backend.vercel.app/api/barbers')
         ]);
         const [b, s, barb] = await Promise.all([bRes.json(), sRes.json(), barbRes.json()]);
-        
+
         setBranches(b || []);
         setServices(s || []);
         setBarbers(barb || []);
@@ -95,7 +119,7 @@ const BookingPage = () => {
         const genderMatch = b.gender === gender;
         return branchMatch && genderMatch;
       });
-      
+
       setBranchBarbers(filtered);
       setSelectedBarber('');
       setSelectedServices([]);
@@ -113,7 +137,6 @@ const BookingPage = () => {
     }
   }, [selectedBarber, barbers, services, gender]);
 
-  //  FETCH BARBER SHIFT WHEN DATE IS SELECTED
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       const fetchShift = async () => {
@@ -121,11 +144,11 @@ const BookingPage = () => {
           setShiftLoading(true);
           setBarberShift(null);
           setSelectedTime('');
-          
+
           const res = await fetch(
             `https://barber-appointment-backend.vercel.app/api/barber-shifts/barber/${selectedBarber}/date/${selectedDate}`
           );
-          
+
           if (res.ok) {
             const data = await res.json();
             setBarberShift(data);
@@ -139,12 +162,11 @@ const BookingPage = () => {
           setShiftLoading(false);
         }
       };
-      
+
       fetchShift();
     }
   }, [selectedBarber, selectedDate]);
 
-  //  FETCH EXISTING BOOKINGS
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       fetch(`https://barber-appointment-backend.vercel.app/api/appointments/barber/${selectedBarber}/date/${selectedDate}`)
@@ -173,11 +195,9 @@ const BookingPage = () => {
     }, 0);
   }, [selectedServices, services]);
 
-  //  GENERATE TIME SLOTS BASED ON SHIFT + BOOKINGS
   const timeSlots = useMemo(() => {
     if (!selectedDate || !selectedBarber || totalMinutes === 0 || !barberShift) return [];
-    
-    // Check if barber is off
+
     if (barberShift.isOff || barberShift.noShift) return [];
 
     const shiftStart = parseTime(barberShift.startTime);
@@ -186,15 +206,13 @@ const BookingPage = () => {
     const slots = [];
     let current = new Date(shiftStart);
 
-    // Generate slots based on shift timings
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
       const slotEnd = addMinutes(current, totalMinutes);
 
-      // Check if this slot overlaps with any existing booking
       const hasConflict = existingBookings.some(booking => {
         const bookingStart = new Date(booking.date);
         const bookingEnd = addMinutes(bookingStart, booking.duration);
-        
+
         return (current < bookingEnd && slotEnd > bookingStart);
       });
 
@@ -206,7 +224,6 @@ const BookingPage = () => {
         });
       }
 
-      // Jump by total service time
       current = addMinutes(current, totalMinutes);
     }
 
@@ -217,53 +234,137 @@ const BookingPage = () => {
     setSelectedServices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  // VALIDATION FUNCTIONS
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim()) return 'Email is required';
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return '';
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[0-9+\-\s()]{10,}$/;
+    if (!phone.trim()) return 'Phone number is required';
+    if (!phoneRegex.test(phone)) return 'Please enter a valid phone number (min 10 digits)';
+    return '';
+  };
+
+  const validateFullName = (name) => {
+    if (!name.trim()) return 'Full name is required';
+    if (name.trim().length < 3) return 'Name must be at least 3 characters';
+    return '';
+  };
+
+  const handleInputChange = (field, value) => {
+    setUserDetails(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error when user types
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const validateStep4 = () => {
+    const newErrors = {
+      fullName: validateFullName(userDetails.fullName),
+      email: validateEmail(userDetails.email),
+      phone: validatePhone(userDetails.phone)
+    };
+
+    setErrors(newErrors);
+
+    // Return true if no errors
+    return !Object.values(newErrors).some(error => error !== '');
+  };
+
   const handleNext = async () => {
-    if (step === 1 && !selectedBranch) return alert('Please select a branch');
-    if (step === 2 && (!gender || !selectedBarber || selectedServices.length === 0)) return alert('Please complete all selections');
-    if (step === 3 && (!selectedDate || !selectedTime)) return alert('Please select date and time');
-    if (step === 4 && (!userDetails.fullName || !userDetails.email || !userDetails.phone)) return alert('Please fill in all details');
+    if (step === 1 && !selectedBranch) {
+      alert('Please select a branch');
+      return;
+    }
+    
+    if (step === 2 && (!gender || !selectedBarber || selectedServices.length === 0)) {
+      alert('Please complete all selections');
+      return;
+    }
+    
+    if (step === 3 && (!selectedDate || !selectedTime)) {
+      alert('Please select date and time');
+      return;
+    }
 
     if (step === 3) {
       const slot = timeSlots.find(s => s.start === selectedTime);
-      if (!slot?.available) return alert('Selected slot is not available');
+      if (!slot?.available) {
+        alert('Selected slot is not available');
+        return;
+      }
     }
 
     if (step === 4) {
-      setLoading(true);
-      try {
-        const payload = {
-          customerName: userDetails.fullName,
-          email: userDetails.email,
-          phone: userDetails.phone,
-          date: `${selectedDate}T${selectedTime}:00`,
-          selectedServices: selectedServices.map(id => {
-            const s = services.find(x => x._id === id);
-            return { serviceRef: id, name: s.name, price: s.price, duration: s.duration };
-          }),
-          barber: selectedBarber,
-          branch: selectedBranch,
-          duration: totalMinutes
-        };
-
-        const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error('Booking failed');
-        const data = await res.json();
-        setBookingRef(data._id);
-        setBookingComplete(true);
-      } catch (err) {
-        console.error('Booking error:', err);
-        alert('Booking failed. Please try again.');
-      } finally {
-        setLoading(false);
+      // Validate all fields before allowing to proceed
+      if (!validateStep4()) {
+        alert('Please fill in all details correctly');
+        return;
       }
-      return;
+
+      // Check if payment method is selected
+      if (!paymentMethod) {
+        alert('Please select a payment method');
+        return;
+      }
+
+      // If card payment, don't proceed - let Stripe handle it
+      if (paymentMethod === 'card') {
+        // The PaymentOptions component will handle the booking
+        return;
+      }
+
+      // If pay later
+      if (paymentMethod === 'pay-later') {
+        await handlePayLaterBooking();
+        return;
+      }
     }
+
     setStep(s => s + 1);
+  };
+
+  const handlePayLaterBooking = async () => {
+    setLoading(true);
+    try {
+      const payload = {
+        customerName: userDetails.fullName,
+        email: userDetails.email,
+        phone: userDetails.phone,
+        date: `${selectedDate}T${selectedTime}:00`,
+        selectedServices: selectedServices.map(id => {
+          const s = services.find(x => x._id === id);
+          return { serviceRef: id, name: s.name, price: s.price, duration: s.duration };
+        }),
+        barber: selectedBarber,
+        branch: selectedBranch,
+        duration: totalMinutes,
+        totalPrice,
+        payOnline: false
+      };
+
+      const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Booking failed');
+      const data = await res.json();
+      setBookingRef(data._id);
+      setBookingComplete(true);
+    } catch (err) {
+      console.error('Booking error:', err);
+      alert('Booking failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -274,7 +375,7 @@ const BookingPage = () => {
   const selectedTimeSlot = timeSlots.find(s => s.start === selectedTime);
 
   if (fetching) return <div className="min-h-screen flex items-center justify-center"><Scissors className="w-12 h-12 animate-spin text-[#D4AF37]" /></div>;
-  
+
   if (bookingComplete) return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="text-center p-12 border-2 border-[#D4AF37]">
@@ -391,7 +492,7 @@ const BookingPage = () => {
               <Card>
                 <h2 className="text-xl font-bold mb-4">Select Date & Time</h2>
                 <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} min={today} className="mb-4" />
-                
+
                 {shiftLoading && (
                   <div className="text-center py-8">
                     <Clock className="w-8 h-8 animate-spin text-[#D4AF37] mx-auto mb-2" />
@@ -423,9 +524,9 @@ const BookingPage = () => {
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
                       {timeSlots.map(slot => (
-                        <Button 
-                          key={slot.start} 
-                          variant={selectedTime === slot.start ? 'default' : 'outline'} 
+                        <Button
+                          key={slot.start}
+                          variant={selectedTime === slot.start ? 'default' : 'outline'}
                           onClick={() => setSelectedTime(slot.start)}
                           className="h-12 text-xs"
                         >
@@ -449,19 +550,108 @@ const BookingPage = () => {
             {step === 4 && (
               <Card>
                 <h2 className="text-xl font-bold mb-4">Your Details</h2>
-                <div className="space-y-3">
-                  <Input placeholder="Full Name" value={userDetails.fullName} onChange={e => setUserDetails(p => ({...p, fullName: e.target.value}))} />
-                  <Input type="email" placeholder="Email" value={userDetails.email} onChange={e => setUserDetails(p => ({...p, email: e.target.value}))} />
-                  <Input placeholder="Phone" value={userDetails.phone} onChange={e => setUserDetails(p => ({...p, phone: e.target.value}))} />
+                <div className="space-y-4 mb-6">
+                  <Input 
+                    placeholder="Full Name" 
+                    value={userDetails.fullName} 
+                    onChange={e => handleInputChange('fullName', e.target.value)}
+                    error={errors.fullName}
+                  />
+                  <Input 
+                    type="email" 
+                    placeholder="Email Address" 
+                    value={userDetails.email} 
+                    onChange={e => handleInputChange('email', e.target.value)}
+                    error={errors.email}
+                  />
+                  <Input 
+                    type="tel" 
+                    placeholder="Phone Number" 
+                    value={userDetails.phone} 
+                    onChange={e => handleInputChange('phone', e.target.value)}
+                    error={errors.phone}
+                  />
                 </div>
+
+                {/* PAYMENT METHOD SELECTION */}
+                <div className="mb-6">
+                  <h3 className="font-bold mb-3">Select Payment Method</h3>
+                  <div className="space-y-3">
+                    <div 
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200 hover:border-gray-300'}`}
+                      onClick={() => setPaymentMethod('card')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'border-[#D4AF37]' : 'border-gray-300'}`}>
+                          {paymentMethod === 'card' && <div className="w-3 h-3 rounded-full bg-[#D4AF37]"></div>}
+                        </div>
+                        <CreditCard className="w-5 h-5 text-[#D4AF37]" />
+                        <span className="font-bold">Pay with Card</span>
+                      </div>
+                    </div>
+
+                    <div 
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${paymentMethod === 'pay-later' ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200 hover:border-gray-300'}`}
+                      onClick={() => setPaymentMethod('pay-later')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'pay-later' ? 'border-[#D4AF37]' : 'border-gray-300'}`}>
+                          {paymentMethod === 'pay-later' && <div className="w-3 h-3 rounded-full bg-[#D4AF37]"></div>}
+                        </div>
+                        <Clock className="w-5 h-5 text-[#D4AF37]" />
+                        <span className="font-bold">Pay at Salon</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* STRIPE CARD FORM - Only show when card is selected */}
+                {paymentMethod === 'card' && (
+                  <Elements stripe={stripePromise}>
+                    <PaymentOptions
+                      appointmentData={{
+                        customerName: userDetails.fullName,
+                        email: userDetails.email,
+                        phone: userDetails.phone,
+                        date: `${selectedDate}T${selectedTime}:00`,
+                        selectedServices: selectedServices.map(id => {
+                          const s = services.find(x => x._id === id);
+                          return { serviceRef: id, name: s.name, price: s.price, duration: s.duration };
+                        }),
+                        barber: selectedBarber,
+                        branch: selectedBranch,
+                        duration: totalMinutes,
+                        totalPrice
+                      }}
+                      onSuccess={(ref) => {
+                        setBookingRef(ref);
+                        setBookingComplete(true);
+                      }}
+                    />
+                  </Elements>
+                )}
+
+                {/* PAY LATER BUTTON */}
+                {paymentMethod === 'pay-later' && (
+                  <Button 
+                    onClick={handleNext} 
+                    disabled={loading}
+                    className="w-full mt-4"
+                  >
+                    {loading ? 'Booking...' : 'Confirm Booking - Pay at Salon'} 
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
               </Card>
             )}
 
             <div className="flex justify-between">
-              {step > 1 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
-              <Button onClick={handleNext} disabled={loading} className="ml-auto">
-                {loading ? 'Booking...' : (step === 4 ? 'Confirm Booking' : 'Next')} <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
+              {step > 1 && step < 4 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
+              {step < 4 && (
+                <Button onClick={handleNext} disabled={loading} className="ml-auto">
+                  Next <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -471,7 +661,7 @@ const BookingPage = () => {
                 <Calendar className="w-5 h-5 text-[#D4AF37]" />
                 Booking Summary
               </h3>
-              
+
               <div className="space-y-4 text-sm">
                 {selectedBranchData && (
                   <div>

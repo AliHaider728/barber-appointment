@@ -9,7 +9,14 @@ const Appointments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
 
-  
+  // Safe rendering helper
+  const safeString = (value) => {
+    if (!value) return 'N/A';
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object' && value.name) return value.name;
+    return 'N/A';
+  };
+
   useEffect(() => {
     fetchAppointments();
   }, []);
@@ -118,7 +125,7 @@ const Appointments = () => {
         </div>
       </div>
 
-       {/* Desktop Table */}
+      {/* Desktop Table */}
       <div className="hidden xl:block bg-white rounded-xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
@@ -160,11 +167,13 @@ const Appointments = () => {
                   </td>
                   <td className="px-4 py-4">
                     <span className="text-sm text-gray-900 line-clamp-2">
-                      {apt.barber?.name || 'N/A'}
+                      {safeString(apt.barber)}
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className="text-sm text-gray-700 line-clamp-2">{apt.branch?.name || 'N/A'}</span>
+                    <span className="text-sm text-gray-700 line-clamp-2">
+                      {safeString(apt.branch)}
+                    </span>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <span className="font-bold text-sm text-[#D4AF37]">£{apt.totalPrice?.toFixed(2) || '0.00'}</span>
@@ -274,7 +283,7 @@ const Appointments = () => {
                     <span className="text-xs font-medium">Barber</span>
                   </div>
                   <p className="text-sm font-bold text-gray-900">
-                    {apt.barber?.name || 'N/A'}
+                    {safeString(apt.barber)}
                   </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
@@ -282,7 +291,9 @@ const Appointments = () => {
                     <MapPin className="w-4 h-4 text-[#D4AF37]" />
                     <span className="text-xs font-medium">Branch</span>
                   </div>
-                  <p className="text-sm font-bold text-gray-900">{apt.branch?.name || 'N/A'}</p>
+                  <p className="text-sm font-bold text-gray-900">
+                    {safeString(apt.branch)}
+                  </p>
                 </div>
               </div>
 

@@ -20,6 +20,14 @@ const Overview = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  // SAFE STRING FUNCTION - Fixes the error
+  const safeString = (value) => {
+    if (!value) return 'N/A';
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object' && value.name) return value.name;
+    return 'N/A';
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -79,7 +87,8 @@ const Overview = () => {
         return {
           ...apt,
           displayServices: services.filter(Boolean).join(', ') || 'N/A',
-          displayTotal: totalPrice.toFixed(2)
+          displayTotal: totalPrice.toFixed(2),
+          barberName: apt.barber ? (apt.barber.name || 'N/A') : 'N/A' // Add safe barber name
         };
       });
 
@@ -111,7 +120,7 @@ const Overview = () => {
       filtered = filtered.filter(apt => 
         apt.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         apt.displayServices.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (apt.barber && apt.barber.toLowerCase().includes(searchTerm.toLowerCase()))
+        apt.barberName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -128,7 +137,7 @@ const Overview = () => {
       apt.customerName,
       apt.status,
       apt.displayServices,
-      apt.barber || 'N/A',
+      apt.barberName,
       new Date(apt.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       `£${apt.displayTotal}`
     ]);
@@ -170,35 +179,15 @@ const Overview = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
-      {/* Stats Grid - Responsive */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard 
-          icon={Calendar} 
-          label="Total Appointments" 
-          value={stats.totalAppts} 
-          color="blue"
-        />
-        <StatCard 
-          icon={Clock} 
-          label="Today's Appointments" 
-          value={stats.todayAppts} 
-          color="green"
-        />
-        <StatCard 
-          icon={Users} 
-          label="Total Barbers" 
-          value={stats.barbers} 
-          color="purple"
-        />
-        <StatCard 
-          icon={MapPin} 
-          label="Total Branches" 
-          value={stats.branches} 
-          color="orange"
-        />
+        <StatCard icon={Calendar} label="Total Appointments" value={stats.totalAppts} color="blue" />
+        <StatCard icon={Clock} label="Today's Appointments" value={stats.todayAppts} color="green" />
+        <StatCard icon={Users} label="Total Barbers" value={stats.barbers} color="purple" />
+        <StatCard icon={MapPin} label="Total Branches" value={stats.branches} color="orange" />
       </div>
 
-      {/* Revenue & Status - Responsive */}
+      {/* Revenue & Status */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg shadow p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between">
@@ -241,7 +230,7 @@ const Overview = () => {
         </div>
       </div>
 
-      {/* Today's Appointments with Filters - Mobile Optimized */}
+      {/* Today's Appointments */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex flex-col gap-3">
@@ -251,7 +240,6 @@ const Overview = () => {
                 <span className="ml-2 text-sm sm:text-base text-gray-500">({filteredAppointments.length})</span>
               </h3>
               
-              {/* Mobile Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="sm:hidden flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -260,7 +248,6 @@ const Overview = () => {
                 Filters
               </button>
 
-              {/* Desktop Export Button */}
               <button
                 onClick={exportToCSV}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#c9a332] transition text-sm font-medium"
@@ -300,7 +287,7 @@ const Overview = () => {
               </div>
             </div>
 
-            {/* Mobile Filters - Collapsible */}
+            {/* Mobile Filters */}
             {showFilters && (
               <div className="sm:hidden space-y-3 pt-2 border-t border-gray-200">
                 <div className="relative">
@@ -328,9 +315,8 @@ const Overview = () => {
 
                 <button
                   onClick={exportToCSV}
-                  className="w-full flex items-center justify-center hover:translate-y-2 duration-300   gap-2 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#c9a332] transition text-sm font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#c9a332] transition text-sm font-medium"
                   disabled={filteredAppointments.length === 0}
-                  
                 >
                   <Download className="w-4 h-4" />
                   Export to CSV
@@ -387,7 +373,7 @@ const Overview = () => {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-700">{apt.displayServices}</td>
-                        <td className="px-4 py-4 text-sm text-gray-700">{apt.barber || 'N/A'}</td>
+                        <td className="px-4 py-4 text-sm text-gray-700">{apt.barberName}</td>
                         <td className="px-4 py-4 text-sm font-medium text-gray-900">
                           {new Date(apt.date).toLocaleTimeString('en-US', { 
                             hour: '2-digit', 
@@ -439,7 +425,7 @@ const Overview = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Barber:</span>
-                        <span className="font-medium text-gray-900">{apt.barber || 'N/A'}</span>
+                        <span className="font-medium text-gray-900">{apt.barberName}</span>
                       </div>
                       {parseFloat(apt.displayTotal) > 0 && (
                         <div className="flex justify-between pt-2 border-t border-gray-300">
