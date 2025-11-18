@@ -3,13 +3,16 @@ import { MapPin, Calendar, Clock, ChevronRight, Scissors, Check, Home, CalendarP
 import PaymentOptions from '../Admin/PaymentOptions';
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from '@stripe/react-stripe-js';
+ 
 
-// Stripe initialization
+// Add fallback and validation for Stripe key
 const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+
+// Only initialize Stripe if key exists
 const stripePromise = STRIPE_PUBLIC_KEY ? loadStripe(STRIPE_PUBLIC_KEY) : null;
 
 if (!STRIPE_PUBLIC_KEY) {
-  console.error('⚠️ VITE_STRIPE_PUBLIC_KEY is not defined in environment variables');
+  console.error(' VITE_STRIPE_PUBLIC_KEY is not defined in environment variables');
 }
 
 const parseTime = (t) => {
@@ -74,7 +77,7 @@ const BookingPage = () => {
   const [fetching, setFetching] = useState(true);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(''); // 'card' or 'pay-later'
 
   const [branches, setBranches] = useState([]);
   const [barbers, setBarbers] = useState([]);
@@ -89,35 +92,19 @@ const BookingPage = () => {
     const fetchAll = async () => {
       try {
         setFetching(true);
-        
         const [bRes, sRes, barbRes] = await Promise.all([
           fetch('https://barber-appointment-backend.vercel.app/api/branches'),
           fetch('https://barber-appointment-backend.vercel.app/api/services'),
           fetch('https://barber-appointment-backend.vercel.app/api/barbers')
         ]);
-
-        if (!bRes.ok || !sRes.ok || !barbRes.ok) {
-          throw new Error('Failed to load data from server');
-        }
-
-        const [b, s, barb] = await Promise.all([
-          bRes.json(), 
-          sRes.json(), 
-          barbRes.json()
-        ]);
-
-        console.log('✅ Data loaded:', { 
-          branches: b.length, 
-          services: s.length, 
-          barbers: barb.length 
-        });
+        const [b, s, barb] = await Promise.all([bRes.json(), sRes.json(), barbRes.json()]);
 
         setBranches(b || []);
         setServices(s || []);
         setBarbers(barb || []);
       } catch (err) {
-        console.error('❌ Fetch error:', err);
-        alert(`Failed to load data: ${err.message}. Please refresh the page.`);
+        console.error('Fetch error:', err);
+        alert('Failed to load data');
       } finally {
         setFetching(false);
       }
@@ -247,6 +234,7 @@ const BookingPage = () => {
     setSelectedServices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  // VALIDATION FUNCTIONS
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) return 'Email is required';
@@ -270,6 +258,7 @@ const BookingPage = () => {
   const handleInputChange = (field, value) => {
     setUserDetails(prev => ({ ...prev, [field]: value }));
     
+    // Clear error when user types
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -283,6 +272,8 @@ const BookingPage = () => {
     };
 
     setErrors(newErrors);
+
+    // Return true if no errors
     return !Object.values(newErrors).some(error => error !== '');
   };
 
@@ -311,20 +302,25 @@ const BookingPage = () => {
     }
 
     if (step === 4) {
+      // Validate all fields before allowing to proceed
       if (!validateStep4()) {
         alert('Please fill in all details correctly');
         return;
       }
 
+      // Check if payment method is selected
       if (!paymentMethod) {
         alert('Please select a payment method');
         return;
       }
 
+      // If card payment, don't proceed - let Stripe handle it
       if (paymentMethod === 'card') {
+        // The PaymentOptions component will handle the booking
         return;
       }
 
+      // If pay later
       if (paymentMethod === 'pay-later') {
         await handlePayLaterBooking();
         return;
@@ -344,21 +340,14 @@ const BookingPage = () => {
         date: `${selectedDate}T${selectedTime}:00`,
         selectedServices: selectedServices.map(id => {
           const s = services.find(x => x._id === id);
-          return { 
-            serviceRef: id, 
-            name: s.name, 
-            price: s.price, 
-            duration: s.duration 
-          };
+          return { serviceRef: id, name: s.name, price: s.price, duration: s.duration };
         }),
         barber: selectedBarber,
         branch: selectedBranch,
         duration: totalMinutes,
-        totalPrice: parseFloat(totalPrice.toFixed(2)),
+        totalPrice,
         payOnline: false
       };
-
-      console.log('📤 Sending booking payload:', payload);
 
       const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
         method: 'POST',
@@ -366,19 +355,13 @@ const BookingPage = () => {
         body: JSON.stringify(payload)
       });
 
+      if (!res.ok) throw new Error('Booking failed');
       const data = await res.json();
-      
-      if (!res.ok) {
-        console.error('❌ Booking failed:', data);
-        throw new Error(data.message || 'Booking failed');
-      }
-
-      console.log('✅ Booking success:', data);
       setBookingRef(data._id);
       setBookingComplete(true);
     } catch (err) {
-      console.error('❌ Booking error:', err);
-      alert(`Booking failed: ${err.message}`);
+      console.error('Booking error:', err);
+      alert('Booking failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -590,6 +573,7 @@ const BookingPage = () => {
                   />
                 </div>
 
+                {/* PAYMENT METHOD SELECTION */}
                 <div className="mb-6">
                   <h3 className="font-bold mb-3">Select Payment Method</h3>
                   <div className="space-y-3">
@@ -621,6 +605,7 @@ const BookingPage = () => {
                   </div>
                 </div>
 
+                {/* STRIPE CARD FORM - Only show when card is selected */}
                 {paymentMethod === 'card' && (
                   <Elements stripe={stripePromise}>
                     <PaymentOptions
@@ -636,7 +621,7 @@ const BookingPage = () => {
                         barber: selectedBarber,
                         branch: selectedBranch,
                         duration: totalMinutes,
-                        totalPrice: parseFloat(totalPrice.toFixed(2))
+                        totalPrice
                       }}
                       onSuccess={(ref) => {
                         setBookingRef(ref);
@@ -646,6 +631,7 @@ const BookingPage = () => {
                   </Elements>
                 )}
 
+                {/* PAY LATER BUTTON */}
                 {paymentMethod === 'pay-later' && (
                   <Button 
                     onClick={handleNext} 
