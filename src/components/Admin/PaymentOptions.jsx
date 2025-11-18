@@ -20,24 +20,29 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
     setError('');
 
     try {
+      console.log('💳 Creating payment intent...');
+
       // Step 1: Create Payment Intent
       const intentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          totalPrice: appointmentData.totalPrice,
+          totalPrice: parseFloat(appointmentData.totalPrice.toFixed(2)),
           customerEmail: appointmentData.email,
           customerName: appointmentData.customerName
         })
       });
 
       if (!intentResponse.ok) {
-        throw new Error('Failed to create payment intent');
+        const errorData = await intentResponse.json();
+        throw new Error(errorData.error || 'Failed to create payment intent');
       }
 
       const { clientSecret, paymentIntentId } = await intentResponse.json();
+      console.log('✅ Payment intent created:', paymentIntentId);
 
       // Step 2: Confirm Card Payment
+      console.log('💳 Confirming payment...');
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
@@ -54,28 +59,33 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       }
 
       if (paymentIntent.status === 'succeeded') {
-         const appointmentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment', {
+        console.log('✅ Payment succeeded, creating booking...');
+        
+        const appointmentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...appointmentData,
+            totalPrice: parseFloat(appointmentData.totalPrice.toFixed(2)),
             paymentIntentId: paymentIntent.id,
             payOnline: true
           })
         });
 
         if (!appointmentResponse.ok) {
-          throw new Error('Booking failed after payment. Please contact support.');
+          const errorData = await appointmentResponse.json();
+          throw new Error(errorData.error || 'Booking failed after payment. Please contact support.');
         }
 
         const result = await appointmentResponse.json();
+        console.log('✅ Booking created:', result);
         
         // Success!
         onSuccess(result.appointment._id);
       }
 
     } catch (err) {
-      console.error('Payment error:', err);
+      console.error('❌ Payment error:', err);
       setError(err.message || 'Payment failed. Please try again.');
     } finally {
       setLoading(false);
@@ -97,7 +107,6 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       },
     },
   };
-  
 
   return (
     <div className="mt-6">
@@ -135,11 +144,11 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
         </button>
 
         <p className="text-xs text-gray-500 text-center mt-3">
-           Secure payment powered by Stripe
+          🔒 Secure payment powered by Stripe
         </p>
       </form>
     </div>
   );
 };
 
-export default PaymentOptions; 
+export default PaymentOptions;
