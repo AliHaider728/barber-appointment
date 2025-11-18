@@ -621,7 +621,7 @@ const BookingPage = () => {
                         barber: selectedBarber,
                         branch: selectedBranch,
                         duration: totalMinutes,
-                        totalPrice
+                        totalPrice  
                       }}
                       onSuccess={(ref) => {
                         setBookingRef(ref);
