@@ -185,7 +185,7 @@ const BookingPage = () => {
     return selectedServices.reduce((sum, id) => {
       const s = services.find(x => x._id === id);
       return sum + (parseInt(s?.duration?.match(/\d+/)?.[0]) || 0);
-    }, 0);
+    }, 0);  
   }, [selectedServices, services]);
 
   const totalPrice = useMemo(() => {
@@ -443,7 +443,7 @@ const BookingPage = () => {
                     </Button>
                     <Button variant={gender === 'female' ? 'default' : 'outline'} onClick={() => setGender('female')} className="h-20 flex-col gap-2">
                       <FemaleIcon />
-                      <span className="text-sm">Female</span>
+                      <span className="text-sm">Female</span> 
                     </Button>
                   </div>
                 )}

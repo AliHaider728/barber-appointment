@@ -54,8 +54,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       }
 
       if (paymentIntent.status === 'succeeded') {
-        // Step 3: Create Appointment with Payment
-        const appointmentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment', {
+         const appointmentResponse = await fetch('https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -98,6 +97,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       },
     },
   };
+  
 
   return (
     <div className="mt-6">
@@ -142,4 +142,4 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
   );
 };
 
-export default PaymentOptions;
+export default PaymentOptions; 
