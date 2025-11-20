@@ -77,7 +77,7 @@ const BookingPage = () => {
   const [fetching, setFetching] = useState(true);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(''); // 'card' or 'pay-later'
 
   const [branches, setBranches] = useState([]);
   const [barbers, setBarbers] = useState([]);
@@ -97,21 +97,14 @@ const BookingPage = () => {
           fetch('https://barber-appointment-backend.vercel.app/api/services'),
           fetch('https://barber-appointment-backend.vercel.app/api/barbers')
         ]);
-        
-        const [b, s, barb] = await Promise.all([
-          bRes.ok ? bRes.json() : Promise.resolve([]),
-          sRes.ok ? sRes.json() : Promise.resolve([]),
-          barbRes.ok ? barbRes.json() : Promise.resolve([])
-        ]);
+        const [b, s, barb] = await Promise.all([bRes.json(), sRes.json(), barbRes.json()]);
 
-        setBranches(Array.isArray(b) ? b : []);
-        setServices(Array.isArray(s) ? s : []);
-        setBarbers(Array.isArray(barb) ? barb : []);
+        setBranches(b || []);
+        setServices(s || []);
+        setBarbers(barb || []);
       } catch (err) {
         console.error('Fetch error:', err);
-        setBranches([]);
-        setServices([]);
-        setBarbers([]);
+        alert('Failed to load data');
       } finally {
         setFetching(false);
       }
@@ -120,7 +113,7 @@ const BookingPage = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedBranch && gender && Array.isArray(barbers) && barbers.length > 0) {
+    if (selectedBranch && gender) {
       const filtered = barbers.filter(b => {
         const branchMatch = b.branch?._id === selectedBranch || b.branch === selectedBranch;
         const genderMatch = b.gender === gender;
@@ -134,9 +127,9 @@ const BookingPage = () => {
   }, [selectedBranch, gender, barbers]);
 
   useEffect(() => {
-    if (selectedBarber && Array.isArray(barbers) && barbers.length > 0 && Array.isArray(services) && services.length > 0) {
+    if (selectedBarber) {
       const barber = barbers.find(b => b._id === selectedBarber);
-      if (barber && Array.isArray(barber.specialties)) {
+      if (barber) {
         const specs = services.filter(s => barber.specialties.includes(s.name) && s.gender === gender);
         setBarberSpecialties(specs);
         setSelectedServices([]);
@@ -189,7 +182,6 @@ const BookingPage = () => {
   }, [selectedBarber, selectedDate]);
 
   const totalMinutes = useMemo(() => {
-    if (!Array.isArray(selectedServices) || !Array.isArray(services)) return 0;
     return selectedServices.reduce((sum, id) => {
       const s = services.find(x => x._id === id);
       return sum + (parseInt(s?.duration?.match(/\d+/)?.[0]) || 0);
@@ -197,10 +189,9 @@ const BookingPage = () => {
   }, [selectedServices, services]);
 
   const totalPrice = useMemo(() => {
-    if (!Array.isArray(selectedServices) || !Array.isArray(services)) return 0;
     return selectedServices.reduce((sum, id) => {
       const s = services.find(x => x._id === id);
-      return sum + parseFloat(s?.price?.replace('£', '') || 0);
+      return sum + parseFloat(s?.price.replace('£', '') || 0);
     }, 0);
   }, [selectedServices, services]);
 
@@ -218,7 +209,7 @@ const BookingPage = () => {
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
       const slotEnd = addMinutes(current, totalMinutes);
 
-      const hasConflict = Array.isArray(existingBookings) && existingBookings.some(booking => {
+      const hasConflict = existingBookings.some(booking => {
         const bookingStart = new Date(booking.date);
         const bookingEnd = addMinutes(bookingStart, booking.duration);
 
@@ -243,6 +234,7 @@ const BookingPage = () => {
     setSelectedServices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  // VALIDATION FUNCTIONS
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) return 'Email is required';
@@ -266,6 +258,7 @@ const BookingPage = () => {
   const handleInputChange = (field, value) => {
     setUserDetails(prev => ({ ...prev, [field]: value }));
 
+    // Clear error when user types
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -280,6 +273,7 @@ const BookingPage = () => {
 
     setErrors(newErrors);
 
+    // Return true if no errors
     return !Object.values(newErrors).some(error => error !== '');
   };
 
@@ -308,20 +302,25 @@ const BookingPage = () => {
     }
 
     if (step === 4) {
+      // Validate all fields before allowing to proceed
       if (!validateStep4()) {
         alert('Please fill in all details correctly');
         return;
       }
 
+      // Check if payment method is selected
       if (!paymentMethod) {
         alert('Please select a payment method');
         return;
       }
 
+      // If card payment, don't proceed - let Stripe handle it
       if (paymentMethod === 'card') {
+        // The PaymentOptions component will handle the booking
         return;
       }
 
+      // If pay later
       if (paymentMethod === 'pay-later') {
         await handlePayLaterBooking();
         return;
@@ -370,9 +369,9 @@ const BookingPage = () => {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id === selectedBranch) : null;
-  const selectedBarberData = Array.isArray(barbers) ? barbers.find(b => b._id === selectedBarber) : null;
-  const selectedServicesData = Array.isArray(selectedServices) && Array.isArray(services) ? selectedServices.map(id => services.find(s => s._id === id)).filter(Boolean) : [];
+  const selectedBranchData = branches.find(b => b._id === selectedBranch);
+  const selectedBarberData = barbers.find(b => b._id === selectedBarber);
+  const selectedServicesData = selectedServices.map(id => services.find(s => s._id === id));
   const selectedTimeSlot = timeSlots.find(s => s.start === selectedTime);
 
   if (fetching) return <div className="min-h-screen flex items-center justify-center"><Scissors className="w-12 h-12 animate-spin text-[#D4AF37]" /></div>;
@@ -418,21 +417,17 @@ const BookingPage = () => {
               <Card>
                 <h2 className="text-xl font-bold mb-4">Select Branch</h2>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {Array.isArray(branches) && branches.length > 0 ? (
-                    branches.map(b => (
-                      <Card key={b._id} className={`cursor-pointer border-2 transition-all ${selectedBranch === b._id ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200 hover:border-gray-300'}`} onClick={() => setSelectedBranch(b._id)}>
-                        <div className="flex gap-3 items-start">
-                          <MapPin className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
-                          <div>
-                            <p className="font-bold text-sm">{b.name}</p>
-                            <p className="text-xs text-gray-600">{b.city}</p>
-                          </div>
+                  {branches.map(b => (
+                    <Card key={b._id} className={`cursor-pointer border-2 transition-all ${selectedBranch === b._id ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200 hover:border-gray-300'}`} onClick={() => setSelectedBranch(b._id)}>
+                      <div className="flex gap-3 items-start">
+                        <MapPin className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
+                        <div>
+                          <p className="font-bold text-sm">{b.name}</p>
+                          <p className="text-xs text-gray-600">{b.city}</p>
                         </div>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 col-span-2">No branches available</p>
-                  )}
+                      </div>
+                    </Card>
+                  ))}
                 </div>
               </Card>
             )}
@@ -473,21 +468,17 @@ const BookingPage = () => {
                   <div>
                     <h3 className="font-bold mb-3 text-sm">Select Services</h3>
                     <div className="grid sm:grid-cols-2 gap-3 mb-4">
-                      {barberSpecialties.length > 0 ? (
-                        barberSpecialties.map(s => (
-                          <Card key={s._id} className={`cursor-pointer border-2 transition-all ${selectedServices.includes(s._id) ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200'}`} onClick={() => handleServiceToggle(s._id)}>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold text-sm">{s.name}</p>
-                                <p className="text-xs text-gray-600">{s.duration}</p>
-                              </div>
-                              <p className="text-[#D4AF37] font-black text-sm">{s.price}</p>
+                      {barberSpecialties.map(s => (
+                        <Card key={s._id} className={`cursor-pointer border-2 transition-all ${selectedServices.includes(s._id) ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200'}`} onClick={() => handleServiceToggle(s._id)}>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-bold text-sm">{s.name}</p>
+                              <p className="text-xs text-gray-600">{s.duration}</p>
                             </div>
-                          </Card>
-                        ))
-                      ) : (
-                        <p className="text-gray-500 col-span-2">No services available</p>
-                      )}
+                            <p className="text-[#D4AF37] font-black text-sm">{s.price}</p>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
                     <div className="p-3 bg-gray-50 rounded-xl">
                       <p className="font-black text-sm">Total: £{totalPrice.toFixed(2)} | {totalMinutes} min</p>
@@ -582,6 +573,7 @@ const BookingPage = () => {
                   />
                 </div>
 
+                {/* PAYMENT METHOD SELECTION */}
                 <div className="mb-6">
                   <h3 className="font-bold mb-3">Select Payment Method</h3>
                   <div className="space-y-3">
@@ -613,6 +605,7 @@ const BookingPage = () => {
                   </div>
                 </div>
 
+                {/* STRIPE CARD FORM - Only show when card is selected */}
                 {paymentMethod === 'card' && stripePromise && (
                   <Elements
                     stripe={stripePromise}
