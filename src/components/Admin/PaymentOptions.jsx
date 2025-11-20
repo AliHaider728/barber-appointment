@@ -1,4 +1,3 @@
-// src/components/PaymentOptions.jsx
 import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { CreditCard, Loader, AlertCircle } from 'lucide-react';
@@ -137,8 +136,9 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       </button>
 
       <p className="text-center text-xs text-gray-500 mt-4">
-        Secured by <strong>Stripe</strong> • 256-bit encryption
-      </p>
+        Safe & Secure — Powered by <strong>Stripe</strong>  Payments
+      </p> 
+
     </form>
   );
 };

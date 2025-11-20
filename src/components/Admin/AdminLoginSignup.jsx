@@ -21,14 +21,12 @@ const AdminLoginSignup = () => {
     // Validate passwords match during signup
     if (!isLogin && form.password !== form.confirmPassword) {
       return setError('Passwords do not match');
-    }
-
+    } 
     const url = isLogin 
       ? 'https://barber-appointment-backend.vercel.app/api/auth/login'
       : 'https://barber-appointment-backend.vercel.app/api/auth/signup';
 
-    setLoading(true);
-
+    setLoading(true); 
     try {
       const res = await axios.post(url, {
         email: form.email,
