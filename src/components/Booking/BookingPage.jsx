@@ -89,26 +89,42 @@ const BookingPage = () => {
   const [existingBookings, setExistingBookings] = useState([]);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        setFetching(true);
-        const [bRes, sRes, barbRes] = await Promise.all([
-          fetch('https://barber-appointment-backend.vercel.app/api/branches'),
-          fetch('https://barber-appointment-backend.vercel.app/api/services'),
-          fetch('https://barber-appointment-backend.vercel.app/api/barbers')
-        ]);
-        const [b, s, barb] = await Promise.all([bRes.json(), sRes.json(), barbRes.json()]);
+    const fetchAll = async () => {  
+  try {  
+    setFetching(true);  
+    const [bRes, sRes, barbRes] = await Promise.all([  
+      fetch('https://barber-appointment-backend.vercel.app/api/branches'),  
+      fetch('https://barber-appointment-backend.vercel.app/api/services'),  
+      fetch('https://barber-appointment-backend.vercel.app/api/barbers')  
+    ]);  
 
-        setBranches(b || []);
-        setServices(s || []);
-        setBarbers(barb || []);
-      } catch (err) {
-        console.error('Fetch error:', err);
-        alert('Failed to load data');
-      } finally {
-        setFetching(false);
-      }
-    };
+    // Helper to parse and validate  
+    const parseAndValidate = async (res) => {  
+      if (!res.ok) {  
+        throw new Error(`HTTP error! status: ${res.status}`);  
+      }  
+      const data = await res.json();  
+      return Array.isArray(data) ? data : []; // Fallback to empty array if not array  
+    };  
+
+    const b = await parseAndValidate(bRes);  
+    const s = await parseAndValidate(sRes);  
+    const barb = await parseAndValidate(barbRes);  
+
+    setBranches(b);  
+    setServices(s);  
+    setBarbers(barb);  
+  } catch (err) {  
+    console.error('Fetch error:', err);  
+    alert('Failed to load data');  
+    // Optionally reset states to empty arrays  
+    setBranches([]);  
+    setServices([]);  
+    setBarbers([]);  
+  } finally {  
+    setFetching(false);  
+  }  
+};  
     fetchAll();
   }, []);
 
@@ -369,8 +385,7 @@ const BookingPage = () => {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const selectedBranchData = branches.find(b => b._id === selectedBranch);
-  const selectedBarberData = barbers.find(b => b._id === selectedBarber);
+const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id === selectedBranch) : null;    const selectedBarberData = barbers.find(b => b._id === selectedBarber);
   const selectedServicesData = selectedServices.map(id => services.find(s => s._id === id));
   const selectedTimeSlot = timeSlots.find(s => s.start === selectedTime);
 
@@ -527,8 +542,9 @@ const BookingPage = () => {
                         <Button
                           key={slot.start}
                           variant={selectedTime === slot.start ? 'default' : 'outline'}
-                          onClick={() => setSelectedTime(slot.start)}
-                          className="h-12 text-xs"
+                          onClick={() => setSelectedTime(selectedTime === slot.start ? '' : slot.start)}
+                          disabled={selectedTime && selectedTime !== slot.start}
+                          className={`h-12 text-xs ${selectedTime && selectedTime !== slot.start ? 'opacity-50' : ''}`}
                         >
                           {slot.start}
                         </Button>
@@ -632,6 +648,15 @@ const BookingPage = () => {
                       }}
                     />
                   </Elements>
+                )}
+                {paymentMethod === 'pay-later' && (
+                  <Button
+                    onClick={handleNext}
+                    disabled={loading}
+                    className="w-full bg-[#D4AF37] hover:bg-black hover:text-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3"
+                  >
+                    {loading ? 'Booking...' : `Book Now - Pay at Salon (£${totalPrice.toFixed(2)})`}
+                  </Button>
                 )}
               </Card>
             )}
@@ -737,4 +762,4 @@ const BookingPage = () => {
   );
 };
 
-export default BookingPage;
+export default BookingPage; 
