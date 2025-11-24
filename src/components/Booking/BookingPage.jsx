@@ -243,6 +243,7 @@ const BookingPage = () => {
       current = addMinutes(current, totalMinutes);
     }
 
+    
     return slots;
   }, [selectedDate, selectedBarber, totalMinutes, barberShift, existingBookings]);
 

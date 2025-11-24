@@ -124,6 +124,7 @@ const Appointments = () => {
           </div>
         </div>
       </div>
+      
 
       {/* Desktop Table */}
       <div className="hidden xl:block bg-white rounded-xl shadow-md overflow-hidden">

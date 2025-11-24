@@ -538,6 +538,7 @@ const Barbers = () => {
         </>
       )}
 
+
       {/* Shifts Tab */}
       {activeTab === 'shifts' && (
         <>
