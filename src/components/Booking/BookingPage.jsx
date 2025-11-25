@@ -15,9 +15,9 @@ if (!STRIPE_PUBLIC_KEY) {
   console.error(' VITE_STRIPE_PUBLIC_KEY is not defined in environment variables');
 }
 
-const parseTime = (t) => {
+const parseTimeOnDate = (t, dateStr) => {
   const [h, m] = t.split(':').map(Number);
-  const d = new Date();
+  const d = new Date(dateStr);
   d.setHours(h, m, 0, 0);
   return d;
 };
@@ -216,13 +216,21 @@ const BookingPage = () => {
 
     if (barberShift.isOff || barberShift.noShift) return [];
 
-    const shiftStart = parseTime(barberShift.startTime);
-    const shiftEnd = parseTime(barberShift.endTime);
+    const shiftStart = parseTimeOnDate(barberShift.startTime, selectedDate);
+    const shiftEnd = parseTimeOnDate(barberShift.endTime, selectedDate);
 
     const slots = [];
     let current = new Date(shiftStart);
 
+    const now = new Date();
+    const isToday = selectedDate === now.toISOString().split('T')[0];
+
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
+      if (isToday && current < now) {
+        current = addMinutes(current, totalMinutes);
+        continue;
+      }
+
       const slotEnd = addMinutes(current, totalMinutes);
 
       const hasConflict = existingBookings.some(booking => {
@@ -763,4 +771,4 @@ const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id ==
   );
 };
 
-export default BookingPage; 
+export default BookingPage;
