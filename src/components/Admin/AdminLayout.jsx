@@ -1,3 +1,4 @@
+// src/components/Admin/AdminLayout.jsx
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
