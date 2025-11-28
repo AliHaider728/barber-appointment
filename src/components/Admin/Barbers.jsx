@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, Scissors, User } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient.js';
+import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User } from 'lucide-react';
 
 const Barbers = () => {
   const [barbers, setBarbers] = useState([]);
@@ -12,7 +13,9 @@ const Barbers = () => {
     experienceYears: '', 
     gender: '',
     services: [],
-    branch: '' 
+    branch: '',
+    email: '',
+    password: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -95,8 +98,13 @@ const Barbers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.branch) {
+    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.branch || !form.email) {
       alert('All fields are required!');
+      return;
+    }
+
+    if (!editingId && !form.password) {
+      alert('Password is required for new barbers!');
       return;
     }
 
@@ -105,17 +113,31 @@ const Barbers = () => {
       experienceYears: Number(form.experienceYears),
       gender: form.gender,
       specialties: form.services,
-      branch: form.branch
+      branch: form.branch,
+      email: form.email
     };
 
     try {
       setLoading(true);
       setError(null);
       
+      let barberRes;
       if (editingId) {
-        await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
+        barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
+        // If password is provided during edit, update Supabase user (but for security, better handle in backend)
+        if (form.password) {
+          // Note: Supabase doesn't allow direct password update via client; use reset or backend
+          console.warn('Password update not implemented client-side for security');
+        }
       } else {
-        await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
+        barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
+        
+        const { data: userData, error: supabaseError } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: { data: { role: 'barber', barberId: barberRes.data._id } }
+        });
+        if (supabaseError) throw supabaseError;
       }
       
       resetForm();
@@ -135,7 +157,9 @@ const Barbers = () => {
       experienceYears: b.experienceYears,
       gender: b.gender,
       services: Array.isArray(b.specialties) ? b.specialties : [],
-      branch: b.branch?._id || ''
+      branch: b.branch?._id || '',
+      email: b.email || '',
+      password: ''
     });
     setEditingId(b._id);
     setError(null);
@@ -158,7 +182,7 @@ const Barbers = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: '', experienceYears: '', gender: '', services: [], branch: '' });
+    setForm({ name: '', experienceYears: '', gender: '', services: [], branch: '', email: '', password: '' });
     setEditingId(null);
     setError(null);
   };
@@ -330,7 +354,6 @@ const Barbers = () => {
                   </select>
                 </div>
 
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
                   <select
@@ -347,6 +370,32 @@ const Barbers = () => {
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email (for login) *</label>
+                  <input
+                    type="email"
+                    placeholder="barber@example.com"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                    required
+                  />
+                </div>
+
+                {!editingId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Password *</label>
+                    <input
+                      type="password"
+                      placeholder="Set password"
+                      value={form.password}
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Services Selection */}
@@ -537,7 +586,6 @@ const Barbers = () => {
           </div>
         </>
       )}
-
 
       {/* Shifts Tab */}
       {activeTab === 'shifts' && (

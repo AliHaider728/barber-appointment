@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const AdminLoginSignup = () => {
+import { supabase } from '../../lib/supabaseClient.js'
+const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,28 +27,40 @@ const AdminLoginSignup = () => {
         ({ data, error: supabaseError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { role: 'admin' } },
+          options: { data: { role: 'user' } },   
         }));
       }
       if (supabaseError) throw supabaseError;
 
       if (isLogin) {
         const token = data.session.access_token;
-        const verifyRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/verify-admin', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!verifyRes.ok) {  
-          const verifyData = await verifyRes.json();
-          throw new Error(verifyData.message || 'Access denied');
+        const user = data.user;
+        const role = user.user_metadata?.role || 'user';  // Get role from metadata
+
+        // Verify and redirect based on role
+        if (role === 'admin') {
+          const verifyRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/verify-admin', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!verifyRes.ok) {  
+            const verifyData = await verifyRes.json();
+            throw new Error(verifyData.message || 'Access denied');
+          }
+          localStorage.setItem('sb-token', token);  // General token storage
+          navigate('/admin/dashboard');
+        } else if (role === 'barber') {
+          localStorage.setItem('sb-token', token);
+          navigate('/barber/dashboard');  // Redirect to barber dashboard
+        } else {
+          localStorage.setItem('sb-token', token);
+          navigate('/');  // User dashboard or home
         }
-        localStorage.setItem('sb-admin-token', token);
-        navigate('/admin/dashboard');
       } else {
-        alert('Admin created! Check email for confirmation if enabled. Now login.');
+        alert('Account created! Check email for confirmation if enabled. Now login.');
         setIsLogin(true);
       }
     } catch (err) {
-      setError(err.message || 'Something went wrong in code');
+      setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
       setEmail('');
@@ -69,13 +76,11 @@ const AdminLoginSignup = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/admin/dashboard',  // Success pe yahan redirect
-          queryParams: { access_type: 'offline', prompt: 'consent' },  // Optional for refresh token
+          redirectTo: window.location.origin + '/callback',  // General callback; handle role in onAuthStateChange
+          queryParams: { access_type: 'offline', prompt: 'consent' },
         },
       });
       if (error) throw error;
-
-      // OAuth redirect handle karega Supabase, phir token verify backend mein (dashboard pe onAuthStateChange use kar sakte ho)
     } catch (err) {
       setError(err.message || 'Google auth failed');
     } finally {
@@ -126,10 +131,10 @@ const AdminLoginSignup = () => {
         <div className="bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
           <div className="mb-8">
             <h2 className="text-3xl sm:text-4xl font-black text-center mb-2 text-[#D4AF37] tracking-tight">
-              {isLogin ? 'Admin Login' : 'Admin Signup'}
+              {isLogin ? 'Login' : 'Signup'}
             </h2>
             <p className="text-center text-gray-500 text-sm">
-              {isLogin ? 'Enter your credentials to continue' : 'Create your admin account'}
+              {isLogin ? 'Enter your credentials to continue' : 'Create your account'}
             </p>
           </div>
           
@@ -145,7 +150,7 @@ const AdminLoginSignup = () => {
               </label>
               <input
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="example@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"
@@ -200,12 +205,12 @@ const AdminLoginSignup = () => {
                   Loading...
                 </span>
               ) : (
-                isLogin ? 'Login' : 'Create Admin'
+                isLogin ? 'Login' : 'Signup'
               )}
             </button>
           </form>
 
-          {/* New: Google Auth Button */}
+          {/* Google Auth Button */}
           <div className="mt-4">
             <button
               onClick={handleGoogleAuth}
@@ -225,7 +230,7 @@ const AdminLoginSignup = () => {
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
-              {isLogin ? "Don't have admin access? " : "Already an admin? "}
+              {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
                 type="button"
                 onClick={() => { 
@@ -252,4 +257,4 @@ const AdminLoginSignup = () => {
   );
 };
 
-export default AdminLoginSignup;
+export default LoginSignup;

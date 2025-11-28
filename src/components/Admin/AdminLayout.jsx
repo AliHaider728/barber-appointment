@@ -1,7 +1,6 @@
-// src/components/Admin/AdminLayout.jsx
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText } from 'lucide-react'; // Added FileText for Leaves icon
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -14,6 +13,7 @@ const AdminLayout = () => {
     { path: '/admin/dashboard/barbers', label: 'Barbers & Shifts', icon: Users },
     { path: '/admin/dashboard/branches', label: 'Branches', icon: MapPin },
     { path: '/admin/dashboard/services', label: 'Services', icon: Scissors },
+    { path: '/admin/dashboard/leaves', label: 'Leaves', icon: FileText }, // New: Added Leaves menu item
   ];
 
   const handleLogout = () => {

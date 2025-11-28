@@ -116,7 +116,7 @@ const BookingPage = () => {
     setBarbers(barb);  
   } catch (err) {  
     console.error('Fetch error:', err);  
-    alert('Failed to load data');  
+    alert('Failed to load data. Please try again.');  
     // Optionally reset states to empty arrays  
     setBranches([]);  
     setServices([]);  
@@ -358,6 +358,13 @@ const BookingPage = () => {
   const handlePayLaterBooking = async () => {
     setLoading(true);
     try {
+      // Optional auth token
+      const token = localStorage.getItem('auth-token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const payload = {
         customerName: userDetails.fullName,
         email: userDetails.email,
@@ -376,17 +383,20 @@ const BookingPage = () => {
 
       const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error('Booking failed');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Booking failed');
+      }
       const data = await res.json();
       setBookingRef(data._id);
       setBookingComplete(true);
     } catch (err) {
       console.error('Booking error:', err);
-      alert('Booking failed. Please try again.');
+      alert('Booking failed: ' + (err.message || 'Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -426,7 +436,7 @@ const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id ==
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6"> 
             <div className="flex justify-between bg-white p-4 rounded-xl">
               {['Branch', 'Services', 'Date & Time', 'Confirm'].map((l, i) => (
                 <div key={i} className="flex flex-col items-center">
@@ -491,7 +501,8 @@ const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id ==
                 )}
                 {selectedBarber && (
                   <div>
-                    <h3 className="font-bold mb-3 text-sm">Select Services</h3>
+                    <h3
+                     className="font-bold mb-3 text-sm">Select Services</h3>
                     <div className="grid sm:grid-cols-2 gap-3 mb-4">
                       {barberSpecialties.map(s => (
                         <Card key={s._id} className={`cursor-pointer border-2 transition-all ${selectedServices.includes(s._id) ? 'border-[#D4AF37] bg-yellow-50' : 'border-gray-200'}`} onClick={() => handleServiceToggle(s._id)}>

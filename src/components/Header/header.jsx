@@ -88,7 +88,7 @@ export default function Header() {
 
               {/* Admin / Logout */}
                
-                <NavLink to="/admin">
+                <NavLink to="/login">
                   <button className="group relative px-6 py-3 bg-transparent text-white font-bold rounded-full overflow-hidden transition-all duration-500 uppercase tracking-wider text-sm border border-white/20">
                     <span className="absolute inset-0 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out"></span>
                     <span className="relative z-10 transition-colors duration-300 group-hover:text-black">
@@ -181,7 +181,7 @@ export default function Header() {
 
             {/* Admin / Logout Button */}
             
-              <NavLink to="/admin" onClick={() => setIsOpen(false)}>
+              <NavLink to="/login" onClick={() => setIsOpen(false)}>
                 <button className="group relative w-full py-4 px-6 bg-transparent text-white font-black rounded-2xl overflow-hidden transition-all duration-500 uppercase tracking-wider border-2 border-white/10">
                   {/* Liquid Gold Fill */}
                   <span className="absolute inset-0 bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out"></span>
