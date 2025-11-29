@@ -12,27 +12,31 @@ import BookingPage from "./components/Booking/BookingPage.jsx";
 import LoginSignup from "./components/Admin/AdminLoginSignup.jsx";
 import AdminLayout from "./components/Admin/AdminLayout.jsx";
 import BarberLayout from "./components/Admin/BarberLayout.jsx";
+import UserDashboard from "./components/Admin/UserDashboard.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
 // Admin Pages
-import Overview from "./components/Admin/Overview.jsx"
+import Overview from "./components/Admin/Overview.jsx";
 import Appointments from "./components/Admin/Appointments.jsx";
 import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
 import OAuthCallback from "./components/OAuthCallback.jsx";
+
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isBarberRoute = location.pathname.startsWith('/barber');
+  const isUserRoute = location.pathname.startsWith('/user');
 
   return (
     <>
       <ScrollToTop />
-      {/* Header & Footer  */}
-      {!isAdminRoute && !isBarberRoute && <Header />}
-      <main className={!isAdminRoute && !isBarberRoute ? "pt-16" : ""}>
+      {/* Header & Footer */}
+      {!isAdminRoute && !isBarberRoute && !isUserRoute && <Header />}
+      
+      <main className={!isAdminRoute && !isBarberRoute && !isUserRoute ? "pt-16" : ""}>
         <Routes>
           {/* User Routes */}
           <Route path="/" element={<Home />} />
@@ -44,10 +48,15 @@ function AppContent() {
           <Route path="/branches/:branchId" element={<BranchDetailPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/About" element={<AboutPage />} />
+          
           {/* General Login/Signup */}
           <Route path="/login" element={<LoginSignup />} />
           <Route path="/callback" element={<OAuthCallback />} />
-          {/* Admin dashboard */}
+          
+          {/* User Dashboard */}
+          <Route path="/user/dashboard" element={<UserDashboard />} />
+          
+          {/* Admin Dashboard */}
           <Route path="/admin/dashboard" element={<AdminLayout />}>
             <Route index element={<Overview />} />
             <Route path="overview" element={<Overview />} />
@@ -56,13 +65,15 @@ function AppContent() {
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
           </Route>
-          {/* Barber dashboard */}
+          
+          {/* Barber Dashboard */}
           <Route path="/barber/dashboard" element={<BarberLayout />}>
             <Route index element={<BarberDashboard />} />
           </Route>
         </Routes>
       </main>
-      {!isAdminRoute && !isBarberRoute && <AnimatedFooter />}
+      
+      {!isAdminRoute && !isBarberRoute && !isUserRoute && <AnimatedFooter />}
     </>
   );
 }
