@@ -21,15 +21,16 @@ import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
-// Removed OAuthCallback since no Google auth
+import OAuthCallback from "./components/OAuthCallback.jsx";
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isBarberRoute = location.pathname.startsWith('/barber');
+
   return (
     <>
       <ScrollToTop />
-      {/* Header & Footer */}
+      {/* Header & Footer  */}
       {!isAdminRoute && !isBarberRoute && <Header />}
       <main className={!isAdminRoute && !isBarberRoute ? "pt-16" : ""}>
         <Routes>
@@ -45,6 +46,7 @@ function AppContent() {
           <Route path="/About" element={<AboutPage />} />
           {/* General Login/Signup */}
           <Route path="/login" element={<LoginSignup />} />
+          <Route path="/callback" element={<OAuthCallback />} />
           {/* Admin dashboard */}
           <Route path="/admin/dashboard" element={<AdminLayout />}>
             <Route index element={<Overview />} />
@@ -64,6 +66,7 @@ function AppContent() {
     </>
   );
 }
+
 function App() {
   return (
     <BrowserRouter>
@@ -71,4 +74,5 @@ function App() {
     </BrowserRouter>
   );
 }
+
 export default App;

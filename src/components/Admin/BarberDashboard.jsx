@@ -23,8 +23,8 @@ const BarberDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || user.role !== 'barber') {
+    const userRole = localStorage.getItem('user-role');
+    if (userRole !== 'barber') {
       navigate('/login');
       return;
     }
@@ -33,31 +33,31 @@ const BarberDashboard = () => {
 
   const loadBarberData = async () => {
     try {
-      const token = localStorage.getItem('jwt-token');
-      const user = JSON.parse(localStorage.getItem('user'));
+      const token = localStorage.getItem('auth-token');
+      const userData = JSON.parse(localStorage.getItem('user-data'));
 
-      if (!token || !user?.barberRef) {
+      if (!token || !userData?.barberId) {
         navigate('/login');
         return;
       }
 
       // Fetch barber details
       const barberRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/barbers/${user.barberRef}`,
+        `https://barber-appointment-backend.vercel.app/api/barbers/${userData.barberId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setBarberData(barberRes.data);
 
       // Fetch appointments
       const appointmentsRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/appointments?barber=${user.barberRef}`,
+        `https://barber-appointment-backend.vercel.app/api/appointments?barber=${userData.barberId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAppointments(appointmentsRes.data);
 
       // Fetch shifts
       const shiftsRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${user.barberRef}`,
+        `https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${userData.barberId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setShifts(shiftsRes.data);
@@ -116,7 +116,7 @@ const BarberDashboard = () => {
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     try {
-      const token = localStorage.getItem('jwt-token');
+      const token = localStorage.getItem('auth-token');
       await axios.put(
         `https://barber-appointment-backend.vercel.app/api/appointments/${appointmentId}`,
         { status: newStatus },
