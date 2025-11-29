@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { supabase } from '../../lib/supabaseClient.js';
 import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User } from 'lucide-react';
-
 const Barbers = () => {
   const [barbers, setBarbers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [services, setServices] = useState([]);
   const [shifts, setShifts] = useState([]);
-  const [form, setForm] = useState({ 
-    name: '', 
-    experienceYears: '', 
+  const [form, setForm] = useState({
+    name: '',
+    experienceYears: '',
     gender: '',
     services: [],
     branch: '',
@@ -29,7 +27,6 @@ const Barbers = () => {
     endTime: '19:00',
     isOff: false
   });
-
   const daysOfWeek = [
     { value: 0, label: 'Sunday' },
     { value: 1, label: 'Monday' },
@@ -39,17 +36,15 @@ const Barbers = () => {
     { value: 5, label: 'Friday' },
     { value: 6, label: 'Saturday' }
   ];
-  
+ 
   useEffect(() => {
     fetchData();
   }, []);
-
   useEffect(() => {
     if (selectedBarber) {
       fetchBarberShifts(selectedBarber._id);
     }
   }, [selectedBarber]);
-
   const fetchData = async () => {
     try {
       setInitialLoading(true);
@@ -69,7 +64,6 @@ const Barbers = () => {
       setInitialLoading(false);
     }
   };
-
   const fetchBarbers = async () => {
     try {
       const res = await axios.get('https://barber-appointment-backend.vercel.app/api/barbers');
@@ -80,7 +74,6 @@ const Barbers = () => {
       console.error('Barbers fetch error:', err);
     }
   };
-
   const fetchBarberShifts = async (barberId) => {
     try {
       const res = await axios.get(`https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`);
@@ -94,52 +87,36 @@ const Barbers = () => {
       }
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.branch || !form.email) {
-      alert('All fields are required!');
+    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.branch) {
+      alert('All fields except email/password are required!');
       return;
     }
-
-    if (!editingId && !form.password) {
-      alert('Password is required for new barbers!');
+    if ((form.email && !form.password) || (!form.email && form.password)) {
+      alert('Both email and password are required if providing one!');
       return;
     }
-
     const data = {
       name: form.name.trim(),
       experienceYears: Number(form.experienceYears),
       gender: form.gender,
       specialties: form.services,
-      branch: form.branch,
-      email: form.email
+      branch: form.branch
     };
-
+    if (form.email) data.email = form.email;
+    if (form.password) data.password = form.password;
     try {
       setLoading(true);
       setError(null);
-      
+     
       let barberRes;
       if (editingId) {
         barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
-        // If password is provided during edit, update Supabase user (but for security, better handle in backend)
-        if (form.password) {
-          // Note: Supabase doesn't allow direct password update via client; use reset or backend
-          console.warn('Password update not implemented client-side for security');
-        }
       } else {
         barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
-        
-        const { data: userData, error: supabaseError } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: { data: { role: 'barber', barberId: barberRes.data._id } }
-        });
-        if (supabaseError) throw supabaseError;
       }
-      
+     
       resetForm();
       fetchBarbers();
     } catch (err) {
@@ -150,7 +127,6 @@ const Barbers = () => {
       setLoading(false);
     }
   };
-
   const handleEdit = (b) => {
     setForm({
       name: b.name,
@@ -166,7 +142,6 @@ const Barbers = () => {
     setActiveTab('barbers');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this barber?')) {
       try {
@@ -180,13 +155,11 @@ const Barbers = () => {
       }
     }
   };
-
   const resetForm = () => {
     setForm({ name: '', experienceYears: '', gender: '', services: [], branch: '', email: '', password: '' });
     setEditingId(null);
     setError(null);
   };
-
   const handleServiceToggle = (serviceName) => {
     setForm(prev => ({
       ...prev,
@@ -195,11 +168,9 @@ const Barbers = () => {
         : [...prev.services, serviceName]
     }));
   };
-
   const handleShiftSubmit = async (e) => {
     e.preventDefault();
     if (!selectedBarber) return;
-
     try {
       setLoading(true);
       const payload = {
@@ -207,12 +178,10 @@ const Barbers = () => {
         dayOfWeek: shiftForm.dayOfWeek,
         isOff: shiftForm.isOff
       };
-
       if (!shiftForm.isOff) {
         payload.startTime = shiftForm.startTime;
         payload.endTime = shiftForm.endTime;
       }
-
       await axios.post('https://barber-appointment-backend.vercel.app/api/barber-shifts', payload);
       await fetchBarberShifts(selectedBarber._id);
       setShiftForm({ dayOfWeek: 1, startTime: '09:00', endTime: '19:00', isOff: false });
@@ -223,7 +192,6 @@ const Barbers = () => {
       setLoading(false);
     }
   };
-
   const handleDeleteShift = async (shiftId) => {
     if (!window.confirm('Delete this shift?')) return;
     try {
@@ -234,9 +202,7 @@ const Barbers = () => {
       alert('Failed to delete shift');
     }
   };
-
   const availableServices = services.filter(s => s.gender === form.gender);
-
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -247,7 +213,6 @@ const Barbers = () => {
       </div>
     );
   }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -260,7 +225,6 @@ const Barbers = () => {
           </div>
         </div>
       </div>
-
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="flex border-b border-gray-200">
@@ -288,7 +252,6 @@ const Barbers = () => {
           </button>
         </div>
       </div>
-
       {/* Error Alert */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -300,7 +263,6 @@ const Barbers = () => {
           </button>
         </div>
       )}
-
       {/* Barbers Tab */}
       {activeTab === 'barbers' && (
         <>
@@ -312,7 +274,7 @@ const Barbers = () => {
                 {editingId ? 'Edit Barber' : 'Add New Barber'}
               </h3>
             </div>
-            
+           
             <form onSubmit={handleSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -326,7 +288,6 @@ const Barbers = () => {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years) *</label>
                   <input
@@ -339,7 +300,6 @@ const Barbers = () => {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
                   <select
@@ -353,7 +313,6 @@ const Barbers = () => {
                     <option value="female">Female</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
                   <select
@@ -370,34 +329,29 @@ const Barbers = () => {
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email (for login) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email (optional, for login)</label>
                   <input
                     type="email"
                     placeholder="barber@example.com"
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required
                   />
                 </div>
-
-                {!editingId && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Password *</label>
-                    <input
-                      type="password"
-                      placeholder="Set password"
-                      value={form.password}
-                      onChange={e => setForm({ ...form, password: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                      required
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {editingId ? 'New Password (optional)' : 'Password (optional, if email provided)'}
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Set password"
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                  />
+                </div>
               </div>
-
               {/* Services Selection */}
               {form.gender && (
                 <div className="mt-4">
@@ -433,20 +387,19 @@ const Barbers = () => {
                   )}
                 </div>
               )}
-
               <div className="flex gap-3 mt-6">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={loading}
                   className="px-6 py-2 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Saving...' : editingId ? 'Update Barber' : 'Add Barber'}
                 </button>
-                
+               
                 {editingId && (
-                  <button 
-                    type="button" 
-                    onClick={resetForm} 
+                  <button
+                    type="button"
+                    onClick={resetForm}
                     className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition"
                   >
                     Cancel
@@ -455,7 +408,6 @@ const Barbers = () => {
               </div>
             </form>
           </div>
-
           {/* Barbers List */}
           <div className="bg-white rounded-lg shadow border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
@@ -466,7 +418,7 @@ const Barbers = () => {
                 </span>
               </div>
             </div>
-            
+           
             <div className="p-6">
               {barbers.length === 0 ? (
                 <div className="text-center py-12">
@@ -477,8 +429,8 @@ const Barbers = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {barbers.map(barber => (
-                    <div 
-                      key={barber._id} 
+                    <div
+                      key={barber._id}
                       className="border border-gray-200 rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition"
                     >
                       {/* Header */}
@@ -496,7 +448,6 @@ const Barbers = () => {
                           </div>
                         </div>
                       </div>
-
                       {/* Branch */}
                       <div className="flex items-center gap-2 text-sm mb-3">
                         <MapPin className="w-4 h-4 text-gray-400" />
@@ -505,7 +456,6 @@ const Barbers = () => {
                           {barber.branch?.name || 'Not Assigned'}
                         </span>
                       </div>
-
                       {/* Services - Gender Wise */}
                       <div className="space-y-3 mb-4">
                         {barber.gender === 'male' && barber.specialties?.length > 0 && (
@@ -526,7 +476,6 @@ const Barbers = () => {
                             </div>
                           </div>
                         )}
-
                         {barber.gender === 'female' && barber.specialties?.length > 0 && (
                           <div>
                             <div className="flex items-center gap-1 text-xs font-semibold text-pink-700 mb-1">
@@ -545,33 +494,31 @@ const Barbers = () => {
                             </div>
                           </div>
                         )}
-
                         {(!barber.specialties || barber.specialties.length === 0) && (
                           <p className="text-xs text-gray-400 italic">No services assigned</p>
                         )}
                       </div>
-
                       {/* Actions */}
                       <div className="flex gap-2 pt-3 border-t border-gray-100">
-                        <button 
-                          onClick={() => handleEdit(barber)} 
+                        <button
+                          onClick={() => handleEdit(barber)}
                           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
                         >
                           <Edit2 className="w-4 h-4" />
                           Edit
                         </button>
-                        <button 
+                        <button
                           onClick={() => {
                             setSelectedBarber(barber);
                             setActiveTab('shifts');
-                          }} 
+                          }}
                           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition text-sm font-medium"
                         >
                           <Clock className="w-4 h-4" />
                           Shifts
                         </button>
-                        <button 
-                          onClick={() => handleDelete(barber._id)} 
+                        <button
+                          onClick={() => handleDelete(barber._id)}
                           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -586,7 +533,6 @@ const Barbers = () => {
           </div>
         </>
       )}
-
       {/* Shifts Tab */}
       {activeTab === 'shifts' && (
         <>
@@ -610,7 +556,6 @@ const Barbers = () => {
               ))}
             </select>
           </div>
-
           {selectedBarber && (
             <>
               <div className="bg-white rounded-lg shadow border border-gray-200">
@@ -620,7 +565,7 @@ const Barbers = () => {
                     Add Working Hours for {selectedBarber.name}
                   </h3>
                 </div>
-                
+               
                 <form onSubmit={handleShiftSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
@@ -635,7 +580,6 @@ const Barbers = () => {
                         ))}
                       </select>
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
                       <input
@@ -646,7 +590,6 @@ const Barbers = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition disabled:bg-gray-100"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
                       <input
@@ -657,7 +600,6 @@ const Barbers = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition disabled:bg-gray-100"
                       />
                     </div>
-
                     <div className="flex items-end">
                       <label className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-[#D4AF37] transition">
                         <input
@@ -670,7 +612,6 @@ const Barbers = () => {
                       </label>
                     </div>
                   </div>
-
                   <button
                     type="submit"
                     disabled={loading}
@@ -680,7 +621,6 @@ const Barbers = () => {
                   </button>
                 </form>
               </div>
-
               <div className="bg-white rounded-lg shadow border border-gray-200">
                 <div className="border-b border-gray-200 px-6 py-4">
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -688,7 +628,7 @@ const Barbers = () => {
                     Weekly Schedule
                   </h3>
                 </div>
-                
+               
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
                     {daysOfWeek.map(day => {
@@ -735,7 +675,6 @@ const Barbers = () => {
               </div>
             </>
           )}
-
           {!selectedBarber && (
             <div className="bg-white rounded-lg shadow border border-gray-200 p-12 text-center">
               <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -747,5 +686,4 @@ const Barbers = () => {
     </div>
   );
 };
-
 export default Barbers;

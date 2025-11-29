@@ -1,19 +1,19 @@
-// src/components/Barber/BarberLayout.jsx
-import React from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom'; // Outlet renders child routes
-import { createClient } from '@supabase/supabase-js'; // For auth if needed
-import { LogOut, Calendar, DollarSign, Clock, Users } from 'lucide-react'; // Icons (install lucide-react if not already)
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import React, { useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { LogOut, Calendar, DollarSign, Clock, Users } from 'lucide-react';
 
 const BarberLayout = () => {
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('sb-token');
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || user.role !== 'barber') {
+      navigate('/login');
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.clear();
     navigate('/login');
   };
 
@@ -27,41 +27,25 @@ const BarberLayout = () => {
         <nav className="mt-6">
           <ul className="space-y-2">
             <li>
-              <Link 
-                to="/barber/dashboard" 
-                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition"
+              <button 
+                onClick={() => navigate('/barber/dashboard')}
+                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition w-full"
               >
                 <Users className="w-5 h-5 mr-3" />
                 Dashboard
-              </Link>
+              </button>
             </li>
-            <li>
-              <Link 
-                to="/barber/bookings" 
-                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition"
+            {/* If you have more routes, add them here. For now, assuming only dashboard */}
+            {/* <li>
+              <button 
+                onClick={() => navigate('/barber/bookings')}
+                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition w-full"
               >
                 <Calendar className="w-5 h-5 mr-3" />
                 Bookings
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/barber/shifts" 
-                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition"
-              >
-                <Clock className="w-5 h-5 mr-3" />
-                Shifts/Schedule
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/barber/payments" 
-                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition"
-              >
-                <DollarSign className="w-5 h-5 mr-3" />
-                Payments
-              </Link>
-            </li>
+              </button>
+            </li> */}
+            {/* Similar for others */}
           </ul>
         </nav>
         <div className="absolute bottom-0 w-64 p-4 border-t">

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient.js'
 const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -9,54 +8,44 @@ const LoginSignup = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     if (!isLogin && password !== confirmPassword) {
       return setError('Passwords do not match');
     }
-
     setLoading(true);
     try {
-      let { data, error: supabaseError } = {};  
+      let res;
+      const payload = { email, password };
       if (isLogin) {
-        ({ data, error: supabaseError } = await supabase.auth.signInWithPassword({ email, password }));
+        res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
       } else {
-        ({ data, error: supabaseError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { role: 'user' } },   
-        }));
+        res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, role: 'user' })
+        });
       }
-      if (supabaseError) throw supabaseError;
-
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error');
       if (isLogin) {
-        const token = data.session.access_token;
-        const user = data.user;
-        const role = user.user_metadata?.role || 'user';  // Get role from metadata
-
-        // Verify and redirect based on role
-        if (role === 'admin') {
-          const verifyRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/verify-admin', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!verifyRes.ok) {  
-            const verifyData = await verifyRes.json();
-            throw new Error(verifyData.message || 'Access denied');
-          }
-          localStorage.setItem('sb-token', token);  // General token storage
+        const { token, user } = data;
+        localStorage.setItem('jwt-token', token);
+        // Redirect based on role
+        if (user.role === 'admin') {
           navigate('/admin/dashboard');
-        } else if (role === 'barber') {
-          localStorage.setItem('sb-token', token);
-          navigate('/barber/dashboard');  // Redirect to barber dashboard
+        } else if (user.role === 'barber') {
+          navigate('/barber/dashboard');
         } else {
-          localStorage.setItem('sb-token', token);
-          navigate('/');  // User dashboard or home
+          navigate('/');
         }
       } else {
-        alert('Account created! Check email for confirmation if enabled. Now login.');
+        alert('Account created! Now login.');
         setIsLogin(true);
       }
     } catch (err) {
@@ -68,42 +57,26 @@ const LoginSignup = () => {
       setConfirmPassword('');
     }
   };
-
   const handleGoogleAuth = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/callback',  // General callback; handle role in onAuthStateChange
-          queryParams: { access_type: 'offline', prompt: 'consent' },
-        },
-      });
-      if (error) throw error;
-    } catch (err) {
-      setError(err.message || 'Google auth failed');
-    } finally {
-      setLoading(false);
-    }
+    // Google OAuth not implemented with JWT yet; skip or implement separately if needed
+    setError('Google auth not supported in JWT mode');
   };
-
   return (
     <>
       <style>
         {`
           @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Emilys+Candy&family=Gravitas+One&family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
-          
+         
           .shiny-text {
             position: relative;
             display: inline-block;
             font-family: "Josefin Sans", sans-serif;
             font-optical-sizing: auto;
             font-weight: 400;
-            font-style: normal;   
+            font-style: normal;
             overflow: hidden;
           }
-          
+         
           .shiny-text::after {
             content: "";
             position: absolute;
@@ -119,14 +92,14 @@ const LoginSignup = () => {
             );
             animation: shine 3s linear infinite;
           }
-          
+         
           @keyframes shine {
-            0%   { left: -150%; }
+            0% { left: -150%; }
             100% { left: 150%; }
           }
         `}
       </style>
-      
+     
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
           <div className="mb-8">
@@ -137,7 +110,7 @@ const LoginSignup = () => {
               {isLogin ? 'Enter your credentials to continue' : 'Create your account'}
             </p>
           </div>
-          
+         
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg mb-4 text-center">
               {error}
@@ -158,7 +131,6 @@ const LoginSignup = () => {
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
@@ -173,7 +145,7 @@ const LoginSignup = () => {
                 disabled={loading}
               />
             </div>
-            
+           
             {!isLogin && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -190,7 +162,6 @@ const LoginSignup = () => {
                 />
               </div>
             )}
-
             <button
               type="submit"
               className="w-full bg-[#D4AF37] text-black font-bold py-3.5 rounded-lg hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
@@ -209,7 +180,6 @@ const LoginSignup = () => {
               )}
             </button>
           </form>
-
           {/* Google Auth Button */}
           <div className="mt-4">
             <button
@@ -227,15 +197,14 @@ const LoginSignup = () => {
               {isLogin ? 'Login with Google' : 'Signup with Google'}
             </button>
           </div>
-
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
                 type="button"
-                onClick={() => { 
-                  setIsLogin(!isLogin); 
-                  setError(''); 
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
                   setEmail(''); setPassword(''); setConfirmPassword('');
                 }}
                 className="text-[#D4AF37] font-bold hover:underline hover:text-[#b8941f] transition-colors"
@@ -245,7 +214,6 @@ const LoginSignup = () => {
               </button>
             </p>
           </div>
-
           <div className="flex justify-center mt-8">
             <span className="text-center items-center shiny-text text-gray-700 text-sm font-medium">
               Powered By TecnoSphere
@@ -256,5 +224,4 @@ const LoginSignup = () => {
     </>
   );
 };
-
 export default LoginSignup;
