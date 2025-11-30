@@ -117,10 +117,6 @@ const Barbers = () => {
       email: form.email
     };
 
-    if (form.password) {
-      data.password = form.password;
-    }
-
     try {
       setLoading(true);
       setError(null);
@@ -128,8 +124,20 @@ const Barbers = () => {
       let barberRes;
       if (editingId) {
         barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
+        // If password is provided during edit, update Supabase user (but for security, better handle in backend)
+        if (form.password) {
+          // Note: Supabase doesn't allow direct password update via client; use reset or backend
+          console.warn('Password update not implemented client-side for security');
+        }
       } else {
         barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
+        
+        const { data: userData, error: supabaseError } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: { data: { role: 'barber', barberId: barberRes.data._id } }
+        });
+        if (supabaseError) throw supabaseError;
       }
       
       resetForm();
@@ -375,17 +383,19 @@ const Barbers = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{editingId ? 'New Password (optional)' : 'Initial Password *'}</label>
-                  <input
-                    type="password"
-                    placeholder={editingId ? 'Leave blank to keep current' : 'Set password'}
-                    value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required={!editingId}
-                  />
-                </div>
+                {!editingId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Password *</label>
+                    <input
+                      type="password"
+                      placeholder="Set password"
+                      value={form.password}
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Services Selection */}
@@ -738,4 +748,4 @@ const Barbers = () => {
   );
 };
 
-export default Barbers; 
+export default Barbers;
