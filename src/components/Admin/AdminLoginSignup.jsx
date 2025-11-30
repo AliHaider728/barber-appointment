@@ -69,6 +69,7 @@ const LoginSignup = () => {
             email: user.email,
             name: user.user_metadata?.full_name
           }));
+          localStorage.setItem('auth-token', token);
           
           navigate('/barber/dashboard', { replace: true });
         } else {
