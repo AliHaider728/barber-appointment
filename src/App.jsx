@@ -11,17 +11,20 @@ import BranchDetailPage from "./components/branches/BranchDetailPage.jsx";
 import BookingPage from "./components/Booking/BookingPage.jsx";
 import LoginSignup from "./components/Admin/AdminLoginSignup.jsx";
 import AdminLayout from "./components/Admin/AdminLayout.jsx";
-import BarberLayout from "./components/Admin/BarberLayout.jsx";
 import UserDashboard from "./components/Admin/UserDashboard.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
+
 // Admin Pages
 import Overview from "./components/Admin/Overview.jsx";
 import Appointments from "./components/Admin/Appointments.jsx";
 import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
+
+// Barber Dashboard (standalone - no layout needed)
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
+
 import OAuthCallback from "./components/OAuthCallback.jsx";
 
 function AppContent() {
@@ -56,7 +59,7 @@ function AppContent() {
           {/* User Dashboard */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
           
-          {/* Admin Dashboard */}
+          {/* Admin Dashboard (with nested routes) */}
           <Route path="/admin/dashboard" element={<AdminLayout />}>
             <Route index element={<Overview />} />
             <Route path="overview" element={<Overview />} />
@@ -66,10 +69,8 @@ function AppContent() {
             <Route path="services" element={<ServicesAdmin />} />
           </Route>
           
-          {/* Barber Dashboard */}
-          <Route path="/barber/dashboard" element={<BarberLayout />}>
-            <Route index element={<BarberDashboard />} />
-          </Route>
+          {/* Barber Dashboard (standalone - NO layout wrapper) */}
+          <Route path="/barber/dashboard" element={<BarberDashboard />} />
         </Routes>
       </main>
       
