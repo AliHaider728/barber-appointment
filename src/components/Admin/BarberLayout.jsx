@@ -1,5 +1,5 @@
 // src/components/Barber/BarberLayout.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom'; // Outlet renders child routes
 import { createClient } from '@supabase/supabase-js'; // For auth if needed
 import { LogOut, Calendar, DollarSign, Clock, Users } from 'lucide-react'; // Icons (install lucide-react if not already)
@@ -11,9 +11,19 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const BarberLayout = () => {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.user_metadata.role !== 'barber') {
+        navigate('/login');
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('sb-token');
+    localStorage.clear();
     navigate('/login');
   };
 

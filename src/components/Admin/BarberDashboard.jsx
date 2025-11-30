@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
 import { 
   Calendar, Clock, DollarSign, LogOut, 
   CheckCircle, AlertCircle, TrendingUp,
   Scissors, MapPin, Award, User, Menu, X, Home
 } from 'lucide-react';
+
+// Initialize Supabase
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const BarberDashboard = () => {
   const [barberData, setBarberData] = useState(null);
@@ -23,49 +29,79 @@ const BarberDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userRole = localStorage.getItem('user-role');
-    if (userRole !== 'barber') {
-      navigate('/login');
-      return;
-    }
-    loadBarberData();
+    checkAuthAndLoadData();
   }, []);
 
-  const loadBarberData = async () => {
+  const checkAuthAndLoadData = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
-      const userData = JSON.parse(localStorage.getItem('user-data'));
-
-      if (!token || !userData?.barberId) {
+      // ✅ Check Supabase session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('No active session:', sessionError);
         navigate('/login');
         return;
       }
 
+      // ✅ Verify barber role
+      const userMetadata = session.user.user_metadata;
+      if (userMetadata.role !== 'barber') {
+        alert('Access denied! This is for barbers only.');
+        await supabase.auth.signOut();
+        navigate('/login');
+        return;
+      }
+
+      // ✅ Get barberId from metadata
+      const barberId = userMetadata.barberId;
+      if (!barberId) {
+        alert('Barber ID not found in your account!');
+        await supabase.auth.signOut();
+        navigate('/login');
+        return;
+      }
+
+      console.log('✓ Authenticated Barber ID:', barberId);
+      
+      // Load barber data
+      await loadBarberData(barberId, session.access_token);
+      
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      navigate('/login');
+    }
+  };
+
+  const loadBarberData = async (barberId, token) => {
+    try {
+      setLoading(true);
+
       // Fetch barber details
       const barberRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/barbers/${userData.barberId}`,
+        `https://barber-appointment-backend.vercel.app/api/barbers/${barberId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setBarberData(barberRes.data);
 
       // Fetch appointments
       const appointmentsRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/appointments?barber=${userData.barberId}`,
+        `https://barber-appointment-backend.vercel.app/api/appointments?barber=${barberId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAppointments(appointmentsRes.data);
 
       // Fetch shifts
       const shiftsRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${userData.barberId}`,
+        `https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setShifts(shiftsRes.data);
+      setShifts(Array.isArray(shiftsRes.data) ? shiftsRes.data : []);
 
       calculateStats(appointmentsRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
       if (error.response?.status === 401) {
+        alert('Session expired! Please login again.');
         handleLogout();
       }
     } finally {
@@ -109,23 +145,32 @@ const BarberDashboard = () => {
     });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.clear();
     navigate('/login');
   };
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Session expired!');
+        handleLogout();
+        return;
+      }
+
       await axios.put(
         `https://barber-appointment-backend.vercel.app/api/appointments/${appointmentId}`,
         { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
-      loadBarberData();
-      alert('Status updated!');
+      
+      // Reload data
+      await loadBarberData(session.user.user_metadata.barberId, session.access_token);
+      alert('Status updated successfully!');
     } catch (error) {
-      alert('Failed to update status');
+      alert('Failed to update status: ' + error.message);
     }
   };
 
