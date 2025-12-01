@@ -56,19 +56,19 @@ const BarberDashboard = () => {
 
   const checkAuthAndLoadData = async () => {
     try {
-      console.log(' Starting authentication check...');
+      console.log('🔍 Starting authentication check...');
       
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
-        console.error('  No session:', sessionError);
+        console.error('❌ No session:', sessionError);
         
         // Fallback to localStorage
         const storedToken = localStorage.getItem('sb-token');
         const userData = localStorage.getItem('user-data');
         
         if (storedToken && userData) {
-          console.log('  Using stored credentials');
+          console.log('✅ Using stored credentials');
           const parsedData = JSON.parse(userData);
           await loadBarberData(parsedData.barberId, storedToken);
           setAuthChecked(true);
@@ -90,7 +90,7 @@ const BarberDashboard = () => {
         throw new Error('Barber ID not found in account');
       }
 
-      console.log('  Authenticated - Barber ID:', barberId);
+      console.log('✅ Authenticated - Barber ID:', barberId);
       
       localStorage.setItem('sb-token', session.access_token);
       localStorage.setItem('user-data', JSON.stringify({ 
@@ -126,7 +126,7 @@ const BarberDashboard = () => {
 
       // Handle barber data
       if (barberRes.status === 'fulfilled') {
-        console.log('  Barber data:', barberRes.value.data.name);
+        console.log('✅ Barber data:', barberRes.value.data.name);
         setBarberData(barberRes.value.data);
       } else {
         console.error('❌ Failed to load barber:', barberRes.reason);
@@ -136,7 +136,7 @@ const BarberDashboard = () => {
       // Handle appointments
       if (appointmentsRes.status === 'fulfilled') {
         const appts = appointmentsRes.value.data;
-        console.log('  Appointments loaded:', appts.length);
+        console.log('✅ Appointments loaded:', appts.length);
         setAppointments(Array.isArray(appts) ? appts : []);
         calculateStats(Array.isArray(appts) ? appts : []);
       } else {
@@ -148,7 +148,7 @@ const BarberDashboard = () => {
       // Handle shifts
       if (shiftsRes.status === 'fulfilled') {
         const shiftData = shiftsRes.value.data;
-        console.log('  Shifts loaded:', shiftData.length);
+        console.log('✅ Shifts loaded:', shiftData.length);
         setShifts(Array.isArray(shiftData) ? shiftData : []);
       } else {
         console.warn('⚠️ Failed to load shifts:', shiftsRes.reason);
@@ -310,7 +310,7 @@ const BarberDashboard = () => {
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition font-semibold"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" /> 
               <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
@@ -436,7 +436,7 @@ const BarberDashboard = () => {
                             {new Date(apt.date).toLocaleDateString()} at {new Date(apt.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} • £{apt.totalPrice}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Payment: {apt.paymentStatus === 'paid' ? '  Paid' : '⏳ Pending'}
+                            Payment: {apt.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}
                           </p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
