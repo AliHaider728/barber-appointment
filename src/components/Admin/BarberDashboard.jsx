@@ -4,14 +4,15 @@ import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import { 
   Calendar, Clock, DollarSign, LogOut, 
-  CheckCircle, AlertCircle, TrendingUp,
-  Scissors, MapPin, Award, User, Menu, X, Home
+  CheckCircle, AlertCircle,
+  Scissors, MapPin, Award, User, Menu, X, Home, RefreshCw
 } from 'lucide-react';
 
-// Initialize Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const API_BASE = 'https://barber-appointment-backend.vercel.app/api';
 
 const BarberDashboard = () => {
   const [barberData, setBarberData] = useState(null);
@@ -26,83 +27,141 @@ const BarberDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkAuthAndLoadData();
+    let mounted = true;
+    
+    const initDashboard = async () => {
+      if (!mounted) return;
+      
+      try {
+        await checkAuthAndLoadData();
+      } catch (error) {
+        console.error('❌ Dashboard init failed:', error);
+        if (mounted) {
+          setError(error.message);
+        }
+      }
+    };
+
+    initDashboard();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const checkAuthAndLoadData = async () => {
     try {
-      // ✅ Check Supabase session
+      console.log(' Starting authentication check...');
+      
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
-        console.error('No active session:', sessionError);
-        navigate('/login');
-        return;
+        console.error('  No session:', sessionError);
+        
+        // Fallback to localStorage
+        const storedToken = localStorage.getItem('sb-token');
+        const userData = localStorage.getItem('user-data');
+        
+        if (storedToken && userData) {
+          console.log('  Using stored credentials');
+          const parsedData = JSON.parse(userData);
+          await loadBarberData(parsedData.barberId, storedToken);
+          setAuthChecked(true);
+          return;
+        }
+        
+        throw new Error('No valid authentication found');
       }
 
-      // ✅ Verify barber role
       const userMetadata = session.user.user_metadata;
-      if (userMetadata.role !== 'barber') {
-        alert('Access denied! This is for barbers only.');
-        await supabase.auth.signOut();
-        navigate('/login');
-        return;
-      }
-
-      // ✅ Get barberId from metadata
-      const barberId = userMetadata.barberId;
-      if (!barberId) {
-        alert('Barber ID not found in your account!');
-        await supabase.auth.signOut();
-        navigate('/login');
-        return;
-      }
-
-      console.log('✓ Authenticated Barber ID:', barberId);
+      const role = userMetadata?.role;
       
-      // Load barber data
+      if (role !== 'barber') {
+        throw new Error('Access denied - not a barber account');
+      }
+
+      const barberId = userMetadata?.barberId;
+      if (!barberId) {
+        throw new Error('Barber ID not found in account');
+      }
+
+      console.log('  Authenticated - Barber ID:', barberId);
+      
+      localStorage.setItem('sb-token', session.access_token);
+      localStorage.setItem('user-data', JSON.stringify({ 
+        barberId, 
+        email: session.user.email,
+        name: userMetadata?.full_name || 'Barber'
+      }));
+      
       await loadBarberData(barberId, session.access_token);
+      setAuthChecked(true);
       
     } catch (error) {
-      console.error('Auth check failed:', error);
-      navigate('/login');
+      console.error('❌ Auth failed:', error);
+      setError(error.message);
+      setTimeout(() => navigate('/login', { replace: true }), 2000);
     }
   };
 
   const loadBarberData = async (barberId, token) => {
     try {
       setLoading(true);
+      setError(null);
+      console.log('📥 Loading data for barber:', barberId);
 
-      // Fetch barber details
-      const barberRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/barbers/${barberId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setBarberData(barberRes.data);
+      const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch appointments
-      const appointmentsRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/appointments?barber=${barberId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setAppointments(appointmentsRes.data);
+      // Parallel API calls with error handling
+      const [barberRes, appointmentsRes, shiftsRes] = await Promise.allSettled([
+        axios.get(`${API_BASE}/barbers/${barberId}`, { headers, timeout: 10000 }),
+        axios.get(`${API_BASE}/appointments?barber=${barberId}`, { headers, timeout: 10000 }),
+        axios.get(`${API_BASE}/barber-shifts?barber=${barberId}`, { headers, timeout: 10000 })
+      ]);
 
-      // Fetch shifts
-      const shiftsRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setShifts(Array.isArray(shiftsRes.data) ? shiftsRes.data : []);
+      // Handle barber data
+      if (barberRes.status === 'fulfilled') {
+        console.log('  Barber data:', barberRes.value.data.name);
+        setBarberData(barberRes.value.data);
+      } else {
+        console.error('❌ Failed to load barber:', barberRes.reason);
+        throw new Error('Failed to load barber profile');
+      }
 
-      calculateStats(appointmentsRes.data);
+      // Handle appointments
+      if (appointmentsRes.status === 'fulfilled') {
+        const appts = appointmentsRes.value.data;
+        console.log('  Appointments loaded:', appts.length);
+        setAppointments(Array.isArray(appts) ? appts : []);
+        calculateStats(Array.isArray(appts) ? appts : []);
+      } else {
+        console.warn('⚠️ Failed to load appointments:', appointmentsRes.reason);
+        setAppointments([]);
+        calculateStats([]);
+      }
+
+      // Handle shifts
+      if (shiftsRes.status === 'fulfilled') {
+        const shiftData = shiftsRes.value.data;
+        console.log('  Shifts loaded:', shiftData.length);
+        setShifts(Array.isArray(shiftData) ? shiftData : []);
+      } else {
+        console.warn('⚠️ Failed to load shifts:', shiftsRes.reason);
+        setShifts([]);
+      }
+
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('❌ Load data error:', error);
       if (error.response?.status === 401) {
-        alert('Session expired! Please login again.');
-        handleLogout();
+        setError('Session expired - please login again');
+        setTimeout(() => handleLogout(), 2000);
+      } else {
+        setError('Failed to load dashboard data');
       }
     } finally {
       setLoading(false);
@@ -121,14 +180,17 @@ const BarberDashboard = () => {
       const aptDate = new Date(apt.date).toDateString();
       const price = parseFloat(apt.totalPrice) || 0;
 
+      // Only count confirmed/completed for earnings
       if (apt.status === 'confirmed' || apt.status === 'completed') {
         totalEarnings += price;
       }
 
+      // Pending payments (not paid yet)
       if (apt.paymentStatus === 'pending') {
         pendingAmount += price;
       }
 
+      // Today's stats
       if (aptDate === today) {
         todayCount++;
         if (apt.status === 'completed') {
@@ -148,7 +210,7 @@ const BarberDashboard = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.clear();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
@@ -161,27 +223,63 @@ const BarberDashboard = () => {
       }
 
       await axios.put(
-        `https://barber-appointment-backend.vercel.app/api/appointments/${appointmentId}`,
+        `${API_BASE}/appointments/${appointmentId}`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
       
-      // Reload data
-      await loadBarberData(session.user.user_metadata.barberId, session.access_token);
+      const barberId = session.user.user_metadata.barberId;
+      await loadBarberData(barberId, session.access_token);
       alert('Status updated successfully!');
     } catch (error) {
-      alert('Failed to update status: ' + error.message);
+      console.error('Status update error:', error);
+      alert('Failed to update: ' + (error.response?.data?.message || error.message));
     }
+  };
+
+  const handleRetry = () => {
+    window.location.reload();
   };
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  if (loading) {
+  // Error state
+  if (error && !authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50">
+        <div className="text-center bg-white p-8 rounded-xl shadow-lg max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={handleRetry}
+              className="px-4 py-2 bg-[#D4AF37] text-black font-bold rounded-lg hover:bg-black hover:text-white transition"
+            >
+              <RefreshCw className="w-4 h-4 inline mr-2" />
+              Retry
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (!authChecked || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-yellow-50">
         <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          <div className="inline-block w-16 h-16 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600 font-semibold">
+            {!authChecked ? 'Authenticating...' : 'Loading dashboard...'}
+          </p>
         </div>
       </div>
     );
@@ -203,8 +301,8 @@ const BarberDashboard = () => {
               <div className="flex items-center gap-2">
                 <Scissors className="w-6 h-6 text-[#D4AF37]" />
                 <div>
-                  <h1 className="text-xl font-bold">{barberData?.name}</h1>
-                  <p className="text-xs text-gray-300">{barberData?.branch?.name}</p>
+                  <h1 className="text-xl font-bold">{barberData?.name || 'Barber'}</h1>
+                  <p className="text-xs text-gray-300">{barberData?.branch?.name || 'Loading...'}</p>
                 </div>
               </div>
             </div>
@@ -264,10 +362,19 @@ const BarberDashboard = () => {
 
         {/* Main Content */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {/* Overview */}
+          {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
+                <button
+                  onClick={handleRetry}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
 
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -315,14 +422,21 @@ const BarberDashboard = () => {
                 </div>
                 <div className="p-6">
                   {appointments.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No appointments yet</p>
+                    <div className="text-center py-12">
+                      <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 font-medium">No appointments yet</p>
+                      <p className="text-sm text-gray-400 mt-1">Your bookings will appear here</p>
+                    </div>
                   ) : (
                     appointments.slice(0, 5).map(apt => (
                       <div key={apt._id} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900">{apt.customerName}</p>
                           <p className="text-sm text-gray-600">
-                            {new Date(apt.date).toLocaleDateString()} at {apt.time} • £{apt.totalPrice}
+                            {new Date(apt.date).toLocaleDateString()} at {new Date(apt.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} • £{apt.totalPrice}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Payment: {apt.paymentStatus === 'paid' ? '  Paid' : '⏳ Pending'}
                           </p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -340,67 +454,92 @@ const BarberDashboard = () => {
             </div>
           )}
 
-          {/* Appointments */}
+          {/* Appointments Tab */}
           {activeTab === 'appointments' && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="border-b border-gray-200 px-6 py-4 bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-900">All Appointments</h3>
+                <h3 className="text-lg font-semibold text-gray-900">All Appointments ({appointments.length})</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date/Time</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Services</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Payment</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {appointments.map(apt => (
-                      <tr key={apt._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-900">{apt.customerName}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{new Date(apt.date).toLocaleDateString()}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{apt.time}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">£{apt.totalPrice}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            apt.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {apt.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {apt.status === 'pending' && (
-                            <button
-                              onClick={() => handleStatusUpdate(apt._id, 'confirmed')}
-                              className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition"
-                            >
-                              Confirm
-                            </button>
-                          )}
-                          {apt.status === 'confirmed' && (
-                            <button
-                              onClick={() => handleStatusUpdate(apt._id, 'completed')}
-                              className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition"
-                            >
-                              Complete
-                            </button>
-                          )}
+                    {appointments.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                          No appointments found
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      appointments.map(apt => (
+                        <tr key={apt._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-gray-900">{apt.customerName}</p>
+                            <p className="text-xs text-gray-500">{apt.email}</p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            <p>{new Date(apt.date).toLocaleDateString()}</p>
+                            <p className="text-xs">{new Date(apt.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {apt.services?.map(s => s.name).join(', ') || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">£{apt.totalPrice}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              apt.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                              'bg-orange-100 text-orange-700'
+                            }`}>
+                              {apt.paymentStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              apt.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {apt.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {apt.status === 'pending' && (
+                              <button
+                                onClick={() => handleStatusUpdate(apt._id, 'confirmed')}
+                                className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition"
+                              >
+                                Confirm
+                              </button>
+                            )}
+                            {apt.status === 'confirmed' && (
+                              <button
+                                onClick={() => handleStatusUpdate(apt._id, 'completed')}
+                                className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition"
+                              >
+                                Complete
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          {/* Schedule */}
+          {/* Schedule Tab */}
           {activeTab === 'schedule' && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="border-b border-gray-200 px-6 py-4 bg-gray-50">
@@ -440,7 +579,7 @@ const BarberDashboard = () => {
             </div>
           )}
 
-          {/* Profile */}
+          {/* Profile Tab */}
           {activeTab === 'profile' && barberData && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="border-b border-gray-200 px-6 py-4 bg-gray-50">
@@ -485,14 +624,18 @@ const BarberDashboard = () => {
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 mb-3">Specialties</label>
                     <div className="flex flex-wrap gap-2">
-                      {barberData.specialties?.map((service, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 bg-[#D4AF37]/10 text-[#D4AF37] rounded-full text-sm font-semibold border border-[#D4AF37]/30"
-                        >
-                          {service}
-                        </span>
-                      ))}
+                      {barberData.specialties && barberData.specialties.length > 0 ? (
+                        barberData.specialties.map((service, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-[#D4AF37]/10 text-[#D4AF37] rounded-full text-sm font-semibold border border-[#D4AF37]/30"
+                          >
+                            {service}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm">No specialties assigned</p>
+                      )}
                     </div>
                   </div>
                 </div>

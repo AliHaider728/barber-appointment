@@ -117,6 +117,10 @@ const Barbers = () => {
       email: form.email
     };
 
+    if (form.password) {
+      data.password = form.password; // Send password to backend for handling (create or update)
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -124,20 +128,8 @@ const Barbers = () => {
       let barberRes;
       if (editingId) {
         barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
-        // If password is provided during edit, update Supabase user (but for security, better handle in backend)
-        if (form.password) {
-          // Note: Supabase doesn't allow direct password update via client; use reset or backend
-          console.warn('Password update not implemented client-side for security');
-        }
       } else {
         barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
-        
-        const { data: userData, error: supabaseError } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: { data: { role: 'barber', barberId: barberRes.data._id } }
-        });
-        if (supabaseError) throw supabaseError;
       }
       
       resetForm();
@@ -168,7 +160,7 @@ const Barbers = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this barber?')) {
+    if (window.confirm('Are you sure you want to delete this barber? This action cannot be undone.')) {
       try {
         setLoading(true);
         await axios.delete(`https://barber-appointment-backend.vercel.app/api/barbers/${id}`);
@@ -225,13 +217,14 @@ const Barbers = () => {
   };
 
   const handleDeleteShift = async (shiftId) => {
-    if (!window.confirm('Delete this shift?')) return;
-    try {
-      await axios.delete(`https://barber-appointment-backend.vercel.app/api/barber-shifts/${shiftId}`);
-      await fetchBarberShifts(selectedBarber._id);
-      alert('Shift deleted!');
-    } catch (err) {
-      alert('Failed to delete shift');
+    if (window.confirm('Are you sure you want to delete this shift? This action cannot be undone.')) {
+      try {
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barber-shifts/${shiftId}`);
+        await fetchBarberShifts(selectedBarber._id);
+        alert('Shift deleted!');
+      } catch (err) {
+        alert('Failed to delete shift');
+      }
     }
   };
 
@@ -383,19 +376,19 @@ const Barbers = () => {
                   />
                 </div>
 
-                {!editingId && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Password *</label>
-                    <input
-                      type="password"
-                      placeholder="Set password"
-                      value={form.password}
-                      onChange={e => setForm({ ...form, password: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                      required
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {editingId ? 'New Password (leave blank to keep current)' : 'Initial Password *'}
+                  </label>
+                  <input
+                    type="password"
+                    placeholder={editingId ? 'Enter new password to update' : 'Set password'}
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                    required={!editingId}
+                  />
+                </div>
               </div>
 
               {/* Services Selection */}

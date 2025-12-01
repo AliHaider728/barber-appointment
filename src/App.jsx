@@ -22,7 +22,7 @@ import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 
-// Barber Dashboard (standalone - no layout needed)
+// Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
 
 import OAuthCallback from "./components/OAuthCallback.jsx";
