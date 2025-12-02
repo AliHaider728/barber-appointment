@@ -69,7 +69,7 @@ function AppContent() {
             <Route path="services" element={<ServicesAdmin />} />
           </Route>
           
-          {/* Barber Dashboard (standalone - NO layout wrapper) */}
+          {/* Barber Dashboard  */}
           <Route path="/barber/dashboard" element={<BarberDashboard />} />
         </Routes>
       </main>

@@ -38,12 +38,21 @@ const UserDashboard = () => {
 
       setUserData(user);
 
-      // Get user appointments
+      // Get user appointments - Backend will automatically filter by user
       const appoRes = await axios.get(
-        `https://barber-appointment-backend.vercel.app/api/appointments?email=${user.email}`,
+        'https://barber-appointment-backend.vercel.app/api/appointments',
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setAppointments(appoRes.data || []);
+
+      // CLIENT-SIDE FILTER: Extra safety check
+      const userAppointments = (appoRes.data || []).filter(
+        apt => apt.email === user.email || apt.userId === user._id
+      );
+
+      // Sort by date (newest first)
+      userAppointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setAppointments(userAppointments);
     } catch (error) {
       console.error('Load error:', error);
       navigate('/login');
@@ -194,45 +203,78 @@ const UserDashboard = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Booking ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date & Time</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Barber</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Services</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Duration</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Amount</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Booked On</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {appointments.map(apt => (
-                      <tr key={apt._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {new Date(apt.date).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          <Clock className="w-4 h-4 inline mr-2 text-gray-400" />
-                          {apt.time || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                          {apt.barber?.name || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {apt.services?.map(s => s.name).join(', ') || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                          £{apt.totalPrice}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            apt.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                            apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {apt.status?.charAt(0).toUpperCase() + apt.status?.slice(1) || 'N/A'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {appointments.map(apt => {
+                      const totalDuration = apt.services?.reduce((sum, s) => {
+                        const duration = parseInt(s.duration) || 0;
+                        return sum + duration;
+                      }, 0) || 0;
+                      
+                      return (
+                        <tr key={apt._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                            #{apt._id?.slice(-6).toUpperCase() || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <div>
+                                <div className="font-medium">{new Date(apt.date).toLocaleDateString('en-GB')}</div>
+                                <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                  <Clock className="w-3 h-3" />
+                                  {apt.time || 'N/A'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-gray-400" />
+                              {apt.barber?.name || 'Not Assigned'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            <div className="max-w-xs">
+                              {apt.services?.map((s, i) => (
+                                <div key={i} className="text-xs">
+                                  • {s.name} ({s.price})
+                                </div>
+                              )) || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {totalDuration > 0 ? `${totalDuration} min` : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                            £{apt.totalPrice?.toFixed(2) || '0.00'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              apt.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                              apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              apt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {apt.status?.charAt(0).toUpperCase() + apt.status?.slice(1) || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-500">
+                            {apt.createdAt ? new Date(apt.createdAt).toLocaleDateString('en-GB') : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
