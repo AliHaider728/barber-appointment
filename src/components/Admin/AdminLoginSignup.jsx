@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient.js'
+import { supabase, REDIRECT_URL } from '../../lib/supabaseClient.js';
 
 const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -105,17 +105,22 @@ const LoginSignup = () => {
     setLoading(true);
     setError('');
     try {
+      console.log('Redirecting to:', REDIRECT_URL);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/callback`,
+          redirectTo: REDIRECT_URL,
           queryParams: { 
             access_type: 'offline', 
             prompt: 'consent' 
           },
         },
       });
+      
       if (error) throw error;
+      
+      // The browser will redirect to Google, so we don't need to do anything else
     } catch (err) {
       setError(err.message || 'Google auth failed');
       setLoading(false);
