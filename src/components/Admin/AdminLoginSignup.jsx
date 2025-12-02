@@ -105,22 +105,15 @@ const LoginSignup = () => {
     setLoading(true);
     setError('');
     try {
-      console.log('Redirecting to:', REDIRECT_URL);
-      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: REDIRECT_URL,
-          queryParams: { 
-            access_type: 'offline', 
-            prompt: 'consent' 
-          },
+          redirectTo: REDIRECT_URL, // Online login, works on localhost + Vercel
         },
       });
-      
+
       if (error) throw error;
-      
-      // The browser will redirect to Google, so we don't need to do anything else
+      // Redirect happens automatically
     } catch (err) {
       setError(err.message || 'Google auth failed');
       setLoading(false);
@@ -162,7 +155,7 @@ const LoginSignup = () => {
           }
         `}
       </style>
-      
+
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
           <div className="mb-8">
@@ -173,7 +166,7 @@ const LoginSignup = () => {
               {isLogin ? 'Enter your credentials to continue' : 'Create your account'}
             </p>
           </div>
-          
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg mb-4 text-center">
               {error}
@@ -210,7 +203,7 @@ const LoginSignup = () => {
                 disabled={loading}
               />
             </div>
-            
+
             {!isLogin && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -237,7 +230,6 @@ const LoginSignup = () => {
             </button>
           </form>
 
-          {/* Google Auth */}
           <div className="mt-4">
             <button
               onClick={handleGoogleAuth}
