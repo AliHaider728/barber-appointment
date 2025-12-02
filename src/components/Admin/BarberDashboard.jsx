@@ -287,9 +287,7 @@ const BarberDashboard = () => {
     setLeaveForm({ ...leaveForm, [e.target.name]: e.target.value });
   };
 
-  const handleRetry = () => {
-    window.location.reload();
-  };
+ 
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -302,13 +300,7 @@ const BarberDashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <div className="flex gap-3 justify-center">
-            <button
-              onClick={handleRetry}
-              className="px-4 py-2 bg-[#D4AF37] text-black font-bold rounded-lg hover:bg-black hover:text-white transition"
-            >
-              <RefreshCw className="w-4 h-4 inline mr-2" />
-              Retry
-            </button>
+ 
             <button
               onClick={() => navigate('/login')}
               className="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition"
@@ -435,13 +427,7 @@ const BarberDashboard = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
-                <button
-                  onClick={handleRetry}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh
-                </button>
+               
               </div>
 
               {/* Stats Cards */}
