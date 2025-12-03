@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { supabase } from '../../lib/supabaseClient.js';
 import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User } from 'lucide-react';
 
 const Barbers = () => {
@@ -50,20 +49,30 @@ const Barbers = () => {
     }
   }, [selectedBarber]);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth-token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   const fetchData = async () => {
     try {
       setInitialLoading(true);
+      const headers = getAuthHeaders();
       const [barbersRes, branchesRes, servicesRes] = await Promise.all([
-        axios.get('https://barber-appointment-backend.vercel.app/api/barbers'),
-        axios.get('https://barber-appointment-backend.vercel.app/api/branches'),
-        axios.get('https://barber-appointment-backend.vercel.app/api/services')
+        axios.get('https://barber-appointment-backend.vercel.app/api/barbers', { headers }),
+        axios.get('https://barber-appointment-backend.vercel.app/api/branches', { headers }),
+        axios.get('https://barber-appointment-backend.vercel.app/api/services', { headers })
       ]);
       setBarbers(barbersRes.data);
       setBranches(branchesRes.data);
       setServices(servicesRes.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load data. Please refresh the page.');
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.');
+      } else {
+        setError('Failed to load data. Please refresh the page.');
+      }
       console.error('Fetch error:', err);
     } finally {
       setInitialLoading(false);
@@ -72,22 +81,30 @@ const Barbers = () => {
 
   const fetchBarbers = async () => {
     try {
-      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/barbers');
+      const headers = getAuthHeaders();
+      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/barbers', { headers });
       setBarbers(res.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load barbers.');
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.');
+      } else {
+        setError('Failed to load barbers.');
+      }
       console.error('Barbers fetch error:', err);
     }
   };
 
   const fetchBarberShifts = async (barberId) => {
     try {
-      const res = await axios.get(`https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`);
+      const headers = getAuthHeaders();
+      const res = await axios.get(`https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`, { headers });
       setShifts(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       if (err.response?.status === 404) {
         setShifts([]);
+      } else if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.');
       } else {
         console.error('Shifts fetch error:', err);
         setShifts([]);
@@ -124,19 +141,24 @@ const Barbers = () => {
     try {
       setLoading(true);
       setError(null);
+      const headers = getAuthHeaders();
       
       let barberRes;
       if (editingId) {
-        barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data);
+        barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data, { headers });
       } else {
-        barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data);
+        barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data, { headers });
       }
       
       resetForm();
       fetchBarbers();
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
-      setError('Save failed: ' + errorMsg);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.');
+      } else {
+        setError('Save failed: ' + errorMsg);
+      }
       console.error('Save error:', err);
     } finally {
       setLoading(false);
@@ -163,10 +185,15 @@ const Barbers = () => {
     if (window.confirm('Are you sure you want to delete this barber? This action cannot be undone.')) {
       try {
         setLoading(true);
-        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barbers/${id}`);
+        const headers = getAuthHeaders();
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barbers/${id}`, { headers });
         fetchBarbers();
       } catch (err) {
-        alert('Delete failed: ' + (err.response?.data?.error || err.message));
+        if (err.response?.status === 401) {
+          alert('Authentication failed. Please login again.');
+        } else {
+          alert('Delete failed: ' + (err.response?.data?.error || err.message));
+        }
       } finally {
         setLoading(false);
       }
@@ -205,12 +232,17 @@ const Barbers = () => {
         payload.endTime = shiftForm.endTime;
       }
 
-      await axios.post('https://barber-appointment-backend.vercel.app/api/barber-shifts', payload);
+      const headers = getAuthHeaders();
+      await axios.post('https://barber-appointment-backend.vercel.app/api/barber-shifts', payload, { headers });
       await fetchBarberShifts(selectedBarber._id);
       setShiftForm({ dayOfWeek: 1, startTime: '09:00', endTime: '19:00', isOff: false });
       alert('Shift added successfully!');
     } catch (err) {
-      alert('Failed to add shift: ' + (err.response?.data?.message || err.message));
+      if (err.response?.status === 401) {
+        alert('Authentication failed. Please login again.');
+      } else {
+        alert('Failed to add shift: ' + (err.response?.data?.message || err.message));
+      }
     } finally {
       setLoading(false);
     }
@@ -219,11 +251,16 @@ const Barbers = () => {
   const handleDeleteShift = async (shiftId) => {
     if (window.confirm('Are you sure you want to delete this shift? This action cannot be undone.')) {
       try {
-        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barber-shifts/${shiftId}`);
+        const headers = getAuthHeaders();
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barber-shifts/${shiftId}`, { headers });
         await fetchBarberShifts(selectedBarber._id);
         alert('Shift deleted!');
       } catch (err) {
-        alert('Failed to delete shift');
+        if (err.response?.status === 401) {
+          alert('Authentication failed. Please login again.');
+        } else {
+          alert('Failed to delete shift');
+        }
       }
     }
   };
