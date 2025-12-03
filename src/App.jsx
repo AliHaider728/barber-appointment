@@ -25,8 +25,6 @@ import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
 
-import OAuthCallback from "./components/OAuthCallback.jsx";
-
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -54,7 +52,6 @@ function AppContent() {
           
           {/* General Login/Signup */}
           <Route path="/login" element={<LoginSignup />} />
-          <Route path="/callback" element={<OAuthCallback />} />
           
           {/* User Dashboard */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
