@@ -438,7 +438,7 @@ const Barbers = () => {
                     <p className="text-sm text-red-600">No services available for selected gender</p>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                      {availableServices.map(service => (
+                      {availableServices.map(service => ( 
                         <label
                           key={service._id}
                           className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition ${
@@ -777,6 +777,5 @@ const Barbers = () => {
     </div>
   );
 };
-
 
 export default Barbers;

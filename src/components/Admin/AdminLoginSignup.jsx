@@ -12,7 +12,6 @@ const LoginSignup = () => {
 
   // Initialize Google Sign-In
   useEffect(() => {
-    // Load Google Identity Services script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -38,8 +37,8 @@ const LoginSignup = () => {
     try {
       const googleToken = response.credential;
 
-      // Send to your backend for verification
-      const res = await fetch(`https://barber-appointment-backend.vercel.app/api/auth/google-login`, {
+      // Send to backend
+      const res = await fetch(`https://barber-appointment-backend.vercel.app/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: googleToken }),
@@ -59,6 +58,8 @@ const LoginSignup = () => {
       localStorage.setItem('user-role', role);
       localStorage.setItem('user-id', user.id);
 
+      console.log(' Google login successful:', { email: user.email, role });
+
       // Role-based redirect
       if (role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
@@ -74,7 +75,7 @@ const LoginSignup = () => {
       }
     } catch (err) {
       setError(err.message || 'Google authentication failed');
-      console.error('Google auth error:', err);
+      console.error(' Google auth error:', err);
     } finally {
       setLoading(false);
     }
@@ -122,6 +123,8 @@ const LoginSignup = () => {
         localStorage.setItem('user-role', role);
         localStorage.setItem('user-id', user.id);
 
+        console.log(' Login successful:', { email: user.email, role });
+        
         // Role-based redirect
         if (role === 'admin') {
           navigate('/admin/dashboard', { replace: true });
@@ -141,7 +144,7 @@ const LoginSignup = () => {
       }
     } catch (err) {
       setError(err.message || 'Something went wrong');
-      console.error('Auth error:', err);
+      console.error(' Auth error:', err);
     } finally {
       setLoading(false);
       setEmail('');

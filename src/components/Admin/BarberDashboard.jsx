@@ -64,7 +64,7 @@ const BarberDashboard = () => {
 
   const checkAuthAndLoadData = async () => {
     try {
-      console.log('🔍 Starting authentication check...');
+      console.log('  Starting authentication check...');
       
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
@@ -810,6 +810,7 @@ const BarberDashboard = () => {
       </div>
     </div>
   );
+
 };
 
 export default BarberDashboard;

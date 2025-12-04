@@ -37,6 +37,7 @@ function AppContent() {
       {/* Header & Footer */}
       {!isAdminRoute && !isBarberRoute && !isUserRoute && <Header />}
       
+      
       <main className={!isAdminRoute && !isBarberRoute && !isUserRoute ? "pt-16" : ""}>
         <Routes>
           {/* User Routes */}
