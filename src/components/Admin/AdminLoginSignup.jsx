@@ -60,6 +60,7 @@ const LoginSignup = () => {
 
       console.log(' Google login successful:', { email: user.email, role });
 
+      
       // Role-based redirect
       if (role === 'admin') {
         navigate('/admin/dashboard', { replace: true });

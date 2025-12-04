@@ -17,7 +17,7 @@ const UserDashboard = () => {
   const loadUserData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('sb-token');
+      const token = localStorage.getItem('auth-token');
 
       if (!token) {
         navigate('/login');
@@ -286,4 +286,4 @@ const UserDashboard = () => {
   );
 };
 
-export default UserDashboard;
+export default UserDashboard; 

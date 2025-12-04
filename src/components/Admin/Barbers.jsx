@@ -428,6 +428,7 @@ const Barbers = () => {
                 </div>
               </div>
 
+
               {/* Services Selection */}
               {form.gender && (
                 <div className="mt-4">
