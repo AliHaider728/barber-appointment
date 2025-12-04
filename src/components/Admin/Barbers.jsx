@@ -778,4 +778,5 @@ const Barbers = () => {
   );
 };
 
+
 export default Barbers;
