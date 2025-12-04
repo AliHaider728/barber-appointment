@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
 import { 
   Calendar, Clock, DollarSign, LogOut, 
   CheckCircle, AlertCircle,
   Scissors, MapPin, Award, User, Menu, X, Home, RefreshCw,
   CreditCard, Briefcase
 } from 'lucide-react';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app/api';
 
@@ -59,32 +64,50 @@ const BarberDashboard = () => {
 
   const checkAuthAndLoadData = async () => {
     try {
-      console.log('Starting authentication check...');
+      console.log('  Starting authentication check...');
       
-      // Use custom auth from localStorage (no Supabase)
-      const token = localStorage.getItem('auth-token');
-      const userData = localStorage.getItem('user-data');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (!token || !userData) {
-        console.error('No token or user data');
+      if (sessionError || !session) {
+        console.error('No session:', sessionError);
+        
+        // Fallback to localStorage
+        const storedToken = localStorage.getItem('sb-token');
+        const userData = localStorage.getItem('user-data');
+        
+        if (storedToken && userData) {
+          console.log('Using stored credentials');
+          const parsedData = JSON.parse(userData);
+          await loadBarberData(parsedData.barberId, storedToken);
+          setAuthChecked(true);
+          return;
+        }
+        
         throw new Error('No valid authentication found');
       }
 
-      const parsedData = JSON.parse(userData);
-      const role = localStorage.getItem('user-role');
+      const userMetadata = session.user.user_metadata;
+      const role = userMetadata?.role;
       
       if (role !== 'barber') {
         throw new Error('Access denied - not a barber account');
       }
 
-      const barberId = parsedData.barberId;
+      const barberId = userMetadata?.barberId;
       if (!barberId) {
-        throw new Error('Barber ID not found');
+        throw new Error('Barber ID not found in account');
       }
 
       console.log('Authenticated - Barber ID:', barberId);
       
-      await loadBarberData(barberId, token);
+      localStorage.setItem('sb-token', session.access_token);
+      localStorage.setItem('user-data', JSON.stringify({ 
+        barberId, 
+        email: session.user.email,
+        name: userMetadata?.full_name || 'Barber'
+      }));
+      
+      await loadBarberData(barberId, session.access_token);
       setAuthChecked(true);
       
     } catch (error) {
@@ -205,14 +228,15 @@ const BarberDashboard = () => {
   };
 
   const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.clear();
     navigate('/login', { replace: true });
   };
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     try {
-      const token = localStorage.getItem('auth-token');
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         alert('Session expired!');
         handleLogout();
         return;
@@ -221,11 +245,11 @@ const BarberDashboard = () => {
       await axios.put(
         `${API_BASE}/appointments/${appointmentId}`,
         { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
       
-      const barberId = JSON.parse(localStorage.getItem('user-data')).barberId;
-      await loadBarberData(barberId, token);
+      const barberId = session.user.user_metadata.barberId;
+      await loadBarberData(barberId, session.access_token);
       alert('Status updated successfully!');
     } catch (error) {
       console.error('Status update error:', error);
@@ -236,21 +260,21 @@ const BarberDashboard = () => {
   const handleApplyLeave = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('auth-token');
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         alert('Session expired!');
         handleLogout();
         return;
       }
 
-      const barberId = JSON.parse(localStorage.getItem('user-data')).barberId;
+      const barberId = session.user.user_metadata.barberId;
       await axios.post(
         `${API_BASE}/leaves`,
         { ...leaveForm, barberId },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
 
-      await loadBarberData(barberId, token);
+      await loadBarberData(barberId, session.access_token);
       setLeaveForm({ date: '', reason: '' });
       alert('Leave applied successfully!');
     } catch (error) {
@@ -262,6 +286,8 @@ const BarberDashboard = () => {
   const handleLeaveChange = (e) => {
     setLeaveForm({ ...leaveForm, [e.target.name]: e.target.value });
   };
+
+ 
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -332,6 +358,7 @@ const BarberDashboard = () => {
           </div>
         </div>
       </header>
+
 
       <div className="flex">
         {/* Sidebar */}
@@ -784,6 +811,7 @@ const BarberDashboard = () => {
       </div>
     </div>
   );
+
 };
 
 export default BarberDashboard;
