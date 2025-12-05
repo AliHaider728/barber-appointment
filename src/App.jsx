@@ -21,9 +21,10 @@ import Appointments from "./components/Admin/Appointments.jsx";
 import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
-
+import Leaves from "./components/Admin/Leaves.jsx"
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
+
 
 function AppContent() {
   const location = useLocation();
@@ -65,6 +66,7 @@ function AppContent() {
             <Route path="barbers" element={<Barbers />} />
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
+            <Route path="leaves" element={<Leaves/>} />
           </Route>
           
           {/* Barber Dashboard  */}

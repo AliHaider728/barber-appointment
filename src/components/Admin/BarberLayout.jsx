@@ -1,20 +1,14 @@
 // src/components/Barber/BarberLayout.jsx
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom'; // Outlet renders child routes
-import { createClient } from '@supabase/supabase-js'; // For auth if needed
 import { LogOut, Calendar, DollarSign, Clock, Users } from 'lucide-react'; // Icons (install lucide-react if not already)
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const BarberLayout = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('sb-token');
-    navigate('/login');
+    localStorage.clear();
+    navigate('/login', { replace: true });
   };
 
   return (
