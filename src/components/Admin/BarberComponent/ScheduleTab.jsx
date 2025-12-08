@@ -1,4 +1,3 @@
-// components/ScheduleTab.jsx
 
 import { Edit2, Trash2, Clock } from 'lucide-react';
 
@@ -81,7 +80,7 @@ function ScheduleTab({
           </div>
           <button
             onClick={onSubmit}
-            className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-200 hover:-translate-y-0.5"
+            className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-[#d4af37] to-[#d2b03e] text-white font-bold rounded-xl hover:shadow-xl hover:shadow-[#d4af37]/30 transition-all duration-200 hover:-translate-y-0.5"
           >
             Update Shift
           </button>

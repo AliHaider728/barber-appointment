@@ -35,6 +35,8 @@ function BarberDashboard() {
   const [leaves, setLeaves] = useState([]);
   const [leaveForm, setLeaveForm] = useState({
     date: '',
+    startTime: '',
+    endTime: '',
     reason: ''
   });
 
@@ -273,7 +275,7 @@ function BarberDashboard() {
       );
 
       await loadBarberData(barberId, token);
-      setLeaveForm({ date: '', reason: '' });
+      setLeaveForm({ date: '', startTime: '', endTime: '', reason: '' });
       alert('Leave applied successfully!');
     } catch (error) {
       console.error('Apply leave error:', error);
@@ -437,5 +439,6 @@ function BarberDashboard() {
     </div>
   );
 }
+
 
 export default BarberDashboard;

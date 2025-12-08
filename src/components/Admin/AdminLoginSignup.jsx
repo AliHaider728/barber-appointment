@@ -111,7 +111,7 @@ const LoginSignup = () => {
     }
   };
 
-  // FIXED: Better Google Login Handler
+  //   Better Google Login Handler
   const handleGoogleLogin = () => {
     console.log('  Google button clicked');
     setError('');
@@ -131,7 +131,7 @@ const LoginSignup = () => {
     try {
       console.log('  Opening Google popup...');
       
-      // FIXED: Render button instead of prompt (more reliable)
+      //   Render button instead of prompt (more reliable)
       const buttonDiv = document.getElementById('google-signin-button');
       if (buttonDiv) {
         window.google.accounts.id.renderButton(
@@ -262,6 +262,7 @@ const LoginSignup = () => {
           }
         `}
       </style>
+
       
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">

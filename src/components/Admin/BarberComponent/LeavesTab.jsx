@@ -1,4 +1,3 @@
-// components/LeavesTab.jsx
 
 import { Calendar, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 
@@ -63,8 +62,8 @@ function LeavesTab({ leaves, leaveForm, handleLeaveChange, handleApplyLeave }) {
       <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="border-b border-gray-100 px-6 py-5 bg-gradient-to-r from-gray-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-violet-100 to-violet-50 rounded-lg">
-              <FileText className="w-5 h-5 text-violet-600" />
+            <div className="p-2 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg">
+              <FileText className="w-5 h-5 text-[#d4af37] " />
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-900">Apply for Leave</h3>
@@ -85,6 +84,28 @@ function LeavesTab({ leaves, leaveForm, handleLeaveChange, handleApplyLeave }) {
             />
           </div>
           <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time</label>
+            <input
+              type="time"
+              name="startTime"
+              value={leaveForm.startTime}
+              onChange={handleLeaveChange}
+              className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-200 font-medium text-gray-900"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">End Time</label>
+            <input
+              type="time"
+              name="endTime"
+              value={leaveForm.endTime}
+              onChange={handleLeaveChange}
+              className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-200 font-medium text-gray-900"
+              required
+            />
+          </div>
+          <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Reason</label>
             <textarea
               name="reason"
@@ -98,7 +119,7 @@ function LeavesTab({ leaves, leaveForm, handleLeaveChange, handleApplyLeave }) {
           </div>
           <button
             onClick={onSubmit}
-            className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-200 hover:-translate-y-0.5"
+            className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-[#d4af37] to-[#bf9c2b] text-white font-bold rounded-xl hover:shadow-xl hover:shadow-[#d4af37]/30 transition-all duration-200 hover:-translate-y-0.5"
           >
             Submit Leave Request
           </button>
@@ -136,7 +157,7 @@ function LeavesTab({ leaves, leaveForm, handleLeaveChange, handleApplyLeave }) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <p className="text-base font-bold text-gray-900">
-                            {new Date(leave.date).toLocaleDateString('en-GB', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                            {new Date(leave.startDate).toLocaleDateString('en-GB', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} ({new Date(leave.startDate).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - {new Date(leave.endDate).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})})
                           </p>
                           <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
                             leave.status === 'approved' 

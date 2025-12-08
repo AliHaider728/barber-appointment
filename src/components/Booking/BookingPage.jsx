@@ -53,6 +53,7 @@ const BookingPage = () => {
   const [barberShift, setBarberShift] = useState(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [existingBookings, setExistingBookings] = useState([]);
+  const [barberLeaves, setBarberLeaves] = useState([]);
 
   const navigate = useNavigate();
 
@@ -159,7 +160,7 @@ const BookingPage = () => {
           const res = await fetch(
             `https://barber-appointment-backend.vercel.app/api/barber-shifts/barber/${selectedBarber}/date/${selectedDate}`
           );
-
+ 
           if (res.ok) {
             const data = await res.json();
             setBarberShift(data);
@@ -189,6 +190,20 @@ const BookingPage = () => {
           setExistingBookings(Array.isArray(data) ? data : []);
         })
         .catch(() => setExistingBookings([]));
+    }
+  }, [selectedBarber, selectedDate]);
+
+  useEffect(() => {
+    if (selectedBarber && selectedDate) {
+      fetch(`https://barber-appointment-backend.vercel.app/api/leaves/barber/${selectedBarber}/date/${selectedDate}`)
+        .then(r => {
+          if (!r.ok) throw new Error('No leaves');
+          return r.json();
+        })
+        .then(data => {
+          setBarberLeaves(Array.isArray(data) ? data : []);
+        })
+        .catch(() => setBarberLeaves([]));
     }
   }, [selectedBarber, selectedDate]);
 
@@ -233,6 +248,11 @@ const BookingPage = () => {
         const bookingEnd = addMinutes(bookingStart, booking.duration);
 
         return (current < bookingEnd && slotEnd > bookingStart);
+      }) || barberLeaves.some(leave => {
+        const leaveStart = new Date(leave.startDate);
+        const leaveEnd = new Date(leave.endDate);
+
+        return (current < leaveEnd && slotEnd > leaveStart);
       });
 
       if (!hasConflict) {
@@ -247,7 +267,7 @@ const BookingPage = () => {
     }
 
     return slots;
-  }, [selectedDate, selectedBarber, totalMinutes, barberShift, existingBookings]);
+  }, [selectedDate, selectedBarber, totalMinutes, barberShift, existingBookings, barberLeaves]);
 
   const handleServiceToggle = id => {
     setSelectedServices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);

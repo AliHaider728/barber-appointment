@@ -1,4 +1,3 @@
-// New component: src/components/Admin/Leaves.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FileText, Plus, Edit2, Trash2, X, Check, AlertCircle, Calendar, User } from 'lucide-react';
@@ -8,8 +7,9 @@ const Leaves = () => {
   const [barbers, setBarbers] = useState([]);
   const [form, setForm] = useState({
     barber: '',
-    startDate: '',
-    endDate: '',
+    date: '',
+    startTime: '',
+    endTime: '',
     reason: ''
   });
   const [editingId, setEditingId] = useState(null);
@@ -42,8 +42,8 @@ const Leaves = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.barber || !form.startDate || !form.endDate) {
-      setError('Barber, start date, and end date are required');
+    if (!form.barber || !form.date || !form.startTime || !form.endTime) {
+      setError('Barber, date, start time, and end time are required');
       return;
     }
 
@@ -67,10 +67,13 @@ const Leaves = () => {
   };
 
   const handleEdit = (leave) => {
+    const start = new Date(leave.startDate);
+    const end = new Date(leave.endDate);
     setForm({
       barber: leave.barber._id,
-      startDate: new Date(leave.startDate).toISOString().split('T')[0],
-      endDate: new Date(leave.endDate).toISOString().split('T')[0],
+      date: start.toISOString().split('T')[0],
+      startTime: start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+      endTime: end.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
       reason: leave.reason
     });
     setEditingId(leave._id);
@@ -98,7 +101,7 @@ const Leaves = () => {
   };
 
   const resetForm = () => {
-    setForm({ barber: '', startDate: '', endDate: '', reason: '' });
+    setForm({ barber: '', date: '', startTime: '', endTime: '', reason: '' });
     setEditingId(null);
   };
 
@@ -144,26 +147,36 @@ const Leaves = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Start Date *</label>
+              <label className="block text-sm font-medium mb-1">Date *</label>
               <input
                 type="date"
-                value={form.startDate}
-                onChange={e => setForm({...form, startDate: e.target.value})}
+                value={form.date}
+                onChange={e => setForm({...form, date: e.target.value})}
                 className="w-full p-2 border rounded-lg"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">End Date *</label>
+              <label className="block text-sm font-medium mb-1">Start Time *</label>
               <input
-                type="date"
-                value={form.endDate}
-                onChange={e => setForm({...form, endDate: e.target.value})}
+                type="time"
+                value={form.startTime}
+                onChange={e => setForm({...form, startTime: e.target.value})}
                 className="w-full p-2 border rounded-lg"
                 required
               />
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">End Time *</label>
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={e => setForm({...form, endTime: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+                required
+              />
+            </div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Reason</label>
               <input
                 type="text"
@@ -193,7 +206,7 @@ const Leaves = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="p-3 text-left">Barber</th>
-                <th className="p-3 text-left">Dates</th>
+                <th className="p-3 text-left">Date & Time</th>
                 <th className="p-3 text-left">Reason</th>
                 <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Actions</th>
@@ -204,7 +217,7 @@ const Leaves = () => {
                 <tr key={leave._id} className="border-t">
                   <td className="p-3">{leave.barber.name}</td>
                   <td className="p-3">
-                    {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
+                    {new Date(leave.startDate).toLocaleDateString()} ({new Date(leave.startDate).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - {new Date(leave.endDate).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})})
                   </td>
                   <td className="p-3">{leave.reason}</td>
                   <td className="p-3">
