@@ -10,6 +10,14 @@ const Card = ({ children, className = '' }) => (
   <div className={`bg-white rounded-xl shadow-sm p-6 ${className}`}>{children}</div>
 );
 
+const Button = ({ children, className = '', variant = 'default', onClick, disabled, ...props }) => {
+  const base = 'px-4 py-2 rounded-lg font-bold flex items-center justify-center transition-all';
+  const styles = variant === 'outline'
+    ? 'border-2 bg-white hover:bg-gray-50 text-black'
+    : 'bg-[#D4AF37] text-black hover:bg-black hover:text-white';
+  return <button className={`${base} ${styles} ${className}`} onClick={onClick} disabled={disabled} {...props}>{children}</button>;
+};
+
 const parseTimeOnDate = (t, dateStr) => {
   const [h, m] = t.split(':').map(Number);
   const d = new Date(dateStr);
@@ -34,7 +42,7 @@ const BookingPage = () => {
   const [fetching, setFetching] = useState(true);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState(''); // 'card' or 'pay-later'
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [branches, setBranches] = useState([]);
@@ -238,7 +246,6 @@ const BookingPage = () => {
       current = addMinutes(current, totalMinutes);
     }
 
-    
     return slots;
   }, [selectedDate, selectedBarber, totalMinutes, barberShift, existingBookings]);
 
@@ -246,7 +253,6 @@ const BookingPage = () => {
     setSelectedServices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  // VALIDATION FUNCTIONS
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) return 'Email is required';
@@ -270,7 +276,6 @@ const BookingPage = () => {
   const handleInputChange = (field, value) => {
     setUserDetails(prev => ({ ...prev, [field]: value }));
 
-    // Clear error when user types
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -285,7 +290,6 @@ const BookingPage = () => {
 
     setErrors(newErrors);
 
-    // Return true if no errors
     return !Object.values(newErrors).some(error => error !== '');
   };
 
@@ -314,25 +318,20 @@ const BookingPage = () => {
     }
 
     if (step === 4) {
-      // Validate all fields before allowing to proceed
       if (!validateStep4()) {
         alert('Please fill in all details correctly');
         return;
       }
 
-      // Check if payment method is selected
       if (!paymentMethod) {
         alert('Please select a payment method');
         return;
       }
 
-      // If card payment, don't proceed - let Stripe handle it
       if (paymentMethod === 'card') {
-        // The PaymentOptions component will handle the booking
         return;
       }
 
-      // If pay later
       if (paymentMethod === 'pay-later') {
         await handlePayLaterBooking();
         return;
@@ -345,7 +344,6 @@ const BookingPage = () => {
   const handlePayLaterBooking = async () => {
     setLoading(true);
     try {
-      // Optional auth token
       const token = localStorage.getItem('auth-token');
       const headers = { 'Content-Type': 'application/json' };
       if (token) {
@@ -414,7 +412,6 @@ const BookingPage = () => {
     </div>
   );
 
-  
   return (
     <div className="bg-gradient-to-br from-[#faf7f2] via-[#f5f1ea] to-[#faf7f2] min-h-screen">
       <div className="max-w-7xl mx-auto p-6 pt-9">
@@ -458,6 +455,8 @@ const BookingPage = () => {
               loading={loading}
               handleNext={handleNext}
               today={today}
+              setBookingRef={setBookingRef}
+              setBookingComplete={setBookingComplete}
             />
 
             <StepNavigation step={step} loading={loading} handleNext={handleNext} setStep={setStep} />

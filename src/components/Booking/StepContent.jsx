@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, AlertCircle, Clock, ChevronRight } from 'lucide-react';
+import { MapPin, AlertCircle, Clock, ChevronRight, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PaymentOptions from  "../Admin/PaymentOptions.jsx";
 import { Elements } from '@stripe/react-stripe-js';
@@ -15,6 +15,7 @@ const MaleIcon = () => (
     <path d="M8 14h8v8H8z" />
   </svg>
 );
+
 
 const FemaleIcon = () => (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -76,7 +77,9 @@ const StepContent = ({
   setPaymentMethod,
   loading,
   handleNext,
-  today
+  today,
+  setBookingRef,
+  setBookingComplete
 }) => {
   const navigate = useNavigate();
 
@@ -310,8 +313,12 @@ const StepContent = ({
                       totalPrice
                     }}
                     onSuccess={(ref) => {
-                      setBookingRef(ref);
-                      setBookingComplete(true);
+                      if (typeof setBookingRef === 'function') {
+                        setBookingRef(ref);
+                      }
+                      if (typeof setBookingComplete === 'function') {
+                        setBookingComplete(true);
+                      }
                     }}
                   />
                 </Elements>

@@ -78,12 +78,31 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
           }
         );
 
-        if (!bookRes.ok) throw new Error('Booking failed after payment');
+        // Enhanced error handling for different status codes
+        if (!bookRes.ok) {
+          const errorData = await bookRes.json();
+          
+          if (bookRes.status === 409) {
+            // Time slot conflict
+            throw new Error('⚠️ Time slot no longer available! Someone just booked it. Please select another time and try again.');
+          } else if (bookRes.status === 400) {
+            // Bad request (validation errors)
+            throw new Error(errorData.message || errorData.error || 'Invalid booking details. Please check and try again.');
+          } else {
+            // Other errors
+            throw new Error(errorData.error || errorData.message || 'Booking failed after payment. Please contact support with your payment confirmation.');
+          }
+        }
+
         const data = await bookRes.json();
+        
+        // Clear the card element after successful payment
+        elements.getElement(CardElement)?.clear();
+        
         onSuccess(data.appointment._id);
       }
     } catch (err) {
-      setError(err.message || 'Payment failed. Try again.');
+      setError(err.message || 'Payment failed. Please try again.');
       console.error('Payment error:', err);
     } finally {
       setLoading(false);
@@ -113,15 +132,21 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-5 text-red-700 text-sm">
-          {error}
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-red-700 mb-1">Payment Error</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
         </div>
       )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-[#D4AF37] hover:bg-black hover:text-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-60"
+        className="w-full bg-[#D4AF37] hover:bg-black hover:text-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading ? (
           <>
@@ -137,9 +162,8 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       </button>
 
       <p className="text-center text-xs text-gray-500 mt-4">
-        Safe & Secure — Powered by <strong>Stripe</strong>  Payments
-      </p> 
-
+        Safe & Secure — Powered by <strong>Stripe</strong> Payments
+      </p>
     </form>
   );
 };
