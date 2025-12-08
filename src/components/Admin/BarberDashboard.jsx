@@ -35,8 +35,6 @@ function BarberDashboard() {
   const [leaves, setLeaves] = useState([]);
   const [leaveForm, setLeaveForm] = useState({
     date: '',
-    startTime: '',
-    endTime: '',
     reason: ''
   });
 
@@ -132,7 +130,7 @@ function BarberDashboard() {
         axios.get(`${API_BASE}/appointments?barber=${barberId}`, { headers, timeout: 10000 }),
         axios.get(`${API_BASE}/barber-shifts?barber=${barberId}`, { headers, timeout: 10000 }),
         // Assuming a new endpoint for leaves
-        axios.get(`${API_BASE}/leaves?barber=${barberId}`, { headers, timeout: 10000 })
+        axios.get(`${API_BASE}/leaves/barber/${barberId}`, { headers, timeout: 10000 })
       ]);
 
       // Handle barber data
@@ -269,13 +267,13 @@ function BarberDashboard() {
 
       const barberId = JSON.parse(localStorage.getItem('user-data')).barberId;
       await axios.post(
-        `${API_BASE}/leaves`,
-        { ...leaveForm, barberId },
+        `${API_BASE}/leaves/barber/me`,
+        leaveForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       await loadBarberData(barberId, token);
-      setLeaveForm({ date: '', startTime: '', endTime: '', reason: '' });
+      setLeaveForm({ date: '', reason: '' });
       alert('Leave applied successfully!');
     } catch (error) {
       console.error('Apply leave error:', error);
