@@ -89,7 +89,7 @@ function Home() {
               <h3 className="text-[#d5a353] mb-2 text-base lg:text-lg">Hours</h3>
               <p className="text-white text-xs lg:text-sm leading-relaxed">
                 Monday - Saturday: 11 AM - 9 PM<br />
-                Sunday: 11 AM - 7 PM
+                Sunday:  OFF
               </p>
             </div>
           </div>

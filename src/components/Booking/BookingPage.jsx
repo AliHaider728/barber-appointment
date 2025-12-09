@@ -193,6 +193,7 @@ const BookingPage = () => {
     }
   }, [selectedBarber, selectedDate]);
 
+  //  UPDATED: Fetch APPROVED leaves for the selected barber and date
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       fetch(`https://barber-appointment-backend.vercel.app/api/leaves/barber/${selectedBarber}/date/${selectedDate}`)
@@ -201,7 +202,12 @@ const BookingPage = () => {
           return r.json();
         })
         .then(data => {
-          setBarberLeaves(Array.isArray(data) ? data : []);
+          //  CRITICAL: Backend already filters only approved leaves
+          // But we double-check here for safety
+          const approvedLeaves = Array.isArray(data) 
+            ? data.filter(leave => leave.status === 'approved')
+            : [];
+          setBarberLeaves(approvedLeaves);
         })
         .catch(() => setBarberLeaves([]));
     }
@@ -221,6 +227,7 @@ const BookingPage = () => {
     }, 0);
   }, [selectedServices, services]);
 
+  //  UPDATED: timeSlots calculation now properly filters APPROVED leaves
   const timeSlots = useMemo(() => {
     if (!selectedDate || !selectedBarber || totalMinutes === 0 || !barberShift) return [];
 
@@ -236,6 +243,7 @@ const BookingPage = () => {
     const isToday = selectedDate === now.toISOString().split('T')[0];
 
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
+      // Skip past times for today
       if (isToday && current < now) {
         current = addMinutes(current, totalMinutes);
         continue;
@@ -243,19 +251,27 @@ const BookingPage = () => {
 
       const slotEnd = addMinutes(current, totalMinutes);
 
-      const hasConflict = existingBookings.some(booking => {
+      // Check for existing booking conflicts
+      const hasBookingConflict = existingBookings.some(booking => {
         const bookingStart = new Date(booking.date);
         const bookingEnd = addMinutes(bookingStart, booking.duration);
-
         return (current < bookingEnd && slotEnd > bookingStart);
-      }) || barberLeaves.some(leave => {
+      });
+
+      //  UPDATED: Check for APPROVED leave conflicts
+      const hasLeaveConflict = barberLeaves.some(leave => {
+        // Double-check status (backend should already filter, but safety first)
+        if (leave.status !== 'approved') return false;
+        
         const leaveStart = new Date(leave.startDate);
         const leaveEnd = new Date(leave.endDate);
-
+        
+        // Check if slot overlaps with leave period
         return (current < leaveEnd && slotEnd > leaveStart);
       });
 
-      if (!hasConflict) {
+      //  Only add slot if NO conflicts (bookings OR leaves)
+      if (!hasBookingConflict && !hasLeaveConflict) {
         slots.push({
           start: formatTime(current),
           end: formatTime(slotEnd),
@@ -292,6 +308,7 @@ const BookingPage = () => {
     if (name.trim().length < 3) return 'Name must be at least 3 characters';
     return '';
   };
+  
 
   const handleInputChange = (field, value) => {
     setUserDetails(prev => ({ ...prev, [field]: value }));
