@@ -1,6 +1,3 @@
-// Complete Admin Leaves Component - Admin/Leaves.jsx
-// Replace your entire Admin/Leaves.jsx file with this code
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FileText, Edit2, Trash2, X, Check, AlertCircle, Calendar, User, Clock, AlertTriangle, RefreshCw, ArrowRight } from 'lucide-react';
@@ -168,6 +165,7 @@ const Leaves = () => {
       await axios.put(`https://barber-appointment-backend.vercel.app/api/leaves/${leaveId}`, { 
         status: 'approved' 
       });
+      alert('✅ Leave approved successfully!');
       fetchData();
     } catch (err) {
       setError('Approval failed');
@@ -182,7 +180,7 @@ const Leaves = () => {
     }));
   };
 
-  // Approve with reassignments
+  // ⬇️ UPDATED: Approve with reassignments + metadata ⬇️
   const approveWithReassignments = async () => {
     try {
       setLoading(true);
@@ -196,21 +194,33 @@ const Leaves = () => {
         return;
       }
 
-      // Reassign appointments
+      // Reassign appointments WITH METADATA
       for (const apt of conflictingAppointments) {
         const newBarberId = reassignments[apt._id];
         if (newBarberId) {
           await axios.put(
             `https://barber-appointment-backend.vercel.app/api/appointments/${apt._id}`,
-            { barber: newBarberId }
+            { 
+              barber: newBarberId,
+              barberChanged: true,                    // ⬅️ Flag set karo
+              originalBarber: apt.barber._id,         // ⬅️ Original barber save karo
+              reassignmentReason: 'Barber leave'      // ⬅️ Reason save karo
+            }
           );
+          console.log(`✅ Reassigned appointment ${apt._id} to barber ${newBarberId}`);
         }
       }
 
       // Approve leave
       await axios.put(
         `https://barber-appointment-backend.vercel.app/api/leaves/${currentLeaveForApproval._id}`,
-        { status: 'approved' }
+        { 
+          status: 'approved',
+          reassignedAppointments: conflictingAppointments.map(apt => ({
+            appointment: apt._id,
+            newBarber: reassignments[apt._id]
+          }))
+        }
       );
 
       // Close modal and refresh
@@ -220,8 +230,10 @@ const Leaves = () => {
       setReassignments({});
       fetchData();
       setError(null);
+      alert(`✅ Leave approved and ${conflictingAppointments.length} appointment(s) reassigned successfully!`);
       
     } catch (err) {
+      console.error('Reassignment error:', err);
       setError('Failed to reassign appointments: ' + err.message);
     } finally {
       setLoading(false);
@@ -381,6 +393,7 @@ const Leaves = () => {
                 <th className="p-3 text-left text-sm font-semibold">Reason</th>
                 <th className="p-3 text-left text-sm font-semibold">Priority</th>
                 <th className="p-3 text-left text-sm font-semibold">Status</th>
+                <th className="p-3 text-left text-sm font-semibold">Reassignments</th>
                 <th className="p-3 text-left text-sm font-semibold">Actions</th>
               </tr>
             </thead>
@@ -417,6 +430,11 @@ const Leaves = () => {
                       'bg-yellow-100 text-yellow-800'
                     }`}>
                       {leave.status?.charAt(0).toUpperCase() + leave.status?.slice(1)}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-sm font-medium">
+                      {leave.reassignedAppointments?.length || 0}
                     </span>
                   </td>
                   <td className="p-3">
@@ -460,7 +478,7 @@ const Leaves = () => {
               ))}
               {leaves.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                  <td colSpan="7" className="p-8 text-center text-gray-500">
                     <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                     No leaves found
                   </td>

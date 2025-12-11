@@ -456,7 +456,7 @@ const BookingPage = () => {
           <Scissors className="w-12 h-12 text-[#D4AF37] mx-auto mb-4" />
           <h1 className="text-4xl font-black uppercase">Book Appointment</h1>
         </div>
-
+                      
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6"> 
             <ProgressSteps step={step} />

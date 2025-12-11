@@ -281,6 +281,10 @@ const LoginSignup = () => {
             </div>
           )}
 
+
+
+
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div>
@@ -305,7 +309,7 @@ const LoginSignup = () => {
               </label>
               <input
                 type="email"
-                placeholder="example@example.com"
+                placeholder="example@yourmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"

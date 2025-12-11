@@ -129,8 +129,7 @@ function BarberDashboard() {
         axios.get(`${API_BASE}/barbers/${barberId}`, { headers, timeout: 10000 }),
         axios.get(`${API_BASE}/appointments?barber=${barberId}`, { headers, timeout: 10000 }),
         axios.get(`${API_BASE}/barber-shifts?barber=${barberId}`, { headers, timeout: 10000 }),
-        // Assuming a new endpoint for leaves
-        axios.get(`${API_BASE}/leaves/barber/${barberId}`, { headers, timeout: 10000 })
+        axios.get(`${API_BASE}/leaves/barber/me`, { headers, timeout: 10000 })
       ]);
 
       // Handle barber data
@@ -437,6 +436,7 @@ function BarberDashboard() {
     </div>
   );
 }
+
 
 
 export default BarberDashboard;

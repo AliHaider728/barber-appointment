@@ -262,6 +262,12 @@ const UserDashboard = () => {
                               </span>
                             ))}
                           </div>
+                          {apt.barberChanged && (
+                            <p className="mt-2 text-sm text-yellow-400 flex items-center gap-2 bg-yellow-900/20 p-2 rounded-lg">
+                              <AlertCircle className="w-4 h-4" />
+                              Your barber has been changed from {apt.originalBarber?.name || 'previous barber'} to {apt.barber?.name} due to barber leave.
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-[#D4AF37]">£{apt.totalPrice?.toFixed(2)}</p>

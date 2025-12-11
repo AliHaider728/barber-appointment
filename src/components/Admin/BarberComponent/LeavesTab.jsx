@@ -1,4 +1,3 @@
-
 import { Calendar, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 function LeavesTab({ leaves, leaveForm, handleLeaveChange, handleApplyLeave }) {
@@ -173,6 +172,29 @@ function LeavesTab({ leaves, leaveForm, handleLeaveChange, handleApplyLeave }) {
                       </div>
                     </div>
                   </div>
+                  {leave.reassignedAppointments && leave.reassignedAppointments.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 text-blue-600" />
+                        Reassigned Appointments ({leave.reassignedAppointments.length})
+                      </h4>
+                      <div className="space-y-2">
+                        {leave.reassignedAppointments.map((reassign, i) => (
+                          <div key={i} className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-sm">
+                            <p className="font-medium text-gray-900">
+                              Appointment #{reassign.appointment?._id.slice(-6).toUpperCase()} reassigned to {reassign.newBarber?.name}
+                            </p>
+                            <p className="text-gray-600 mt-1">
+                              Date: {new Date(reassign.appointment?.date).toLocaleString()}
+                            </p>
+                            <p className="text-gray-600">
+                              Services: {reassign.appointment?.services?.map(s => s.name).join(', ')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
