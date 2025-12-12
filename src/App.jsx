@@ -14,24 +14,22 @@ import AdminLayout from "./components/Admin/AdminLayout.jsx";
 import UserDashboard from "./components/Admin/UserDashboard.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
-
-
 // Admin Pages
 import Overview from "./components/Admin/Overview.jsx";
 import Appointments from "./components/Admin/Appointments.jsx";
 import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
-import Leaves from "./components/Admin/Leaves.jsx"
+import Leaves from "./components/Admin/Leaves.jsx";
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
-
 
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isBarberRoute = location.pathname.startsWith('/barber');
   const isUserRoute = location.pathname.startsWith('/user');
+  const isLoginRoute = location.pathname === '/login';
 
   return (
     <>
@@ -39,8 +37,12 @@ function AppContent() {
       {/* Header & Footer */}
       {!isAdminRoute && !isBarberRoute && !isUserRoute && <Header />}
       
-      
-      <main className={!isAdminRoute && !isBarberRoute && !isUserRoute ? "pt-16" : ""}>
+      {/* Main content with conditional padding */}
+      <main className={
+        !isAdminRoute && !isBarberRoute && !isUserRoute && !isLoginRoute 
+          ? "pt-16" 
+          : ""
+      }>
         <Routes>
           {/* User Routes */}
           <Route path="/" element={<Home />} />
@@ -52,7 +54,6 @@ function AppContent() {
           <Route path="/branches/:branchId" element={<BranchDetailPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/About" element={<AboutPage />} />
-          
           
           {/* General Login/Signup */}
           <Route path="/login" element={<LoginSignup />} />
@@ -88,5 +89,4 @@ function App() {
     </BrowserRouter>
   );
 }
-
-export default App;
+export default App

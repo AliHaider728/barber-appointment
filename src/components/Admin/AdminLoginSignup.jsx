@@ -390,6 +390,7 @@ const LoginSignup = () => {
             </button>
           </div>
 
+
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
               {isLogin ? "Don't have an account? " : "Already have an account? "}

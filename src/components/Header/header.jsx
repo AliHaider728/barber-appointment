@@ -1,7 +1,7 @@
 // src/components/Header.jsx
 import { useState, useEffect } from 'react';
 import { Menu, X, Scissors, User, LogOut, LayoutDashboard, User2Icon } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,6 +11,10 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if we're on login page
+  const isLoginPage = location.pathname === '/login';
 
   useEffect(() => {
     const token = localStorage.getItem('auth-token');
@@ -65,8 +69,10 @@ export default function Header() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${
-          scrolled
+        className={`${isLoginPage ? 'relative' : 'fixed'} top-0 left-0 right-0 z-30 transition-all duration-300 ${
+          isLoginPage 
+            ? 'bg-black'
+            : scrolled
             ? 'bg-black/95 backdrop-blur-lg shadow-lg shadow-[#D4AF37]/10'
             : 'bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm'
         }`}
