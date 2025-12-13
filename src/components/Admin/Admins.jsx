@@ -1,7 +1,8 @@
-// Updated frontend Admins.jsx - Fix admins.map error by adding type check
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+
+const API_BASE = process.env.REACT_APP_API_BASE ; 
 
 const Admins = () => {
   const [admins, setAdmins] = useState([]);
@@ -22,7 +23,7 @@ const Admins = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('/api/admins', {
+      const response = await axios.get(`${API_BASE}/api/admins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       // Check if data is array
@@ -46,11 +47,11 @@ const Admins = () => {
       setLoading(true);
       const token = localStorage.getItem('adminToken');
       if (editingId) {
-        await axios.put(`/api/admins/${editingId}`, formData, {
+        await axios.put(`${API_BASE}/api/admins/${editingId}`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post('/api/admins', formData, {
+        await axios.post(`${API_BASE}/api/admins`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -78,7 +79,7 @@ const Admins = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('adminToken');
-      await axios.delete(`/api/admins/${id}`, {
+      await axios.delete(`${API_BASE}/api/admins/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchAdmins();
