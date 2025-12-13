@@ -21,5 +21,5 @@ const StepNavigation = ({ step, loading, handleNext, setStep }) => {
     </div>
   );
 };
-
+ 
 export default StepNavigation;

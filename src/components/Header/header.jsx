@@ -204,7 +204,7 @@ export default function Header() {
         className={`fixed top-0 right-0 h-full w-80 sm:w-96 bg-gradient-to-b from-black via-gray-900 to-black z-50 transform transition-all duration-500 ease-out shadow-2xl lg:hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-      >
+      > 
         <div className="flex flex-col h-full relative overflow-hidden">
           {/* Decorative Background */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-[#D4AF37]/10 rounded-full blur-3xl"></div>

@@ -423,7 +423,7 @@ const BookingPage = () => {
       setLoading(false);
     }
   };
-
+  
   const today = new Date().toISOString().split('T')[0];
 
   const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id === selectedBranch) : null;    

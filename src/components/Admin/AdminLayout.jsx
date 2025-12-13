@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText } from 'lucide-react'; // Added FileText for Leaves icon
+import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText, UserPlus } from 'lucide-react'; // Added UserPlus for Admins icon
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -13,8 +13,9 @@ const AdminLayout = () => {
     { path: '/admin/dashboard/barbers', label: 'Barbers & Shifts', icon: Users },
     { path: '/admin/dashboard/branches', label: 'Branches', icon: MapPin },
     { path: '/admin/dashboard/services', label: 'Services', icon: Scissors },
-    { path: '/admin/dashboard/leaves', label: 'Leaves', icon: FileText }, // New: Added Leaves menu item
-  ];
+    { path: '/admin/dashboard/leaves', label: 'Leaves', icon: FileText },
+    { path: '/admin/dashboard/admins', label: 'Manage Admins', icon: UserPlus },  
+  ]
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
