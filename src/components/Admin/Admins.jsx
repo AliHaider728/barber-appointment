@@ -21,10 +21,15 @@ const Admins = () => {
   }, []);
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('adminToken');
+    // Check all possible token storage keys
+    const token = localStorage.getItem('auth-token') || 
+                  localStorage.getItem('token') || 
+                  localStorage.getItem('adminToken');
+    
     if (!token) {
       throw new Error('No authentication token found. Please login again.');
     }
+    
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -44,17 +49,18 @@ const Admins = () => {
       }
       
       setAdmins(response.data);
-      console.log('✅ Admins loaded:', response.data.length);
+      console.log('Admins loaded:', response.data.length);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to fetch admins';
       setError(errorMsg);
       setAdmins([]);
-      console.error('❌ Fetch error:', err);
+      console.error('Fetch error:', err);
       
-      // If 401, redirect to login
-      if (err.response?.status === 401) {
+      if (err.response?.status === 401 || err.message.includes('No authentication token')) {
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('token');
         localStorage.removeItem('adminToken');
-        window.location.href = '/admin/login';
+        window.location.href = '/';
       }
     } finally {
       setLoading(false);
@@ -71,38 +77,34 @@ const Admins = () => {
       const headers = getAuthHeaders();
       
       if (editingId) {
-        // Update existing admin
         const dataToSend = {
           fullName: formData.fullName,
           email: formData.email,
         };
         
-        // Only include password if it's provided
         if (formData.password && formData.password.trim() !== '') {
           dataToSend.password = formData.password;
         }
         
         await axios.put(`${API_BASE}/api/admins/${editingId}`, dataToSend, { headers });
-        setSuccess('Admin updated successfully!');
+        setSuccess('Admin updated successfully');
       } else {
-        // Create new admin
         if (!formData.password) {
           throw new Error('Password is required for new admin');
         }
         
         await axios.post(`${API_BASE}/api/admins`, formData, { headers });
-        setSuccess('Admin created successfully!');
+        setSuccess('Admin created successfully');
       }
       
       fetchAdmins();
       resetForm();
       
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Operation failed';
       setError(errorMsg);
-      console.error('❌ Submit error:', err);
+      console.error('Submit error:', err);
     } finally {
       setLoading(false);
     }
@@ -112,7 +114,7 @@ const Admins = () => {
     setFormData({
       fullName: admin.fullName,
       email: admin.email,
-      password: '', // Don't prefill password
+      password: '',
     });
     setEditingId(admin._id);
     setError('');
@@ -128,14 +130,14 @@ const Admins = () => {
       const headers = getAuthHeaders();
       
       await axios.delete(`${API_BASE}/api/admins/${id}`, { headers });
-      setSuccess('Admin deleted successfully!');
+      setSuccess('Admin deleted successfully');
       fetchAdmins();
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to delete admin';
       setError(errorMsg);
-      console.error('❌ Delete error:', err);
+      console.error('Delete error:', err);
     } finally {
       setLoading(false);
     }
@@ -150,7 +152,6 @@ const Admins = () => {
     <div className="bg-white rounded-xl shadow-lg p-6">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Manage Admins</h2>
       
-      {/* Error Alert */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-start gap-2">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -158,14 +159,12 @@ const Admins = () => {
         </div>
       )}
 
-      {/* Success Alert */}
       {success && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
           {success}
         </div>
       )}
 
-      {/* Add/Edit Form */}
       <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg mb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -227,7 +226,6 @@ const Admins = () => {
         </div>
       </form>
 
-      {/* Admins Table */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -254,7 +252,7 @@ const Admins = () => {
             ) : admins.length === 0 ? (
               <tr>
                 <td colSpan="4" className="p-8 text-center text-gray-500">
-                  No admins found. Create one to get started!
+                  No admins found. Create one to get started
                 </td>
               </tr>
             ) : (
