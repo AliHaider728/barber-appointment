@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 
-const API_BASE = process.env.REACT_APP_API_BASE ; 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'; // Updated for Vite - Use VITE_ prefix in .env
 
 const Admins = () => {
   const [admins, setAdmins] = useState([]);
