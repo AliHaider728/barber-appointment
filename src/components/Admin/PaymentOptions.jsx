@@ -1,7 +1,6 @@
-// src/components/PaymentOptions.jsx
 import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, Loader, AlertCircle } from 'lucide-react';
+import { CreditCard, Loader, AlertCircle, Info } from 'lucide-react';
 
 const PaymentOptions = ({ appointmentData, onSuccess }) => {
   const stripe = useStripe();
@@ -9,7 +8,6 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Agar Stripe load nahi hua to graceful fallback
   if (!stripe || !elements) {
     return (
       <div className="text-center py-10 bg-orange-50 rounded-xl border-2 border-orange-200">
@@ -26,7 +24,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
     setError('');
 
     try {
-      // Create Payment Intent
+      // Create Payment Intent with barber ID for split payment
       const response = await fetch(
         'https://barber-appointment-backend.vercel.app/api/payments/create-payment-intent',
         {
@@ -36,6 +34,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
             totalPrice: appointmentData.totalPrice,
             customerEmail: appointmentData.email || 'no-email@temp.com',
             customerName: appointmentData.customerName || 'Guest',
+            barberId: appointmentData.barber // IMPORTANT: For split payment
           }),
         }
       );
@@ -45,7 +44,9 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
         throw new Error(err.error || 'Failed to create payment');
       }
 
-      const { clientSecret, paymentIntentId } = await response.json();
+      const { clientSecret, paymentIntentId, platformFee, barberAmount } = await response.json();
+
+      console.log(`Payment split - Barber: £${barberAmount}, Platform: £${platformFee}`);
 
       // Confirm Payment
       const result = await stripe.confirmCardPayment(clientSecret, {
@@ -64,7 +65,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       }
 
       if (result.paymentIntent.status === 'succeeded') {
-        // Final booking
+        // Create booking with payment
         const bookRes = await fetch(
           'https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment',
           {
@@ -78,25 +79,20 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
           }
         );
 
-        // Enhanced error handling for different status codes
         if (!bookRes.ok) {
           const errorData = await bookRes.json();
           
           if (bookRes.status === 409) {
-            // Time slot conflict
-            throw new Error('⚠️ Time slot no longer available! Someone just booked it. Please select another time and try again.');
+            throw new Error('Time slot no longer available! Someone just booked it. Please select another time and try again.');
           } else if (bookRes.status === 400) {
-            // Bad request (validation errors)
             throw new Error(errorData.message || errorData.error || 'Invalid booking details. Please check and try again.');
           } else {
-            // Other errors
             throw new Error(errorData.error || errorData.message || 'Booking failed after payment. Please contact support with your payment confirmation.');
           }
         }
 
         const data = await bookRes.json();
         
-        // Clear the card element after successful payment
         elements.getElement(CardElement)?.clear();
         
         onSuccess(data.appointment._id);
@@ -121,6 +117,10 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
     },
   };
 
+  // Calculate split
+  const barberAmount = appointmentData.totalPrice * 0.9;
+  const platformFee = appointmentData.totalPrice * 0.1;
+
   return (
     <form onSubmit={handleCardPayment} className="mt-6">
       <div className="bg-white border-2 border-gray-300 rounded-xl p-5 mb-5">
@@ -129,6 +129,33 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
           <h3 className="font-bold">Card Details</h3>
         </div>
         <CardElement options={CARD_STYLE} className="p-3 bg-gray-50 rounded-lg" />
+      </div>
+
+      {/* Payment Split Info */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-5">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-blue-900 mb-2">Payment Breakdown:</p>
+            <div className="space-y-1 text-blue-800">
+              <div className="flex justify-between">
+                <span>Total Amount:</span>
+                <span className="font-bold">£{appointmentData.totalPrice.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Barber receives (90%):</span>
+                <span className="font-bold text-green-600">£{barberAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform fee (10%):</span>
+                <span className="font-medium">£{platformFee.toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              The platform fee helps maintain the booking system and payment processing.
+            </p>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -146,7 +173,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-[#D4AF37] hover:bg-black hover:text-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full bg-[#D4AF37] hover:bg-black hover:text-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
       >
         {loading ? (
           <>
@@ -162,8 +189,14 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       </button>
 
       <p className="text-center text-xs text-gray-500 mt-4">
-        Safe & Secure — Powered by <strong>Stripe</strong> Payments
+        Safe & Secure - Powered by <strong>Stripe</strong> Payments
       </p>
+      
+      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+        <p className="text-xs text-gray-600 text-center">
+          Test Card: 4242 4242 4242 4242 | Exp: Any future date | CVC: Any 3 digits
+        </p>
+      </div>
     </form>
   );
 };
