@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, Loader, AlertCircle } from 'lucide-react';
+import { CreditCard, Loader, AlertCircle, Info } from 'lucide-react';
 
 const PaymentOptions = ({ appointmentData, onSuccess }) => {
   const stripe = useStripe();
@@ -34,7 +34,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
             totalPrice: appointmentData.totalPrice,
             customerEmail: appointmentData.email || 'no-email@temp.com',
             customerName: appointmentData.customerName || 'Guest',
-            barberId: appointmentData.barber
+            barberId: appointmentData.barber // IMPORTANT: For split payment
           }),
         }
       );
@@ -44,7 +44,9 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
         throw new Error(err.error || 'Failed to create payment');
       }
 
-      const { clientSecret, paymentIntentId } = await response.json();
+      const { clientSecret, paymentIntentId, platformFee, barberAmount } = await response.json();
+
+      console.log(`Payment split - Barber: £${barberAmount}, Platform: £${platformFee}`);
 
       // Confirm Payment
       const result = await stripe.confirmCardPayment(clientSecret, {
@@ -115,6 +117,10 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
     },
   };
 
+  // Calculate split
+  const barberAmount = appointmentData.totalPrice * 0.9;
+  const platformFee = appointmentData.totalPrice * 0.1;
+
   return (
     <form onSubmit={handleCardPayment} className="mt-6">
       <div className="bg-white border-2 border-gray-300 rounded-xl p-5 mb-5">
@@ -123,6 +129,33 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
           <h3 className="font-bold">Card Details</h3>
         </div>
         <CardElement options={CARD_STYLE} className="p-3 bg-gray-50 rounded-lg" />
+      </div>
+
+      {/* Payment Split Info */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-5">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-blue-900 mb-2">Payment Breakdown:</p>
+            <div className="space-y-1 text-blue-800">
+              <div className="flex justify-between">
+                <span>Total Amount:</span>
+                <span className="font-bold">£{appointmentData.totalPrice.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Barber receives (90%):</span>
+                <span className="font-bold text-green-600">£{barberAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform fee (10%):</span>
+                <span className="font-medium">£{platformFee.toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              The platform fee helps maintain the booking system and payment processing.
+            </p>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -158,6 +191,12 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       <p className="text-center text-xs text-gray-500 mt-4">
         Safe & Secure - Powered by <strong>Stripe</strong> Payments
       </p>
+      
+      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+        <p className="text-xs text-gray-600 text-center">
+          Test Card: 4242 4242 4242 4242 | Exp: Any future date | CVC: Any 3 digits
+        </p>
+      </div>
     </form>
   );
 };
