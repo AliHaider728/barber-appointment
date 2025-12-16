@@ -1,4 +1,3 @@
- 
 import { Calendar } from 'lucide-react';
 
 function AppointmentsTab({ appointments, handleStatusUpdate }) {

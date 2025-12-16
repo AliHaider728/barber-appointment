@@ -38,9 +38,9 @@ function PaymentsTab({ appointments }) {
       const headers = getAuthHeaders();
       const res = await axios.get(`${API_BASE}/payments/stripe/status`, { headers });
       setStripeStatus(res.data);
-      console.log('✅ Stripe status:', res.data);
+      console.log('  Stripe status:', res.data);
     } catch (err) {
-      console.error('❌ Stripe status error:', err);
+      console.error('  Stripe status error:', err);
       setStripeStatus({ connected: false });
     }
   };
@@ -62,9 +62,9 @@ function PaymentsTab({ appointments }) {
       setPayments(fetchedPayments);
       setSummary(fetchedSummary);
       
-      console.log('✅ Payments loaded:', fetchedPayments.length);
+      console.log('  Payments loaded:', fetchedPayments.length);
     } catch (err) {
-      console.error('❌ Fetch payments error:', err);
+      console.error('  Fetch payments error:', err);
       setPayments([]);
       setSummary({
         totalEarnings: 0,
@@ -93,7 +93,7 @@ function PaymentsTab({ appointments }) {
       console.log('🔗 Connecting to Stripe...');
       const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, { headers });
       
-      console.log('✅ Stripe response:', res.data);
+      console.log('  Stripe response:', res.data);
 
       if (res.data.onboardingUrl) {
         console.log('↗️ Redirecting to onboarding...');
@@ -104,7 +104,7 @@ function PaymentsTab({ appointments }) {
         await handleRefresh();
       }
     } catch (err) {
-      console.error('❌ Stripe connect error:', err);
+      console.error('  Stripe connect error:', err);
       const errorMsg = err.response?.data?.message || err.message || 'Connection failed';
       alert('Failed to connect Stripe: ' + errorMsg);
     } finally {
@@ -427,7 +427,7 @@ function PaymentsTab({ appointments }) {
                       </td>
                     </tr>
                   ))
-                )}
+                )}  
               </tbody>
             </table>
           </div>
