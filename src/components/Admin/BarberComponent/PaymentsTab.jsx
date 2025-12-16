@@ -1,24 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, CreditCard, ExternalLink, CheckCircle, AlertCircle, Loader, Clock } from 'lucide-react';
-
-// Mock axios for demo
-const axios = {
-  get: async (url, config) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (url.includes('/stripe/status')) {
-      return { data: { connected: false } };
-    }
-    return { data: { payments: [] } };
-  },
-  post: async (url, data, config) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { data: { onboardingUrl: 'https://stripe.com' } };
-  }
-};
+import { DollarSign, TrendingUp, CreditCard, ExternalLink, CheckCircle, AlertCircle, Loader, Clock, RefreshCw } from 'lucide-react';
+import axios from 'axios';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app/api';
 
-function PaymentsTab({ appointments = [] }) {
+function PaymentsTab({ appointments }) {
   const [stripeStatus, setStripeStatus] = useState(null);
   const [payments, setPayments] = useState([]);
   const [summary, setSummary] = useState({
@@ -29,13 +15,14 @@ function PaymentsTab({ appointments = [] }) {
   });
   const [loading, setLoading] = useState(true);
   const [connectLoading, setConnectLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [appointments]);
 
   const getAuthHeaders = () => {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth-token') : null;
+    const token = localStorage.getItem('auth-token');
     return { Authorization: `Bearer ${token}` };
   };
 
@@ -49,10 +36,11 @@ function PaymentsTab({ appointments = [] }) {
   const checkStripeStatus = async () => {
     try {
       const headers = getAuthHeaders();
-      const res = await axios.get(`${API_BASE}/barbers/stripe/status`, { headers });
+      const res = await axios.get(`${API_BASE}/payments/stripe/status`, { headers });
       setStripeStatus(res.data);
+      console.log('✅ Stripe status:', res.data);
     } catch (err) {
-      console.error('Stripe status error:', err);
+      console.error('❌ Stripe status error:', err);
       setStripeStatus({ connected: false });
     }
   };
@@ -64,24 +52,19 @@ function PaymentsTab({ appointments = [] }) {
       const res = await axios.get(`${API_BASE}/payments/barber/me`, { headers });
       
       const fetchedPayments = res.data.payments || [];
-      setPayments(fetchedPayments);
-      
-      const calculatedSummary = {
-        totalEarnings: fetchedPayments
-          .filter(p => p.status === 'succeeded')
-          .reduce((sum, p) => sum + (p.barberAmount || 0), 0),
-        pendingAmount: fetchedPayments
-          .filter(p => p.status === 'succeeded' && p.transferStatus === 'pending')
-          .reduce((sum, p) => sum + (p.barberAmount || 0), 0),
-        transferredAmount: fetchedPayments
-          .filter(p => p.transferStatus === 'completed')
-          .reduce((sum, p) => sum + (p.barberAmount || 0), 0),
-        totalPayments: fetchedPayments.filter(p => p.status === 'succeeded').length
+      const fetchedSummary = res.data.summary || {
+        totalEarnings: 0,
+        pendingAmount: 0,
+        transferredAmount: 0,
+        totalPayments: 0
       };
+
+      setPayments(fetchedPayments);
+      setSummary(fetchedSummary);
       
-      setSummary(calculatedSummary);
+      console.log('✅ Payments loaded:', fetchedPayments.length);
     } catch (err) {
-      console.error('Fetch payments error:', err);
+      console.error('❌ Fetch payments error:', err);
       setPayments([]);
       setSummary({
         totalEarnings: 0,
@@ -94,22 +77,34 @@ function PaymentsTab({ appointments = [] }) {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setTimeout(() => setRefreshing(false), 500);
+  };
+
   const handleStripeConnect = async () => {
     if (connectLoading) return;
     
     try {
       setConnectLoading(true);
       const headers = getAuthHeaders();
+      
+      console.log('🔗 Connecting to Stripe...');
       const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, { headers });
+      
+      console.log('✅ Stripe response:', res.data);
 
       if (res.data.onboardingUrl) {
+        console.log('↗️ Redirecting to onboarding...');
         window.location.href = res.data.onboardingUrl;
       } else if (res.data.loginUrl) {
+        console.log('🔓 Opening Stripe dashboard...');
         window.open(res.data.loginUrl, '_blank');
-        await loadData();
+        await handleRefresh();
       }
     } catch (err) {
-      console.error('Stripe connect error:', err);
+      console.error('❌ Stripe connect error:', err);
       const errorMsg = err.response?.data?.message || err.message || 'Connection failed';
       alert('Failed to connect Stripe: ' + errorMsg);
     } finally {
@@ -117,6 +112,7 @@ function PaymentsTab({ appointments = [] }) {
     }
   };
 
+  // Calculate from appointments
   const paidAppointments = appointments.filter(apt => apt.paymentStatus === 'paid');
   const pendingAppointments = appointments.filter(apt => apt.paymentStatus === 'pending');
   
@@ -126,9 +122,10 @@ function PaymentsTab({ appointments = [] }) {
   const barberShareFromAppointments = totalPaid * 0.9;
   const platformFee = totalPaid * 0.1;
 
-  const displayEarnings = summary.totalEarnings || barberShareFromAppointments;
-  const displayPending = summary.pendingAmount || (totalPending * 0.9);
-  const displayTransferred = summary.transferredAmount || 0;
+  const displayEarnings = summary.totalEarnings;
+  const displayPending = summary.pendingAmount;
+  const displayTransferred = summary.transferredAmount;
+  const displayUpcoming = totalPending * 0.9;
 
   if (loading) {
     return (
@@ -149,6 +146,14 @@ function PaymentsTab({ appointments = [] }) {
           </h2>
           <p className="text-sm text-gray-500 mt-1">Track your business performance in real-time</p>
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 shadow-sm"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="font-medium text-sm">Refresh</span>
+        </button>
       </div>
 
       {/* Stripe Connect Banner */}
@@ -210,6 +215,7 @@ function PaymentsTab({ appointments = [] }) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Earnings */}
         <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 p-6 rounded-2xl shadow-sm border border-emerald-100 hover:shadow-xl hover:shadow-emerald-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
@@ -228,6 +234,7 @@ function PaymentsTab({ appointments = [] }) {
           </div>
         </div>
 
+        {/* Transferred */}
         <div className="group relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-6 rounded-2xl shadow-sm border border-blue-100 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
@@ -248,6 +255,7 @@ function PaymentsTab({ appointments = [] }) {
           </div>
         </div>
 
+        {/* Pending Transfer */}
         <div className="group relative bg-gradient-to-br from-amber-50 via-white to-amber-50/30 p-6 rounded-2xl shadow-sm border border-amber-100 hover:shadow-xl hover:shadow-amber-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
@@ -268,6 +276,7 @@ function PaymentsTab({ appointments = [] }) {
           </div>
         </div>
 
+        {/* Upcoming */}
         <div className="group relative bg-gradient-to-br from-violet-50 via-white to-violet-50/30 p-6 rounded-2xl shadow-sm border border-violet-100 hover:shadow-xl hover:shadow-violet-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
@@ -277,7 +286,7 @@ function PaymentsTab({ appointments = [] }) {
               </div>
               <span className="text-xs font-semibold bg-violet-100 text-violet-700 px-3 py-1 rounded-full">Expected</span>
             </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-1">£{(totalPending * 0.9).toFixed(2)}</h3>
+            <h3 className="text-3xl font-bold text-gray-900 mb-1">£{displayUpcoming.toFixed(2)}</h3>
             <p className="text-sm text-gray-600 font-medium">Upcoming Bookings</p>
             <div className="mt-4 flex gap-1">
               {[...Array(5)].map((_, i) => (
@@ -324,11 +333,8 @@ function PaymentsTab({ appointments = [] }) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-bold text-gray-900">Payment History</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Latest bookings and their status</p>
+              <p className="text-sm text-gray-500 mt-0.5">Latest transactions and their status</p>
             </div>
-            <button className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-              View all →
-            </button>
           </div>
         </div>
         <div className="p-6">
@@ -352,7 +358,7 @@ function PaymentsTab({ appointments = [] }) {
                         <CreditCard className="w-12 h-12 text-gray-300" />
                       </div>
                       <p className="text-gray-900 font-semibold text-base">No payments yet</p>
-                      <p className="text-sm text-gray-500 mt-2">Your bookings will appear here</p>
+                      <p className="text-sm text-gray-500 mt-2">Your transactions will appear here</p>
                     </td>
                   </tr>
                 ) : (
