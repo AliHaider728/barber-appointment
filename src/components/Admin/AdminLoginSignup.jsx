@@ -7,12 +7,14 @@ const LoginSignup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const navigate = useNavigate();
 
-  // Initialize Google Sign-In - FIXED VERSION
+  // Initialize Google Sign-In
   useEffect(() => {
     const initGoogleSignIn = () => {
       if (window.google) {
@@ -21,31 +23,29 @@ const LoginSignup = () => {
             client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
             callback: handleGoogleResponse,
             auto_select: false,
-            cancel_on_tap_outside: false, // Changed to false
-            use_fedcm_for_prompt: true, // Enable FedCM
-            ux_mode: 'popup', // Use popup instead of redirect
-            context: 'signin' // Explicitly set context
+            cancel_on_tap_outside: false,
+            use_fedcm_for_prompt: true,
+            ux_mode: 'popup',
+            context: 'signin'
           });
           setGoogleLoaded(true);
-          console.log('  Google Sign-In initialized');
+          console.log('Google Sign-In initialized');
         } catch (err) {
-          console.error('d  Google init error:', err);
+          console.error('Google init error:', err);
           setError('Failed to load Google Sign-In');
         }
       }
     };
 
-    // Load Google script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = initGoogleSignIn;
     script.onerror = () => {
-      console.error('d  Failed to load Google script');
+      console.error('Failed to load Google script');
       setError('Failed to load Google Sign-In');
     };
-    
     document.body.appendChild(script);
 
     return () => {
@@ -56,18 +56,11 @@ const LoginSignup = () => {
   }, []);
 
   const handleGoogleResponse = async (response) => {
-    console.log('  Google response received');
     setLoading(true);
     setError('');
-    
     try {
       const googleToken = response.credential;
-
-      if (!googleToken) {
-        throw new Error('No Google token received');
-      }
-
-      console.log('  Sending to backend...');
+      if (!googleToken) throw new Error('No Google token received');
 
       const res = await fetch(`https://barber-appointment-backend.vercel.app/api/auth/google`, {
         method: 'POST',
@@ -76,20 +69,13 @@ const LoginSignup = () => {
       });
 
       const data = await res.json();
-      console.log('  Backend response:', { status: res.status, success: data.token ? 'yes' : 'no' });
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Google authentication failed');
-      }
+      if (!res.ok) throw new Error(data.message || 'Google authentication failed');
 
       const { token, user, role } = data;
-
       localStorage.setItem('auth-token', token);
       localStorage.setItem('user-email', user.email);
       localStorage.setItem('user-role', role);
       localStorage.setItem('user-id', user.id);
-
-      console.log('  Google login successful:', { email: user.email, role });
 
       if (role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
@@ -104,34 +90,21 @@ const LoginSignup = () => {
         navigate('/user/dashboard', { replace: true });
       }
     } catch (err) {
-      console.error('d  Google auth error:', err);
+      console.error('Google auth error:', err);
       setError(err.message || 'Google authentication failed');
     } finally {
       setLoading(false);
     }
   };
 
-  //   Better Google Login Handler
   const handleGoogleLogin = () => {
-    console.log('  Google button clicked');
     setError('');
-    
-    if (!window.google) {
-      console.error('d  Google SDK not loaded');
-      setError('Google Sign-In not loaded. Please refresh the page.');
-      return;
-    }
-
     if (!googleLoaded) {
-      console.error('d  Google not initialized');
       setError('Google Sign-In is loading. Please wait...');
       return;
     }
 
     try {
-      console.log('  Opening Google popup...');
-      
-      //   Render button instead of prompt (more reliable)
       const buttonDiv = document.getElementById('google-signin-button');
       if (buttonDiv) {
         window.google.accounts.id.renderButton(
@@ -144,15 +117,83 @@ const LoginSignup = () => {
             shape: 'rectangular'
           }
         );
-        // Trigger click programmatically
         const googleButton = buttonDiv.querySelector('div[role="button"]');
-        if (googleButton) {
-          googleButton.click();
-        }
+        if (googleButton) googleButton.click();
       }
     } catch (err) {
-      console.error('d  Prompt error:', err);
+      console.error('Prompt error:', err);
       setError('Failed to open Google Sign-In. Please try again.');
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, fullName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+      setShowOtpInput(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtpAndSignup = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // Verify OTP
+      const verifyRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyData.message || 'OTP verification failed');
+
+      // Proceed to signup
+      const signupRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName }),
+      });
+      const signupData = await signupRes.json();
+      if (!signupRes.ok) throw new Error(signupData.message || 'Signup failed');
+
+      alert('Account created! Please login.');
+      setIsLogin(true);
+      setShowOtpInput(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setOtp('');
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, fullName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to resend OTP');
+      setError('OTP resent successfully');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,36 +205,23 @@ const LoginSignup = () => {
       return setError('Passwords do not match');
     }
 
-    setLoading(true);
-    try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
-      const body = isLogin 
-        ? { email, password }
-        : { email, password, fullName };
-      
-      const res = await fetch(`https://barber-appointment-backend.vercel.app${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+    if (isLogin) {
+      setLoading(true);
+      try {
+        const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Login failed');
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Authentication failed');
-      }
-
-      const data = await res.json();
-
-      if (isLogin) {
         const { token, user, role } = data;
-
         localStorage.setItem('auth-token', token);
         localStorage.setItem('user-email', user.email);
         localStorage.setItem('user-role', role);
         localStorage.setItem('user-id', user.id);
 
-        console.log('  Login successful:', { email: user.email, role });
-        
         if (role === 'admin') {
           navigate('/admin/dashboard', { replace: true });
         } else if (role === 'barber') {
@@ -206,19 +234,14 @@ const LoginSignup = () => {
         } else {
           navigate('/user/dashboard', { replace: true });
         }
-      } else {
-        alert('Account created! Please login.');
-        setIsLogin(true);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message || 'Something went wrong');
-      console.error('d  Auth error:', err);
-    } finally {
-      setLoading(false);
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setFullName('');
+    } else {
+      // For signup, send OTP first
+      await handleSendOtp();
     }
   };
 
@@ -256,14 +279,12 @@ const LoginSignup = () => {
             100% { left: 150%; }
           }
 
-          /* Hide the auto-rendered Google button */
           #google-signin-button > div {
             display: none !important;
           }
         `}
       </style>
 
-      
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
           <div className="mb-8">
@@ -281,10 +302,6 @@ const LoginSignup = () => {
             </div>
           )}
 
-
-
-
-
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div>
@@ -298,7 +315,7 @@ const LoginSignup = () => {
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"
                   required={!isLogin}
-                  disabled={loading}
+                  disabled={loading || showOtpInput}
                 />
               </div>
             )}
@@ -314,7 +331,7 @@ const LoginSignup = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"
                 required
-                disabled={loading}
+                disabled={loading || showOtpInput}
               />
             </div>
 
@@ -329,7 +346,7 @@ const LoginSignup = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"
                 required
-                disabled={loading}
+                disabled={loading || showOtpInput}
               />
             </div>
             
@@ -345,21 +362,55 @@ const LoginSignup = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"
                   required
-                  disabled={loading}
+                  disabled={loading || showOtpInput}
                 />
               </div>
             )}
 
-            <button
-              type="submit"
-              className="w-full bg-[#D4AF37] text-black font-bold py-3.5 rounded-lg hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : (isLogin ? 'Login' : 'Signup')}
-            </button>
+            {!showOtpInput && (
+              <button
+                type="submit"
+                className="w-full bg-[#D4AF37] text-black font-bold py-3.5 rounded-lg hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : (isLogin ? 'Login' : 'Send OTP')}
+              </button>
+            )}
           </form>
 
-          {/* Google Auth - FIXED */}
+          {showOtpInput && (
+            <div className="mt-6 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Enter OTP
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37] focus:ring-opacity-20 outline-none transition-all duration-200"
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <button
+                onClick={handleVerifyOtpAndSignup}
+                className="w-full bg-[#D4AF37] text-black font-bold py-3.5 rounded-lg hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                disabled={loading}
+              >
+                {loading ? 'Verifying...' : 'Verify OTP & Signup'}
+              </button>
+              <button
+                onClick={handleResendOtp}
+                className="w-full bg-gray-200 text-gray-800 font-bold py-3.5 rounded-lg hover:bg-gray-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+              >
+                {loading ? 'Resending...' : 'Resend OTP'}
+              </button>
+            </div>
+          )}
+
           <div className="mt-4">
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
@@ -370,10 +421,8 @@ const LoginSignup = () => {
               </div>
             </div>
 
-            {/* Hidden div for Google button rendering */}
             <div id="google-signin-button" className="hidden"></div>
 
-            {/* Custom button that triggers Google sign-in */}
             <button
               onClick={handleGoogleLogin}
               type="button"
@@ -390,7 +439,6 @@ const LoginSignup = () => {
             </button>
           </div>
 
-
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
@@ -403,10 +451,12 @@ const LoginSignup = () => {
                   setPassword(''); 
                   setConfirmPassword('');
                   setFullName('');
+                  setShowOtpInput(false);
+                  setOtp('');
                 }}
                 className="text-[#D4AF37] font-bold hover:underline transition-colors"
                 disabled={loading}
-              >
+              >           
                 {isLogin ? 'Signup' : 'Login'}
               </button>
             </p>
