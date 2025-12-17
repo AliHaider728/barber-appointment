@@ -190,7 +190,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
 
       <p className="text-center text-xs text-gray-500 mt-4">
         Safe & Secure - Powered by <strong>Stripe</strong> Payments
-      </p> 
+      </p>
       
       <div className="mt-3 p-3 bg-gray-50 rounded-lg">
         <p className="text-xs text-gray-600 text-center">

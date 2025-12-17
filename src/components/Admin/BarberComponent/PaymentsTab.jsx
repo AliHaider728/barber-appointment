@@ -44,7 +44,7 @@ function PaymentsTab({ appointments }) {
       setStripeStatus({ connected: false });
     }
   };
-
+ 
   const fetchPayments = async () => {
     try {
       setLoading(true);
@@ -90,16 +90,16 @@ function PaymentsTab({ appointments }) {
       setConnectLoading(true);
       const headers = getAuthHeaders();
       
-      console.log('🔗 Connecting to Stripe...');
+      console.log('Connecting to Stripe...');
       const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, { headers });
       
-      console.log('  Stripe response:', res.data);
+      console.log('Stripe response:', res.data);
 
       if (res.data.onboardingUrl) {
-        console.log('↗️ Redirecting to onboarding...');
+        console.log('Redirecting to onboarding...');
         window.location.href = res.data.onboardingUrl;
       } else if (res.data.loginUrl) {
-        console.log('🔓 Opening Stripe dashboard...');
+        console.log('Opening Stripe dashboard...');
         window.open(res.data.loginUrl, '_blank');
         await handleRefresh();
       }
@@ -126,7 +126,7 @@ function PaymentsTab({ appointments }) {
   const displayPending = summary.pendingAmount;
   const displayTransferred = summary.transferredAmount;
   const displayUpcoming = totalPending * 0.9;
-
+  
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">

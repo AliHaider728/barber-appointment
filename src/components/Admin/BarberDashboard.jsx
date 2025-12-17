@@ -31,14 +31,12 @@ function BarberDashboard() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // New states for leaves
   const [leaves, setLeaves] = useState([]);
   const [leaveForm, setLeaveForm] = useState({
     date: '',
     reason: ''
   });
 
-  // States for shifts update
   const [shiftForm, setShiftForm] = useState({
     dayOfWeek: 0,
     startTime: '09:00',
@@ -83,7 +81,6 @@ function BarberDashboard() {
     try {
       console.log('Starting authentication check...');
 
-      // Use custom auth from localStorage (no Supabase)
       const token = localStorage.getItem('auth-token');
       const userData = localStorage.getItem('user-data');
 
@@ -120,66 +117,70 @@ function BarberDashboard() {
     try {
       setLoading(true);
       setError(null);
-      console.log('  Loading data for barber:', barberId);
+      console.log('Loading data for barber:', barberId);
 
       const headers = { Authorization: `Bearer ${token}` };
+      const timeout = 30000; // 30 seconds
 
-      // Parallel API calls with error handling
       const [barberRes, appointmentsRes, shiftsRes, leavesRes] = await Promise.allSettled([
-        axios.get(`${API_BASE}/barbers/${barberId}`, { headers, timeout: 10000 }),
-        axios.get(`${API_BASE}/appointments?barber=${barberId}`, { headers, timeout: 10000 }),
-        axios.get(`${API_BASE}/barber-shifts?barber=${barberId}`, { headers, timeout: 10000 }),
-        axios.get(`${API_BASE}/leaves/barber/me`, { headers, timeout: 10000 })
+        axios.get(`${API_BASE}/barbers/${barberId}`, { headers, timeout }),
+        axios.get(`${API_BASE}/appointments?barber=${barberId}`, { headers, timeout }),
+        axios.get(`${API_BASE}/barber-shifts?barber=${barberId}`, { headers, timeout }),
+        axios.get(`${API_BASE}/leaves/barber/me`, { headers, timeout })
       ]);
 
-      // Handle barber data
       if (barberRes.status === 'fulfilled') {
-        console.log('Barber data:', barberRes.value.data.name);
+        console.log('  Barber data loaded:', barberRes.value.data.name);
         setBarberData(barberRes.value.data);
       } else {
-        console.error('Failed to load barber:', barberRes.reason);
-        throw new Error('Failed to load barber profile');
+        console.error('  Failed to load barber:', barberRes.reason.message);
+        
+        if (barberRes.reason.code === 'ECONNABORTED') {
+          throw new Error('Connection timeout - please check your internet and try again');
+        }
+        
+        throw new Error('Failed to load barber profile - please refresh the page');
       }
 
-      // Handle appointments
       if (appointmentsRes.status === 'fulfilled') {
         const appts = appointmentsRes.value.data;
-        console.log('Appointments loaded:', appts.length);
+        console.log('  Appointments loaded:', appts.length);
         setAppointments(Array.isArray(appts) ? appts : []);
         calculateStats(Array.isArray(appts) ? appts : []);
       } else {
-        console.warn('  Failed to load appointments:', appointmentsRes.reason);
+        console.warn('  Failed to load appointments:', appointmentsRes.reason.message);
         setAppointments([]);
         calculateStats([]);
       }
 
-      // Handle shifts
       if (shiftsRes.status === 'fulfilled') {
         const shiftData = shiftsRes.value.data;
-        console.log('Shifts loaded:', shiftData.length);
+        console.log('  Shifts loaded:', shiftData.length);
         setShifts(Array.isArray(shiftData) ? shiftData : []);
       } else {
-        console.warn('  Failed to load shifts:', shiftsRes.reason);
+        console.warn('  Failed to load shifts:', shiftsRes.reason.message);
         setShifts([]);
       }
 
-      // Handle leaves
       if (leavesRes.status === 'fulfilled') {
         const leaveData = leavesRes.value.data;
-        console.log('Leaves loaded:', leaveData.length);
+        console.log('  Leaves loaded:', leaveData.length);
         setLeaves(Array.isArray(leaveData) ? leaveData : []);
       } else {
-        console.warn('  Failed to load leaves:', leavesRes.reason);
+        console.warn('  Failed to load leaves:', leavesRes.reason.message);
         setLeaves([]);
       }
 
     } catch (error) {
-      console.error('Load data error:', error);
+      console.error('  Load data error:', error);
+      
       if (error.response?.status === 401) {
         setError('Session expired - please login again');
         setTimeout(() => handleLogout(), 2000);
+      } else if (error.code === 'ECONNABORTED') {
+        setError('Connection timeout - please check your internet and try refreshing');
       } else {
-        setError('Failed to load dashboard data');
+        setError(error.message || 'Failed to load dashboard data');
       }
     } finally {
       setLoading(false);
@@ -198,17 +199,14 @@ function BarberDashboard() {
       const aptDate = new Date(apt.date).toDateString();
       const price = parseFloat(apt.totalPrice) || 0;
 
-      // Only count confirmed/completed for earnings
       if (apt.status === 'confirmed' || apt.status === 'completed') {
         totalEarnings += price;
       }
 
-      // Pending payments (not paid yet)
       if (apt.paymentStatus === 'pending') {
         pendingAmount += price;
       }
 
-      // Today's stats
       if (aptDate === today) {
         todayCount++;
         if (apt.status === 'completed') {
@@ -242,18 +240,24 @@ function BarberDashboard() {
       await axios.put(
         `${API_BASE}/appointments/${appointmentId}`,
         { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 15000 
+        }
+      );  
 
       const barberId = JSON.parse(localStorage.getItem('user-data')).barberId;
       await loadBarberData(barberId, token);
       alert('Status updated successfully!');
     } catch (error) {
       console.error('Status update error:', error);
-      alert('Failed to update: ' + (error.response?.data?.message || error.message));
+      const errorMsg = error.code === 'ECONNABORTED' 
+        ? 'Request timeout - please try again'
+        : error.response?.data?.message || error.message;
+      alert('Failed to update: ' + errorMsg);
     }
   };
-
+ 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
     try {
@@ -268,15 +272,21 @@ function BarberDashboard() {
       await axios.post(
         `${API_BASE}/leaves/barber/me`,
         leaveForm,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 15000
+        }
+      );  
 
       await loadBarberData(barberId, token);
       setLeaveForm({ date: '', reason: '' });
       alert('Leave applied successfully!');
     } catch (error) {
       console.error('Apply leave error:', error);
-      alert('Failed to apply leave: ' + (error.response?.data?.message || error.message));
+      const errorMsg = error.code === 'ECONNABORTED' 
+        ? 'Request timeout - please try again'
+        : error.response?.data?.message || error.message;
+      alert('Failed to apply leave: ' + errorMsg);
     }
   };
 
@@ -317,7 +327,10 @@ function BarberDashboard() {
       await axios.post(
         `${API_BASE}/barber-shifts`,
         payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 15000
+        }
       );
 
       await loadBarberData(barberId, token);
@@ -325,7 +338,10 @@ function BarberDashboard() {
       alert('Shift updated successfully!');
     } catch (error) {
       console.error('Shift update error:', error);
-      alert('Failed to update: ' + (error.response?.data?.message || error.message));
+      const errorMsg = error.code === 'ECONNABORTED' 
+        ? 'Request timeout - please try again'
+        : error.response?.data?.message || error.message;
+      alert('Failed to update: ' + errorMsg);
     }
   };
 
@@ -351,14 +367,20 @@ function BarberDashboard() {
       const barberId = JSON.parse(localStorage.getItem('user-data')).barberId;
       await axios.delete(
         `${API_BASE}/barber-shifts/${shiftId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 15000
+        }
       );
 
       await loadBarberData(barberId, token);
       alert('Shift deleted successfully!');
     } catch (error) {
       console.error('Shift delete error:', error);
-      alert('Failed to delete: ' + (error.response?.data?.message || error.message));
+      const errorMsg = error.code === 'ECONNABORTED' 
+        ? 'Request timeout - please try again'
+        : error.response?.data?.message || error.message;
+      alert('Failed to delete: ' + errorMsg);
     }
   };
 
@@ -436,7 +458,5 @@ function BarberDashboard() {
     </div>
   );
 }
-
-
 
 export default BarberDashboard;
