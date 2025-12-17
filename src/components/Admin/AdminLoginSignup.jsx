@@ -14,8 +14,6 @@ const LoginSignup = () => {
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const navigate = useNavigate();
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-
   // Initialize Google Sign-In
   useEffect(() => {
     const initGoogleSignIn = () => {
@@ -31,7 +29,9 @@ const LoginSignup = () => {
             context: 'signin'
           });
           setGoogleLoaded(true);
+          console.log('Google Sign-In initialized');
         } catch (err) {
+          console.error('Google init error:', err);
           setError('Failed to load Google Sign-In');
         }
       }
@@ -43,6 +43,7 @@ const LoginSignup = () => {
     script.defer = true;
     script.onload = initGoogleSignIn;
     script.onerror = () => {
+      console.error('Failed to load Google script');
       setError('Failed to load Google Sign-In');
     };
     document.body.appendChild(script);
@@ -61,7 +62,7 @@ const LoginSignup = () => {
       const googleToken = response.credential;
       if (!googleToken) throw new Error('No Google token received');
 
-      const res = await fetch(`${API_BASE}/api/auth/google`, {
+      const res = await fetch(`https://barber-appointment-backend.vercel.app/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: googleToken }),
@@ -89,6 +90,7 @@ const LoginSignup = () => {
         navigate('/user/dashboard', { replace: true });
       }
     } catch (err) {
+      console.error('Google auth error:', err);
       setError(err.message || 'Google authentication failed');
     } finally {
       setLoading(false);
@@ -119,6 +121,7 @@ const LoginSignup = () => {
         if (googleButton) googleButton.click();
       }
     } catch (err) {
+      console.error('Prompt error:', err);
       setError('Failed to open Google Sign-In. Please try again.');
     }
   };
@@ -127,7 +130,7 @@ const LoginSignup = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/api/otp/send-otp`, {
+      const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, fullName }),
@@ -147,7 +150,7 @@ const LoginSignup = () => {
     setError('');
     try {
       // Verify OTP
-      const verifyRes = await fetch(`${API_BASE}/api/otp/verify-otp`, {
+      const verifyRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
@@ -156,7 +159,7 @@ const LoginSignup = () => {
       if (!verifyRes.ok) throw new Error(verifyData.message || 'OTP verification failed');
 
       // Proceed to signup
-      const signupRes = await fetch(`${API_BASE}/api/auth/signup`, {
+      const signupRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, fullName }),
@@ -179,7 +182,7 @@ const LoginSignup = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/api/otp/resend-otp`, {
+      const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, fullName }),
@@ -205,7 +208,7 @@ const LoginSignup = () => {
     if (isLogin) {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/auth/login`, {
+        const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
