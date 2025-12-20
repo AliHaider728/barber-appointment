@@ -16,6 +16,7 @@ function PaymentsTab({ appointments }) {
   const [loading, setLoading] = useState(true);
   const [connectLoading, setConnectLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -23,10 +24,15 @@ function PaymentsTab({ appointments }) {
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
+    if (!token) {
+      console.error('  No auth token found');
+      return null;
+    }
     return { Authorization: `Bearer ${token}` };
   };
 
   const loadData = async () => {
+    setError(null);
     await Promise.all([
       checkStripeStatus(),
       fetchPayments()
@@ -36,12 +42,27 @@ function PaymentsTab({ appointments }) {
   const checkStripeStatus = async () => {
     try {
       const headers = getAuthHeaders();
-      const res = await axios.get(`${API_BASE}/payments/stripe/status`, { headers });
-      setStripeStatus(res.data);
+      if (!headers) {
+        setStripeStatus({ connected: false, error: 'Not authenticated' });
+        return;
+      }
+
+      console.log('  Checking Stripe status...');
+      const res = await axios.get(`${API_BASE}/payments/stripe/status`, { 
+        headers,
+        timeout: 15000 
+      });
+      
       console.log('  Stripe status:', res.data);
+      setStripeStatus(res.data);
     } catch (err) {
       console.error('  Stripe status error:', err);
-      setStripeStatus({ connected: false });
+      const errorMsg = err.response?.data?.error || err.message;
+      console.error('Error details:', errorMsg);
+      setStripeStatus({ 
+        connected: false, 
+        error: errorMsg 
+      });
     }
   };
  
@@ -49,7 +70,23 @@ function PaymentsTab({ appointments }) {
     try {
       setLoading(true);
       const headers = getAuthHeaders();
-      const res = await axios.get(`${API_BASE}/payments/barber/me`, { headers });
+      if (!headers) {
+        setPayments([]);
+        setSummary({
+          totalEarnings: 0,
+          pendingAmount: 0,
+          transferredAmount: 0,
+          totalPayments: 0
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log('  Fetching payments...');
+      const res = await axios.get(`${API_BASE}/payments/barber/me`, { 
+        headers,
+        timeout: 15000 
+      });
       
       const fetchedPayments = res.data.payments || [];
       const fetchedSummary = res.data.summary || {
@@ -59,12 +96,14 @@ function PaymentsTab({ appointments }) {
         totalPayments: 0
       };
 
+      console.log('  Payments loaded:', fetchedPayments.length);
       setPayments(fetchedPayments);
       setSummary(fetchedSummary);
       
-      console.log('  Payments loaded:', fetchedPayments.length);
     } catch (err) {
       console.error('  Fetch payments error:', err);
+      const errorMsg = err.response?.data?.error || err.message;
+      console.error('Error details:', errorMsg);
       setPayments([]);
       setSummary({
         totalEarnings: 0,
@@ -77,36 +116,64 @@ function PaymentsTab({ appointments }) {
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setTimeout(() => setRefreshing(false), 500);
-  };
+  
 
   const handleStripeConnect = async () => {
     if (connectLoading) return;
     
     try {
       setConnectLoading(true);
+      setError(null);
+      
       const headers = getAuthHeaders();
+      if (!headers) {
+        throw new Error('Not authenticated - please login again');
+      }
       
-      console.log('Connecting to Stripe...');
-      const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, { headers });
+      console.log('  Connecting to Stripe...');
+      const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, { 
+        headers,
+        timeout: 30000 // 30 second timeout
+      });
       
-      console.log('Stripe response:', res.data);
+      console.log('  Stripe response:', res.data);
 
       if (res.data.onboardingUrl) {
-        console.log('Redirecting to onboarding...');
+        console.log('  Redirecting to onboarding...');
+        // Redirect to Stripe onboarding
         window.location.href = res.data.onboardingUrl;
       } else if (res.data.loginUrl) {
-        console.log('Opening Stripe dashboard...');
+        console.log('  Opening Stripe dashboard...');
+        // Open dashboard in new tab
         window.open(res.data.loginUrl, '_blank');
-        await handleRefresh();
+        // Refresh status after short delay
+        
+      } else {
+        throw new Error('Invalid response from server');
       }
     } catch (err) {
       console.error('  Stripe connect error:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Connection failed';
-      alert('Failed to connect Stripe: ' + errorMsg);
+      
+      let errorMsg = 'Failed to connect Stripe';
+      if (err.response?.data?.error) {
+        errorMsg = err.response.data.error;
+      } else if (err.response?.data?.details) {
+        errorMsg = err.response.data.details;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      // Check for specific errors
+      if (err.code === 'ECONNABORTED') {
+        errorMsg = 'Connection timeout - please check your internet and try again';
+      } else if (err.response?.status === 401) {
+        errorMsg = 'Session expired - please login again';
+      } else if (err.response?.status === 503) {
+        errorMsg = 'Stripe service unavailable - please try again later';
+      }
+      
+      setError(errorMsg);
+      alert(errorMsg);
     } finally {
       setConnectLoading(false);
     }
@@ -146,15 +213,19 @@ function PaymentsTab({ appointments }) {
           </h2>
           <p className="text-sm text-gray-500 mt-1">Track your business performance in real-time</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 shadow-sm"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="font-medium text-sm">Refresh</span>
-        </button>
+         
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-red-900">Connection Error</p>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stripe Connect Banner */}
       {!stripeStatus?.connected ? (
@@ -167,8 +238,13 @@ function PaymentsTab({ appointments }) {
             <div className="flex-1">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Connect Stripe Account</h3>
               <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                Link your Stripe account to receive payments. You earn 90% of every booking.
+                Link your Stripe account to receive payments directly. You earn 90% of every booking.
               </p>
+              {stripeStatus?.error && (
+                <p className="text-xs text-red-600 mb-3 font-medium">
+                  {stripeStatus.error}
+                </p>
+              )}
               <button
                 onClick={handleStripeConnect}
                 disabled={connectLoading}
@@ -198,16 +274,21 @@ function PaymentsTab({ appointments }) {
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">Stripe Connected</p>
-                <p className="text-sm text-gray-600">Payments transfer automatically</p>
+                <p className="font-semibold text-gray-900">Stripe Connected ✓</p>
+                <p className="text-sm text-gray-600">
+                  {stripeStatus.fullyOnboarded 
+                    ? 'Payments transfer automatically' 
+                    : 'Complete onboarding to receive payments'}
+                </p>
               </div>
             </div>
             <button
               onClick={handleStripeConnect}
-              className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors"
+              disabled={connectLoading}
+              className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors disabled:opacity-50"
             >
               <ExternalLink className="w-4 h-4" />
-              Manage
+              {connectLoading ? 'Loading...' : 'Manage'}
             </button>
           </div>
         </div>

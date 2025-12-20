@@ -37,7 +37,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
             barberId: appointmentData.barber // IMPORTANT: For split payment
           }),
         }
-      );
+      ); 
 
       if (!response.ok) {
         const err = await response.json();
