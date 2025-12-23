@@ -1,0 +1,285 @@
+import React, { useState, useEffect } from 'react';
+import { LogOut, BarChart2, Calendar, Users, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText, Building2, Clock } from 'lucide-react';
+
+const API_BASE = 'https://barber-appointment-backend.vercel.app';
+
+const BranchAdminLayout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState('overview');
+  const [branchInfo, setBranchInfo] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const branch = localStorage.getItem('branch-info');
+    if (branch) {
+      setBranchInfo(JSON.parse(branch));
+    }
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`${API_BASE}/api/branch-admin/dashboard/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Stats fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const menuItems = [
+    { id: 'overview', label: 'Overview', icon: BarChart2 },
+    { id: 'appointments', label: 'Appointments', icon: Calendar },
+    { id: 'barbers', label: 'Barbers', icon: Users },
+    { id: 'shifts', label: 'Shifts', icon: Clock },
+    { id: 'services', label: 'Services', icon: Scissors },
+    { id: 'leaves', label: 'Leaves', icon: FileText },
+  ];
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = '/';
+  };
+
+  const closeMobileSidebar = () => setMobileSidebarOpen(false);
+
+  const renderContent = () => {
+    switch(currentPage) {
+      case 'overview':
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <Building2 className="w-10 h-10" />
+                <div>
+                  <h2 className="text-2xl font-bold">{branchInfo?.name || 'Branch'}</h2>
+                  <p className="text-yellow-100">{branchInfo?.city}</p>
+                </div>
+              </div>
+              <p className="text-sm text-yellow-100">{branchInfo?.address}</p>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-10">Loading stats...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Total Barbers</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats?.totalBarbers || 0}</p>
+                    </div>
+                    <Users className="w-10 h-10 text-blue-500" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Today's Appointments</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats?.todayAppointments || 0}</p>
+                    </div>
+                    <Calendar className="w-10 h-10 text-green-500" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow p-6 border-l-4 border-orange-500">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Pending Appointments</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats?.pendingAppointments || 0}</p>
+                    </div>
+                    <Clock className="w-10 h-10 text-orange-500" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Active Leaves</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats?.activeLeaves || 0}</p>
+                    </div>
+                    <FileText className="w-10 h-10 text-red-500" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="text-xl font-bold mb-4">Branch Admin Permissions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  'Manage branch barbers',
+                  'View & manage appointments',
+                  'Create & update shifts',
+                  'View services',
+                  'Approve/reject leaves',
+                  'View branch analytics'
+                ].map((perm, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-gray-700">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span>{perm}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'appointments':
+        return (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-2xl font-bold mb-4">Branch Appointments</h3>
+            <p className="text-gray-600">View and manage appointments for your branch.</p>
+            <p className="text-sm text-gray-500 mt-2">Component integration in progress...</p>
+          </div>
+        );
+
+      case 'barbers':
+        return (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-2xl font-bold mb-4">Branch Barbers</h3>
+            <p className="text-gray-600">Manage barbers assigned to your branch.</p>
+            <p className="text-sm text-gray-500 mt-2">Component integration in progress...</p>
+          </div>
+        );
+
+      case 'shifts':
+        return (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-2xl font-bold mb-4">Barber Shifts</h3>
+            <p className="text-gray-600">Create and manage barber shifts for your branch.</p>
+            <p className="text-sm text-gray-500 mt-2">Component integration in progress...</p>
+          </div>
+        );
+
+      case 'services':
+        return (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-2xl font-bold mb-4">Services (Read-Only)</h3>
+            <p className="text-gray-600">View available services.</p>
+            <p className="text-sm text-gray-500 mt-2">Component integration in progress...</p>
+          </div>
+        );
+
+      case 'leaves':
+        return (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-2xl font-bold mb-4">Leave Management</h3>
+            <p className="text-gray-600">Approve or reject leave requests from barbers.</p>
+            <p className="text-sm text-gray-500 mt-2">Component integration in progress...</p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 flex flex-col">
+      <div className="flex flex-1">
+        {mobileSidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={closeMobileSidebar}></div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <aside className={`hidden lg:block ${sidebarOpen ? 'w-72' : 'w-20'} bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-all duration-300 relative border-r border-yellow-500/20`}>
+          <div className="absolute top-0 left-0 w-full h-64 bg-yellow-500/5 rounded-full blur-3xl"></div>
+          
+          <div className="relative p-6 border-b border-yellow-500/20">
+            <div className="flex items-center justify-between">
+              {sidebarOpen && (
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-8 h-8 text-yellow-500" />
+                  <h1 className="font-black text-xl text-white uppercase tracking-tight">Branch Admin</h1>
+                </div>
+              )}
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-xl bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black transition-all">
+                {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          <nav className="relative mt-6 px-3 space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPage === item.id;
+              return (
+                <button key={item.id} onClick={() => setCurrentPage(item.id)} className={`w-full group relative flex items-center px-4 py-4 rounded-2xl transition-all ${isActive ? 'bg-gradient-to-r from-yellow-500 to-yellow-400 text-black shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-white rounded-r-full"></div>}
+                  <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-black' : ''}`} />
+                  {sidebarOpen && <span className={`ml-4 font-bold uppercase tracking-wide text-sm ${isActive ? 'text-black' : ''}`}>{item.label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Mobile Sidebar */}
+        <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-transform duration-300 lg:hidden ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="relative p-6 border-b border-yellow-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="w-8 h-8 text-yellow-500" />
+                <h1 className="font-black text-xl text-white">Branch Admin</h1>
+              </div>
+              <button onClick={closeMobileSidebar} className="p-2 rounded-xl bg-yellow-500/10 text-yellow-500">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <nav className="relative mt-6 px-3 space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPage === item.id;
+              return (
+                <button key={item.id} onClick={() => { setCurrentPage(item.id); closeMobileSidebar(); }} className={`w-full flex items-center px-4 py-4 rounded-2xl transition-all ${isActive ? 'bg-gradient-to-r from-yellow-500 to-yellow-400 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                  <Icon className="w-6 h-6" />
+                  <span className="ml-4 font-bold text-sm">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <div className="flex-1 flex flex-col">
+          <header className="bg-white shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center">
+            <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+              <Menu className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{menuItems.find(i => i.id === currentPage)?.label}</h2>
+            <button onClick={handleLogout} className="flex items-center bg-yellow-500 text-black font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-black hover:text-white transition">
+              <span className="hidden sm:inline">Logout</span>
+              <LogOut className="w-4 h-4 sm:ml-2" />
+            </button>
+          </header>
+
+          <main className="p-4 sm:p-6 flex-1 bg-gray-50 overflow-auto">
+            {renderContent()}
+          </main>
+
+          <footer className="bg-gradient-to-r from-black via-gray-900 to-black text-white py-6 px-4 sm:px-6 border-t border-yellow-500/20">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p className="text-sm text-gray-400">© {new Date().getFullYear()} <span className="text-yellow-500 font-semibold">Barber Shop</span>. All Rights Reserved.</p>
+              <p className="text-sm text-gray-400">Designed by <span className="text-yellow-500 font-semibold">TecnoSphere</span></p>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BranchAdminLayout;

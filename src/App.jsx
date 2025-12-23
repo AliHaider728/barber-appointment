@@ -21,14 +21,15 @@ import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import Leaves from "./components/Admin/Leaves.jsx";
-import Admins from "./components/Admin/Admins.jsx";
-// Barber Dashboard 
+import BranchAdminLayout from "./components/BranchAdmin/BranchAdminLayout.jsx";
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
+import ManageAdmins from "./components/BranchAdmin/ManageAdmins.jsx";
 
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isBarberRoute = location.pathname.startsWith('/barber');
+  const isBranchAdminRoute = location.pathname.startsWith('/branch-admin');
   const isUserRoute = location.pathname.startsWith('/user');
   const isLoginRoute = location.pathname === '/login';
 
@@ -36,11 +37,11 @@ function AppContent() {
     <>
       <ScrollToTop />
       {/* Header & Footer */}
-      {!isAdminRoute && !isBarberRoute && !isUserRoute && <Header />}
+      {!isAdminRoute && !isBarberRoute && !isBranchAdminRoute && !isUserRoute && <Header />}
       
       {/* Main content with conditional padding */}
       <main className={
-        !isAdminRoute && !isBarberRoute && !isUserRoute && !isLoginRoute 
+        !isAdminRoute && !isBarberRoute && !isBranchAdminRoute && !isUserRoute && !isLoginRoute 
           ? "pt-16" 
           : ""
       }>
@@ -71,15 +72,19 @@ function AppContent() {
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
             <Route path="leaves" element={<Leaves/>} />
-            <Route path="admins" element={<Admins/>}  />
+            <Route path="admins" element={<ManageAdmins/>}  />
           </Route>
           
           {/* Barber Dashboard  */}
           <Route path="/barber/dashboard" element={<BarberDashboard />} />
+
+          {/* Branch Admin Dashboard */}
+          <Route path="/branch-admin/dashboard" element={<BranchAdminLayout />} />
+
         </Routes>
       </main>
       
-      {!isAdminRoute && !isBarberRoute && !isUserRoute && <AnimatedFooter />}
+      {!isAdminRoute && !isBarberRoute && !isBranchAdminRoute && !isUserRoute && <AnimatedFooter />}
     </>
   );
 }
@@ -91,4 +96,4 @@ function App() {
     </BrowserRouter>
   );
 }
-export default App
+export default App;
