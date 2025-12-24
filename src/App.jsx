@@ -22,13 +22,13 @@ import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import Leaves from "./components/Admin/Leaves.jsx";
-import Admins from "./components/Admin/Admins.jsx"; // ✅ Re-added
+import ManageAdmins from "./components/Admin/Admins.jsx";
 
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
 
 // Branch Admin Dashboard
-import BranchAdminLayout from "./components/Admin/BranchAdminLayout.jsx";
+import BranchAdminLayout from "./components/BranchAdmin/BranchAdminLayout.jsx";
 
 function AppContent() {
   const location = useLocation();
@@ -77,7 +77,7 @@ function AppContent() {
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
             <Route path="leaves" element={<Leaves/>} />
-            <Route path="admins" element={<Admins/>} />
+            <Route path="admins" element={<ManageAdmins/>} />
           </Route>
           
           {/* Branch Admin Dashboard */}
