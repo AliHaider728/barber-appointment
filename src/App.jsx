@@ -14,6 +14,7 @@ import AdminLayout from "./components/Admin/AdminLayout.jsx";
 import UserDashboard from "./components/Admin/UserDashboard.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
+
 // Admin Pages
 import Overview from "./components/Admin/Overview.jsx";
 import Appointments from "./components/Admin/Appointments.jsx";
@@ -21,14 +22,19 @@ import Barbers from "./components/Admin/Barbers.jsx";
 import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import Leaves from "./components/Admin/Leaves.jsx";
-import Admins from "./components/Admin/Admins.jsx";
+import Admins from "./components/Admin/Admins.jsx"; // ✅ Re-added
+
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
+
+// Branch Admin Dashboard
+import BranchAdminLayout from "./components/Admin/BranchAdminLayout.jsx";
 
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isBarberRoute = location.pathname.startsWith('/barber');
+  const isBranchAdminRoute = location.pathname.startsWith('/branch-admin');
   const isUserRoute = location.pathname.startsWith('/user');
   const isLoginRoute = location.pathname === '/login';
 
@@ -36,11 +42,11 @@ function AppContent() {
     <>
       <ScrollToTop />
       {/* Header & Footer */}
-      {!isAdminRoute && !isBarberRoute && !isUserRoute && <Header />}
+      {!isAdminRoute && !isBarberRoute && !isBranchAdminRoute && !isUserRoute && <Header />}
       
       {/* Main content with conditional padding */}
       <main className={
-        !isAdminRoute && !isBarberRoute && !isUserRoute && !isLoginRoute 
+        !isAdminRoute && !isBarberRoute && !isBranchAdminRoute && !isUserRoute && !isLoginRoute 
           ? "pt-16" 
           : ""
       }>
@@ -62,7 +68,7 @@ function AppContent() {
           {/* User Dashboard */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
           
-          {/* Admin Dashboard (with nested routes) */}
+          {/* Main Admin Dashboard (with nested routes) */}
           <Route path="/admin/dashboard" element={<AdminLayout />}>
             <Route index element={<Overview />} />
             <Route path="overview" element={<Overview />} />
@@ -71,15 +77,18 @@ function AppContent() {
             <Route path="branches" element={<Branches />} />
             <Route path="services" element={<ServicesAdmin />} />
             <Route path="leaves" element={<Leaves/>} />
-            <Route path="admins" element={<Admins/>}  />
+            <Route path="admins" element={<Admins/>} />
           </Route>
           
-          {/* Barber Dashboard  */}
+          {/* Branch Admin Dashboard */}
+          <Route path="/branch-admin/dashboard" element={<BranchAdminLayout />} />
+          
+          {/* Barber Dashboard */}
           <Route path="/barber/dashboard" element={<BarberDashboard />} />
         </Routes>
       </main>
       
-      {!isAdminRoute && !isBarberRoute && !isUserRoute && <AnimatedFooter />}
+      {!isAdminRoute && !isBarberRoute && !isBranchAdminRoute && !isUserRoute && <AnimatedFooter />}
     </>
   );
 }
@@ -91,4 +100,5 @@ function App() {
     </BrowserRouter>
   );
 }
-export default App
+
+export default App;

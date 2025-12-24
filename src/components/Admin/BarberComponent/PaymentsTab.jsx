@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app/api';
 
+
 function PaymentsTab({ appointments }) {
   const [stripeStatus, setStripeStatus] = useState(null);
   const [payments, setPayments] = useState([]);
@@ -117,7 +118,7 @@ function PaymentsTab({ appointments }) {
   };
 
   
-
+   
   const handleStripeConnect = async () => {
     if (connectLoading) return;
     

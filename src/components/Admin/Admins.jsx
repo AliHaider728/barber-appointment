@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck } from 'lucide-react';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
@@ -97,7 +97,7 @@ const ManageAdmins = () => {
           throw new Error(errorData.message || 'Update failed');
         }
         
-        setSuccess('Admin updated successfully');
+        setSuccess('✅ Admin updated successfully');
       } else {
         if (!formData.password) {
           throw new Error('Password is required');
@@ -115,12 +115,12 @@ const ManageAdmins = () => {
           throw new Error(errorData.message || 'Creation failed');
         }
         
-        setSuccess('Admin created successfully');
+        setSuccess('✅ Admin created successfully! They can now login.');
       }
       
       fetchAdmins();
       resetForm();
-      setTimeout(() => setSuccess(''), 3000);
+      setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -143,7 +143,7 @@ const ManageAdmins = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this admin?')) return;
+    if (!confirm('⚠️ Delete this admin? This action cannot be undone.')) return;
     
     try {
       setLoading(true);
@@ -158,7 +158,7 @@ const ManageAdmins = () => {
         throw new Error(errorData.message || 'Delete failed');
       }
       
-      setSuccess('Admin deleted');
+      setSuccess('✅ Admin deleted successfully');
       fetchAdmins();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -183,13 +183,15 @@ const ManageAdmins = () => {
   const getRoleBadge = (role) => {
     if (role === 'main_admin') {
       return (
-        <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-bold">
+        <span className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-xs font-bold flex items-center gap-1 inline-flex">
+          <Shield className="w-3 h-3" />
           Main Admin
         </span>
       );
     }
     return (
-      <span className="px-3 py-1 bg-yellow-500 text-black rounded-full text-xs font-bold">
+      <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-full text-xs font-bold flex items-center gap-1 inline-flex">
+        <UserCheck className="w-3 h-3" />
         Branch Admin
       </span>
     );
@@ -197,181 +199,283 @@ const ManageAdmins = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <UserCog className="w-8 h-8 text-[#D4AF37]" />
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
+        <div className="p-3 bg-gradient-to-br from-[#D4AF37] to-yellow-600 rounded-xl">
+          <UserCog className="w-8 h-8 text-white" />
+        </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Manage Admins</h2>
-          <p className="text-sm text-gray-600">Create and manage administrators</p>
+          <h2 className="text-2xl font-bold text-gray-800">Manage Administrators</h2>
+          <p className="text-sm text-gray-600">Create and manage Main & Branch Admins</p>
         </div>
       </div>
       
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-start gap-2">
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-start gap-2 shadow-sm">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <div>
+            <p className="font-semibold">Error</p>
+            <p className="text-sm">{error}</p>
+          </div>
         </div>
       )}
 
+      {/* Success Alert */}
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {success}
+        <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg mb-4 shadow-sm">
+          <p className="font-semibold">{success}</p>
         </div>
       )}
 
-      <div className="bg-gray-50 p-6 rounded-lg mb-8">
-        <h3 className="text-lg font-semibold mb-4">{editingId ? 'Edit Admin' : 'Add New Admin'}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password {editingId && '(Leave blank to keep)'}
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] pr-10"
-                minLength={6}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
+      {/* Admin Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+          <div className="flex items-center gap-3">
+            <Shield className="w-8 h-8 text-purple-600" />
+            <div>
+              <p className="text-sm text-purple-700 font-medium">Main Admins</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {admins.filter(a => a.role === 'main_admin').length}
+              </p>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Admin Type *
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: ''})}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-            >
-              <option value="branch_admin">Branch Admin</option>
-              <option value="main_admin">Main Admin</option>
-            </select>
-          </div>
-          
-          {formData.role === 'branch_admin' && (
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assigned Branch *
-              </label>
-              <select
-                value={formData.assignedBranch}
-                onChange={(e) => setFormData({...formData, assignedBranch: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-              >
-                <option value="">Select a branch...</option>
-                {branches.map(branch => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.name} - {branch.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
-        
-        <div className="mt-4 flex gap-3">
-          {editingId && (
-            <button
-              onClick={resetForm}
-              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-          )}
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-2 bg-[#D4AF37] text-black rounded-lg hover:bg-[#C5A028] disabled:opacity-50 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            {loading ? 'Processing...' : (editingId ? 'Update' : 'Add Admin')}
-          </button>
+
+        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-xl border border-yellow-200">
+          <div className="flex items-center gap-3">
+            <UserCheck className="w-8 h-8 text-yellow-600" />
+            <div>
+              <p className="text-sm text-yellow-700 font-medium">Branch Admins</p>
+              <p className="text-2xl font-bold text-yellow-900">
+                {admins.filter(a => a.role === 'branch_admin').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+          <div className="flex items-center gap-3">
+            <Building2 className="w-8 h-8 text-blue-600" />
+            <div>
+              <p className="text-sm text-blue-700 font-medium">Total Branches</p>
+              <p className="text-2xl font-bold text-blue-900">{branches.length}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-3 text-left font-semibold">Name</th>
-              <th className="p-3 text-left font-semibold">Email</th>
-              <th className="p-3 text-left font-semibold">Role</th>
-              <th className="p-3 text-left font-semibold">Branch</th>
-              <th className="p-3 text-left font-semibold">Actions</th>
+      {/* Form */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl mb-8 border border-gray-200">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+          {editingId ? (
+            <>
+              <Edit className="w-5 h-5 text-blue-600" />
+              Edit Admin
+            </>
+          ) : (
+            <>
+              <Plus className="w-5 h-5 text-green-600" />
+              Add New Admin
+            </>
+          )}
+        </h3>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.fullName}
+                onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                placeholder="John Doe"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                placeholder="admin@example.com"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Password {editingId ? '(Leave blank to keep current)' : <span className="text-red-500">*</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all pr-12"
+                  placeholder="••••••••"
+                  minLength={6}
+                  required={!editingId}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {!editingId && (
+                <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Admin Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: ''})}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                required
+              >
+                <option value="branch_admin">Branch Admin (Limited Access)</option>
+                <option value="main_admin">Main Admin (Full Access)</option>
+              </select>
+            </div>
+            
+            {formData.role === 'branch_admin' && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Building2 className="w-4 h-4 inline mr-1" />
+                  Assigned Branch <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.assignedBranch}
+                  onChange={(e) => setFormData({...formData, assignedBranch: e.target.value})}
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                  required={formData.role === 'branch_admin'}
+                >
+                  <option value="">-- Select a branch --</option>
+                  {branches.map(branch => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name} - {branch.city} ({branch.address})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Branch Admin will only manage this specific branch
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-6 flex gap-3">
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold transition-all"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  {editingId ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editingId ? 'Update Admin' : 'Create Admin'}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Admins Table */}
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full">
+          <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
+            <tr>
+              <th className="p-4 text-left font-bold text-gray-700">Name</th>
+              <th className="p-4 text-left font-bold text-gray-700">Email</th>
+              <th className="p-4 text-left font-bold text-gray-700">Role</th>
+              <th className="p-4 text-left font-bold text-gray-700">Branch</th>
+              <th className="p-4 text-left font-bold text-gray-700">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200">
             {loading && !admins.length ? (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500">
-                  Loading...
+                <td colSpan="5" className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin"></div>
+                    <p className="text-gray-600">Loading admins...</p>
+                  </div>
                 </td>
               </tr>
             ) : admins.length === 0 ? (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500">
-                  No admins found
+                <td colSpan="5" className="p-12 text-center">
+                  <UserCog className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 font-semibold">No admins found</p>
+                  <p className="text-sm text-gray-500 mt-1">Create your first admin above</p>
                 </td>
               </tr>
             ) : (
               admins.map(admin => (
-                <tr key={admin._id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{admin.fullName}</td>
-                  <td className="p-3">{admin.email}</td>
-                  <td className="p-3">{getRoleBadge(admin.role)}</td>
-                  <td className="p-3">
+                <tr key={admin._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4">
+                    <p className="font-semibold text-gray-900">{admin.fullName}</p>
+                  </td>
+                  <td className="p-4">
+                    <p className="text-gray-700">{admin.email}</p>
+                  </td>
+                  <td className="p-4">{getRoleBadge(admin.role)}</td>
+                  <td className="p-4">
                     {admin.assignedBranch ? (
                       <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                        <span>{admin.assignedBranch.name} - {admin.assignedBranch.city}</span>
+                        <Building2 className="w-4 h-4 text-yellow-600" />
+                        <span className="text-sm font-medium text-gray-700">
+                          {admin.assignedBranch.name}
+                          <span className="text-gray-500"> - {admin.assignedBranch.city}</span>
+                        </span>
                       </div>
                     ) : (
-                      <span className="text-gray-400 italic">All Branches</span>
+                      <span className="text-gray-400 italic text-sm">All Branches</span>
                     )}
                   </td>
-                  <td className="p-3">
+                  <td className="p-4">
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(admin)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Edit"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit Admin"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(admin._id)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Admin"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -382,6 +486,20 @@ const ManageAdmins = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Info Footer */}
+      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-semibold mb-1">💡 Admin Types:</p>
+            <ul className="space-y-1 ml-4 list-disc">
+              <li><strong>Main Admin:</strong> Full system access - manage all branches, barbers, services, and admins</li>
+              <li><strong>Branch Admin:</strong> Limited to assigned branch - manage only that branch's barbers, appointments, and shifts</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
