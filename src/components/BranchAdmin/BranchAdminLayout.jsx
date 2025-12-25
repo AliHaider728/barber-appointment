@@ -3,6 +3,13 @@ import { LogOut, BarChart2, Calendar, Users, Scissors, Menu, X, ChevronLeft, Che
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
+// Import all branch components (you'll create separate files for these)
+import BranchAppointments from './BranchAppointments';
+import BranchBarbers from './BranchBarbers';
+import BranchShifts from './BranchShifts';
+import BranchServices from './BranchServices';
+import BranchLeaves from './BranchLeaves';
+
 const BranchAdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -17,7 +24,6 @@ const BranchAdminLayout = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load branch info from localStorage (set during login)
     const branchData = localStorage.getItem('branch-info');
     if (branchData) {
       try {
@@ -59,7 +65,6 @@ const BranchAdminLayout = () => {
       }
     } catch (err) {
       console.error('Stats fetch error:', err);
-      // Keep default stats if fetch fails
     } finally {
       setLoading(false);
     }
@@ -86,7 +91,6 @@ const BranchAdminLayout = () => {
       case 'overview':
         return (
           <div className="space-y-6">
-            {/* Branch Info Card */}
             <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <Building2 className="w-10 h-10" />
@@ -101,7 +105,6 @@ const BranchAdminLayout = () => {
               )}
             </div>
 
-            {/* Stats Grid */}
             {loading ? (
               <div className="text-center py-10">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
@@ -151,7 +154,6 @@ const BranchAdminLayout = () => {
               </div>
             )}
 
-            {/* Permissions Info */}
             <div className="bg-white rounded-xl shadow p-6">
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Users className="w-6 h-6 text-yellow-500" />
@@ -174,7 +176,6 @@ const BranchAdminLayout = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow p-6 border border-gray-200">
               <h3 className="text-xl font-bold mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -216,74 +217,19 @@ const BranchAdminLayout = () => {
         );
       
       case 'appointments':
-        return (
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Calendar className="w-7 h-7 text-green-500" />
-              Branch Appointments
-            </h3>
-            <p className="text-gray-600 mb-4">View and manage appointments for your branch.</p>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">📋 Component integration in progress...</p>
-            </div>
-          </div>
-        );
+        return <BranchAppointments />;
 
       case 'barbers':
-        return (
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Users className="w-7 h-7 text-blue-500" />
-              Branch Barbers
-            </h3>
-            <p className="text-gray-600 mb-4">Manage barbers assigned to your branch.</p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">👥 Component integration in progress...</p>
-            </div>
-          </div>
-        );
+        return <BranchBarbers />;
 
       case 'shifts':
-        return (
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Clock className="w-7 h-7 text-purple-500" />
-              Barber Shifts
-            </h3>
-            <p className="text-gray-600 mb-4">Create and manage barber shifts for your branch.</p>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <p className="text-sm text-purple-800">🕐 Component integration in progress...</p>
-            </div>
-          </div>
-        );
+        return <BranchShifts />;
 
       case 'services':
-        return (
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Scissors className="w-7 h-7 text-[#D4AF37]" />
-              Services (Read-Only)
-            </h3>
-            <p className="text-gray-600 mb-4">View available services. Contact Main Admin to add/edit services.</p>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-800">✂️ Component integration in progress...</p>
-            </div>
-          </div>
-        );
+        return <BranchServices />;
 
       case 'leaves':
-        return (
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <FileText className="w-7 h-7 text-red-500" />
-              Leave Management
-            </h3>
-            <p className="text-gray-600 mb-4">Approve or reject leave requests from barbers.</p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">📄 Component integration in progress...</p>
-            </div>
-          </div>
-        );
+        return <BranchLeaves />;
 
       default:
         return null;
@@ -293,7 +239,6 @@ const BranchAdminLayout = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 flex flex-col">
       <div className="flex flex-1">
-        {/* Mobile Sidebar Overlay */}
         {mobileSidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
@@ -301,7 +246,6 @@ const BranchAdminLayout = () => {
           ></div>
         )}
 
-        {/* Desktop Sidebar */}
         <aside className={`hidden lg:block ${sidebarOpen ? 'w-72' : 'w-20'} bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-all duration-300 relative border-r border-yellow-500/20`}>
           <div className="absolute top-0 left-0 w-full h-64 bg-yellow-500/5 rounded-full blur-3xl"></div>
           
@@ -310,7 +254,7 @@ const BranchAdminLayout = () => {
               {sidebarOpen && (
                 <div className="flex items-center gap-3">
                   <Building2 className="w-8 h-8 text-yellow-500" />
-                  <h1 className="font-black text-xl text-white uppercase tracking-tight">Branch Admin</h1>
+                  <h1 className="font-black text-[19px] text-white uppercase tracking-tight">Branch Admin</h1>
                 </div>
               )}
               <button 
@@ -351,7 +295,6 @@ const BranchAdminLayout = () => {
           </nav>
         </aside>
 
-        {/* Mobile Sidebar */}
         <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-transform duration-300 lg:hidden ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
@@ -395,9 +338,7 @@ const BranchAdminLayout = () => {
           </nav>
         </aside>
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
           <header className="bg-white shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center">
             <button 
               onClick={() => setMobileSidebarOpen(true)} 
@@ -410,19 +351,17 @@ const BranchAdminLayout = () => {
             </h2>
             <button 
               onClick={handleLogout} 
-              className="flex items-center bg-yellow-500 text-black font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-black hover:text-white transition-all"
+              className="flex items-center bg-red-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-white hover:text-red-600 transition-all ease-in-out  border-[2px] border-transparent  hover:border-[2px] hover:border-red-600 "
             >
+             <LogOut className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Logout</span>
-              <LogOut className="w-4 h-4 sm:ml-2" />
             </button>
           </header>
 
-          {/* Main Content */}
           <main className="p-4 sm:p-6 flex-1 bg-gray-50 overflow-auto">
             {renderContent()}
           </main>
 
-          {/* Footer */}
           <footer className="bg-gradient-to-r from-black via-gray-900 to-black text-white py-6 px-4 sm:px-6 border-t border-yellow-500/20">
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-sm text-gray-400">
@@ -430,7 +369,7 @@ const BranchAdminLayout = () => {
               </p>
               <p className="text-sm text-gray-400">
                 Designed by <span className="text-yellow-500 font-semibold">TecnoSphere</span>
-              </p>
+              </p>  
             </div>
           </footer>
         </div>
