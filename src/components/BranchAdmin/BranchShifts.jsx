@@ -63,8 +63,14 @@ const BranchShifts = () => {
       const response = await fetch(`${API_BASE}/api/branch-admin/shifts`, {
         headers: getAuthHeaders()
       });
-      if (!response.ok) throw new Error('Failed to fetch shifts');
+
+      // Parse body regardless of status
       const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Error details from backend:', data);  // This will log the full error object
+        throw new Error(data.error || data.message || 'Failed to fetch shifts');
+      }
       
       const barberShifts = Array.isArray(data) 
         ? data.filter(shift => shift.barber._id === selectedBarber._id)
@@ -133,23 +139,23 @@ const BranchShifts = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Clock className="w-7 h-7 text-purple-500" />
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+          <Clock className="w-6 h-6 text-purple-500" />
           Barber Shifts Management
         </h2>
-        <p className="text-gray-600 mt-1">Create and manage barber working hours for your branch</p>
+        <p className="text-gray-600 text-sm mt-1">Create and manage barber working hours for your branch</p>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800 text-sm">{error}</p>
         </div>
       )}
 
       {/* Barber Selection */}
-      <div className="bg-white rounded-xl shadow p-6">
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Barber to Manage Shifts *
         </label>
@@ -159,7 +165,7 @@ const BranchShifts = () => {
             const barber = barbers.find(b => b._id === e.target.value);
             setSelectedBarber(barber || null);
           }}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">Choose a barber</option>
           {barbers.map(b => (
@@ -173,7 +179,7 @@ const BranchShifts = () => {
       {selectedBarber && (
         <>
           {/* Add Shift Form */}
-          <div className="bg-white rounded-xl shadow">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Plus className="w-5 h-5" />
@@ -188,7 +194,7 @@ const BranchShifts = () => {
                   <select
                     value={shiftForm.dayOfWeek}
                     onChange={(e) => setShiftForm({ ...shiftForm, dayOfWeek: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     {daysOfWeek.map(d => (
                       <option key={d.value} value={d.value}>{d.label}</option>
@@ -203,7 +209,7 @@ const BranchShifts = () => {
                     value={shiftForm.startTime}
                     onChange={(e) => setShiftForm({ ...shiftForm, startTime: e.target.value })}
                     disabled={shiftForm.isOff}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:bg-gray-100"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                   />
                 </div>
 
@@ -214,17 +220,17 @@ const BranchShifts = () => {
                     value={shiftForm.endTime}
                     onChange={(e) => setShiftForm({ ...shiftForm, endTime: e.target.value })}
                     disabled={shiftForm.isOff}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:bg-gray-100"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                   />
                 </div>
 
                 <div className="flex items-end">
-                  <label className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-yellow-500 transition">
+                  <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition">
                     <input
                       type="checkbox"
                       checked={shiftForm.isOff}
                       onChange={(e) => setShiftForm({ ...shiftForm, isOff: e.target.checked })}
-                      className="w-4 h-4 text-yellow-500 rounded"
+                      className="w-4 h-4 text-blue-500 rounded"
                     />
                     <span className="text-sm font-medium text-gray-700">Day Off</span>
                   </label>
@@ -234,7 +240,7 @@ const BranchShifts = () => {
               <button
                 onClick={handleAddShift}
                 disabled={loading}
-                className="mt-4 px-6 py-2 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-600 transition disabled:opacity-50"
+                className="mt-4 px-6 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
               >
                 {loading ? 'Adding...' : 'Add Shift'}
               </button>
@@ -242,7 +248,7 @@ const BranchShifts = () => {
           </div>
 
           {/* Weekly Schedule */}
-          <div className="bg-white rounded-xl shadow">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Calendar className="w-5 h-5" />
@@ -253,7 +259,7 @@ const BranchShifts = () => {
             <div className="p-6">
               {loading ? (
                 <div className="text-center py-10">
-                  <div className="inline-block w-8 h-8 border-4 border-gray-300 border-t-yellow-500 rounded-full animate-spin"></div>
+                  <div className="inline-block w-8 h-8 border-4 border-gray-300 border-t-gray-500 rounded-full animate-spin"></div>
                   <p className="mt-2 text-gray-600">Loading shifts...</p>
                 </div>
               ) : (
@@ -263,22 +269,22 @@ const BranchShifts = () => {
                     return (
                       <div
                         key={day.value}
-                        className={`p-4 rounded-lg border-2 ${
+                        className={`p-4 rounded-lg border ${
                           shift?.isOff ? 'bg-red-50 border-red-200' :
                           shift ? 'bg-green-50 border-green-200' :
                           'bg-gray-50 border-gray-200'
                         }`}
                       >
-                        <p className="text-xs font-bold mb-2 text-gray-700">{day.label}</p>
+                        <p className="text-xs font-medium mb-2 text-gray-700">{day.label}</p>
                         {shift ? (
                           <>
                             {shift.isOff ? (
-                              <p className="text-sm font-bold text-red-600">Day Off</p>
+                              <p className="text-sm font-medium text-red-600">Day Off</p>
                             ) : (
                               <>
                                 <div className="flex items-center gap-1 text-sm mb-1">
                                   <Clock className="w-3 h-3" />
-                                  <span className="font-bold">{shift.startTime}</span>
+                                  <span className="font-medium">{shift.startTime}</span>
                                 </div>
                                 <div className="text-xs text-gray-600">to {shift.endTime}</div>
                               </>
@@ -305,7 +311,7 @@ const BranchShifts = () => {
       )}
 
       {!selectedBarber && (
-        <div className="bg-white rounded-xl shadow p-12 text-center">
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center border border-gray-200">
           <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Select a barber to manage their working hours</p>
         </div>

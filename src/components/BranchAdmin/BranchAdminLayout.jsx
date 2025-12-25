@@ -22,6 +22,7 @@ const BranchAdminLayout = () => {
     activeLeaves: 0
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const branchData = localStorage.getItem('branch-info');
@@ -40,31 +41,36 @@ const BranchAdminLayout = () => {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
+      setError('');
       const token = localStorage.getItem('auth-token');
       
       if (!token) {
-        console.error('No auth token found');
-        return;
+        throw new Error('No auth token found');
       }
 
-      const response = await fetch(`${API_BASE}/api/branch-admin/dashboard/stats`, {
+      console.log('Fetching stats with token:', token); // Debug log
+
+      const response = await fetch(`${API_BASE}/api/branch-admin/dashboard/stats${branchInfo?._id ? `?branchId=${branchInfo._id}` : ''}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats');
-      }
-
+      // Parse body regardless of status
       const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Error details from backend:', data);  // This will log the full error object
+        throw new Error(data.error || data.message || 'Failed to fetch stats');
+      }
       
       if (data.success && data.stats) {
         setStats(data.stats);
       }
     } catch (err) {
       console.error('Stats fetch error:', err);
+      setError('Failed to load dashboard stats. Please check your connection or login again.');
     } finally {
       setLoading(false);
     }
@@ -104,6 +110,12 @@ const BranchAdminLayout = () => {
                 <p className="text-sm text-yellow-100 mt-2">📞 {branchInfo.phone}</p>
               )}
             </div>
+
+            {error && (
+              <div className="bg-red-50 text-red-700 p-4 rounded-lg">
+                {error}
+              </div>
+            )}
 
             {loading ? (
               <div className="text-center py-10">
