@@ -77,8 +77,15 @@ const LoginSignup = () => {
       localStorage.setItem('user-role', role);
       localStorage.setItem('user-id', user.id);
 
+      // Navigate based on role
       if (role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
+      } else if (role === 'branch_admin') {
+        // Store branch info for branch admin
+        if (user.assignedBranch) {
+          localStorage.setItem('branch-info', JSON.stringify(user.assignedBranch));
+        }
+        navigate('/branch-admin/dashboard', { replace: true });
       } else if (role === 'barber') {
         localStorage.setItem('user-data', JSON.stringify({ 
           barberId: user.barberId, 
@@ -217,13 +224,24 @@ const LoginSignup = () => {
         if (!res.ok) throw new Error(data.message || 'Login failed');
 
         const { token, user, role } = data;
+        
+        console.log('Login response:', { role, user }); // Debug log
+        
         localStorage.setItem('auth-token', token);
         localStorage.setItem('user-email', user.email);
         localStorage.setItem('user-role', role);
         localStorage.setItem('user-id', user.id);
 
+        // Navigate based on role
         if (role === 'admin') {
           navigate('/admin/dashboard', { replace: true });
+        } else if (role === 'branch_admin') {
+          // Store branch info for branch admin
+          if (user.assignedBranch) {
+            localStorage.setItem('branch-info', JSON.stringify(user.assignedBranch));
+          }
+          console.log('Navigating to branch admin dashboard');
+          navigate('/branch-admin/dashboard', { replace: true });
         } else if (role === 'barber') {
           localStorage.setItem('user-data', JSON.stringify({ 
             barberId: user.barberId, 
@@ -377,7 +395,7 @@ const LoginSignup = () => {
               </button>
             )}
           </form>
-
+          
           {showOtpInput && (
             <div className="mt-6 space-y-5">
               <div>
