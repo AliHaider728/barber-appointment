@@ -1,7 +1,3 @@
-// Updated ServicesTab.js for Barber Dashboard
-// Fixes: Added auth headers to all service-related calls, switched to branch-specific routes where appropriate,
-// Improved error handling/logging, ensured available services show all for branch/gender,
-// Fixed duplicate checks, ensured updates work for barbers (assuming backend allows self-update on specialties)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Briefcase, Plus, X, Clock, Trash2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -18,7 +14,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
 
   useEffect(() => {
     fetchAvailableServices();
-  }, [barberData.gender, barberData.branch._id]);
+  }, [barberData.gender]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
@@ -32,13 +28,11 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     try {
       setInitialLoading(true);
       setError(null);
-      // Use branch-specific route to get all services for the barber's branch, filtered by gender client-side
-      const res = await axios.get(`${API_URL}/services/branch`, { headers: getAuthHeaders() });
-      const filteredServices = res.data.filter(s => s.gender === barberData.gender.toLowerCase());
-      setAvailableServices(filteredServices);
+      const res = await axios.get(`${API_URL}/services/gender/${barberData.gender}`);
+      setAvailableServices(res.data);
     } catch (err) {
-      setError('Failed to load services: ' + (err.response?.data?.message || err.message));
-      console.error('Fetch services error:', JSON.stringify(err.response?.data || err));
+      setError('Failed to load services');
+      console.error('Fetch services error:', err);
     } finally {
       setInitialLoading(false);
     }
@@ -55,19 +49,20 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setLoading(true);
       setError(null);
 
-      // Create new service using branch-specific route (assumes backend handles branch addition)
+      // Create new service (Main admin route - no auth needed for creation)
       const serviceData = {
         name: form.name.trim(),
         duration: form.duration.trim(),
         price: `£${form.price}`,
         gender: barberData.gender.toLowerCase(),
+        branches: [barberData.branch._id]
       };
 
-      const res = await axios.post(`${API_URL}/services/branch`, serviceData, { headers: getAuthHeaders() });
+      const res = await axios.post(`${API_URL}/services`, serviceData);
       
       // Add to barber's specialties
       const updatedSpecialties = [...new Set([...barberData.specialties, res.data.name])];
-      await axios.patch(
+      await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
         { headers: getAuthHeaders() }
@@ -82,7 +77,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
-      console.error('Add service error:', JSON.stringify(err.response?.data || err));
+      console.error('Add service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -93,10 +88,31 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setLoading(true);
       setError(null);
 
-      // Check if branch is already added (but since we're using branch route, assume it's available)
+      // Get current branch IDs
+      const currentBranches = service.branches.map(b => {
+        if (typeof b === 'string') return b;
+        if (b._id) return b._id;
+        return null;
+      }).filter(Boolean);
+
+      // Check if branch is already added
+      if (!currentBranches.includes(barberData.branch._id)) {
+        // Update service to add current branch
+        await axios.put(
+          `${API_URL}/services/${service._id}`,
+          {
+            name: service.name,
+            duration: service.duration,
+            price: service.price,
+            gender: service.gender,
+            branches: [...currentBranches, barberData.branch._id]
+          }
+        );
+      }
+      
       // Add to barber's specialties (avoid duplicates)
       const updatedSpecialties = [...new Set([...barberData.specialties, service.name])];
-      await axios.patch(
+      await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
         { headers: getAuthHeaders() }
@@ -110,7 +126,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
-      console.error('Add existing service error:', JSON.stringify(err.response?.data || err));
+      console.error('Add existing service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -124,7 +140,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setError(null);
       
       const updatedSpecialties = barberData.specialties.filter(s => s !== serviceName);
-      await axios.patch(
+      await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
         { headers: getAuthHeaders() }
@@ -138,7 +154,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to remove service: ' + errMsg);
-      console.error('Remove specialty error:', JSON.stringify(err.response?.data || err));
+      console.error('Remove specialty error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }

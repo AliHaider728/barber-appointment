@@ -1,5 +1,3 @@
-// Updated ServicesAdmin.js for Admin Dashboard
-// Fixes: Improved error handling, ensured total services show, no major changes but added logging
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Scissors, Plus, Edit2, Trash2, X, Clock, User, MapPin } from 'lucide-react';
@@ -12,8 +10,7 @@ const ServicesAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
+   useEffect(() => {
     fetchData();
   }, []);
 
@@ -29,7 +26,7 @@ const ServicesAdmin = () => {
       setError(null);
     } catch (err) {
       setError('Failed to load data. Please refresh the page.');
-      console.error('Fetch error:', JSON.stringify(err.response?.data || err));
+      console.error('Fetch error:', err);
     } finally {
       setInitialLoading(false);
     }
@@ -42,7 +39,7 @@ const ServicesAdmin = () => {
       setError(null);
     } catch (err) {
       setError('Failed to load services.');
-      console.error('Fetch services error:', JSON.stringify(err.response?.data || err));
+      console.error('Fetch error:', err);
     }
   };
 
@@ -80,7 +77,7 @@ const ServicesAdmin = () => {
       const msg = err.response?.data?.message || err.message;
       setError('Save failed: ' + msg);
       alert('Error: ' + msg);
-      console.error('Save error:', JSON.stringify(err.response?.data || err));
+      console.error('Save error:', err);
     } finally {
       setLoading(false);
     }
@@ -110,7 +107,6 @@ const ServicesAdmin = () => {
         fetchServices();
       } catch (err) {
         alert('Delete failed: ' + (err.response?.data?.message || err.message));
-        console.error('Delete error:', JSON.stringify(err.response?.data || err));
       } finally {
         setLoading(false);
       }
