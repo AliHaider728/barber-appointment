@@ -6,7 +6,6 @@ const API_BASE = 'https://barber-appointment-backend.vercel.app';
 // Import all branch components (you'll create separate files for these)
 import BranchAppointments from './BranchAppointments';
 import BranchBarbers from './BranchBarbers';
-import BranchShifts from './BranchShifts';
 import BranchServices from './BranchServices';
 import BranchLeaves from './BranchLeaves';
 
@@ -80,7 +79,6 @@ const BranchAdminLayout = () => {
     { id: 'overview', label: 'Overview', icon: BarChart2 },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'barbers', label: 'Barbers', icon: Users },
-    { id: 'shifts', label: 'Shifts', icon: Clock },
     { id: 'services', label: 'Services', icon: Scissors },
     { id: 'leaves', label: 'Leaves', icon: FileText },
   ];
@@ -173,10 +171,9 @@ const BranchAdminLayout = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
-                  '✓ Manage branch barbers',
+                  '✓ Manage branch barbers and shifts',
                   '✓ View & manage appointments',
-                  '✓ Create & update shifts',
-                  '✓ View services (read-only)',
+                  '✓ Manage services',
                   '✓ Approve/reject leaves',
                   '✓ View branch analytics'
                 ].map((perm, idx) => (
@@ -233,9 +230,6 @@ const BranchAdminLayout = () => {
 
       case 'barbers':
         return <BranchBarbers />;
-
-      case 'shifts':
-        return <BranchShifts />;
 
       case 'services':
         return <BranchServices />;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Calendar, DollarSign, Clock, Users, Menu, X, BarChart3 } from 'lucide-react';
+import { LogOut, Calendar, DollarSign, Clock, Users, Menu, X, BarChart3,Briefcase } from 'lucide-react';
 
 const BarberLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,6 +15,7 @@ const BarberLayout = () => {
     { path: '/barber/bookings', label: 'Bookings', icon: Calendar },
     { path: '/barber/shifts', label: 'Shifts/Schedule', icon: Clock },
     { path: '/barber/payments', label: 'Payments', icon: DollarSign },
+    { path: '/barber/services', label: 'services', icon: Briefcase },
   ];
 
   return (

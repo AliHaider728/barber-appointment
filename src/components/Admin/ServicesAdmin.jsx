@@ -4,27 +4,43 @@ import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign, User } from 'lucid
 
 const ServicesAdmin = () => {
   const [services, setServices] = useState([]);
-  const [form, setForm] = useState({ name: '', duration: '', price: '', gender: '' });
+  const [branches, setBranches] = useState([]);
+  const [form, setForm] = useState({ name: '', duration: '', price: '', gender: '', branches: [] });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchServices();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setInitialLoading(true);
+      const [servicesRes, branchesRes] = await Promise.all([
+        axios.get('https://barber-appointment-backend.vercel.app/api/services'),
+        axios.get('https://barber-appointment-backend.vercel.app/api/branches')
+      ]);
+      setServices(servicesRes.data);
+      setBranches(branchesRes.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load data. Please refresh the page.');
+      console.error('Fetch error:', err);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   const fetchServices = async () => {
     try {
-      setInitialLoading(true);
       const res = await axios.get('https://barber-appointment-backend.vercel.app/api/services');
       setServices(res.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load services. Please refresh the page.');
+      setError('Failed to load services.');
       console.error('Fetch error:', err);
-    } finally {
-      setInitialLoading(false);
     }
   };
 
@@ -40,7 +56,8 @@ const ServicesAdmin = () => {
       name: form.name.trim(),
       duration: form.duration.trim(),
       price: `£${form.price}`, // Backend expects £ symbol
-      gender: form.gender.toLowerCase()
+      gender: form.gender.toLowerCase(),
+      branches: form.branches
     };
 
     try {
@@ -74,7 +91,8 @@ const ServicesAdmin = () => {
       name: s.name,
       duration: s.duration,
       price: priceWithoutSymbol,
-      gender: s.gender
+      gender: s.gender,
+      branches: s.branches.map(b => b._id)
     });
     setEditingId(s._id);
     setError(null);
@@ -96,9 +114,18 @@ const ServicesAdmin = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: '', duration: '', price: '', gender: '' });
+    setForm({ name: '', duration: '', price: '', gender: '', branches: [] });
     setEditingId(null);
     setError(null);
+  };
+
+  const handleBranchToggle = (branchId) => {
+    setForm(prev => ({
+      ...prev,
+      branches: prev.branches.includes(branchId)
+        ? prev.branches.filter(id => id !== branchId)
+        : [...prev.branches, branchId]
+    }));
   };
 
   const maleServices = services.filter(s => s.gender === 'male');
@@ -209,6 +236,33 @@ const ServicesAdmin = () => {
                 <option value="male">Male</option>
                 <option value="female">Female</option>
               </select>
+            </div>
+          </div>
+
+          {/* Branches Selection */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Assign to Branches * (Select multiple)
+            </label>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {branches.map(b => (
+                <label
+                  key={b._id}
+                  className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition ${form.branches.includes(b._id)
+                      ? 'border-[#D4AF37] bg-yellow-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.branches.includes(b._id)}
+                    onChange={() => handleBranchToggle(b._id)}
+                    className="w-4 h-4 text-[#D4AF37] rounded"
+                  />
+                  <span className="text-sm font-medium">{b.name}</span>
+                </label>
+              ))}
             </div>
           </div>
 

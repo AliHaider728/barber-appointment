@@ -9,6 +9,7 @@ import ScheduleTab from './BarberComponent/ScheduleTab.jsx';
 import PaymentsTab from './BarberComponent/PaymentsTab.jsx';
 import LeavesTab from './BarberComponent/LeavesTab.jsx';
 import ProfileTab from './BarberComponent/ProfileTab.jsx';
+import ServicesTab from './BarberComponent/ServicesTab.jsx';
 import ErrorState from './BarberComponent/ErrorState.jsx';
 import LoadingState from './BarberComponent/LoadingState.jsx';
 
@@ -436,6 +437,9 @@ function BarberDashboard() {
               handleEditShift={handleEditShift}
               handleDeleteShift={handleDeleteShift}
             />
+          )}
+          {activeTab === 'services' && barberData && (
+            <ServicesTab barberData={barberData} />
           )}
           {activeTab === 'payments' && (
             <PaymentsTab
