@@ -1,5 +1,3 @@
-// components/BarberSidebar.jsx
-
 import { Home, Calendar, Clock, CreditCard, Briefcase, User } from 'lucide-react';
 
 function BarberSidebar({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen }) {
@@ -8,8 +6,10 @@ function BarberSidebar({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen })
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'schedule', label: 'My Schedule', icon: Clock },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'services', label: 'Services', icon: Briefcase },
     { id: 'leaves', label: 'Leaves', icon: Briefcase },
     { id: 'profile', label: 'My Profile', icon: User },
+
   ];
 
   const handleTabClick = (tabId) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign, User } from 'lucide-react';
+import { Scissors, Plus, Edit2, Trash2, X, Clock, User, MapPin } from 'lucide-react';
 
 const ServicesAdmin = () => {
   const [services, setServices] = useState([]);
@@ -55,7 +55,7 @@ const ServicesAdmin = () => {
     const data = {
       name: form.name.trim(),
       duration: form.duration.trim(),
-      price: `£${form.price}`, // Backend expects £ symbol
+      price: `£${form.price}`,
       gender: form.gender.toLowerCase(),
       branches: form.branches
     };
@@ -85,14 +85,15 @@ const ServicesAdmin = () => {
   };
 
   const handleEdit = (s) => {
-    // Remove £ symbol when editing
     const priceWithoutSymbol = s.price.replace('£', '');
+    const branchIds = s.branches.map(b => typeof b === 'object' ? b._id : b);
+    
     setForm({
       name: s.name,
       duration: s.duration,
       price: priceWithoutSymbol,
       gender: s.gender,
-      branches: s.branches.map(b => b._id)
+      branches: branchIds
     });
     setEditingId(s._id);
     setError(null);
@@ -178,7 +179,6 @@ const ServicesAdmin = () => {
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Service Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Service Name *</label>
               <input
@@ -191,7 +191,6 @@ const ServicesAdmin = () => {
               />
             </div>
 
-            {/* Duration */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Duration *</label>
               <input
@@ -204,7 +203,6 @@ const ServicesAdmin = () => {
               />
             </div>
 
-            {/* Price */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
               <div className="relative">
@@ -223,7 +221,6 @@ const ServicesAdmin = () => {
               </div>
             </div>
 
-            {/* Gender */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
               <select
@@ -266,7 +263,6 @@ const ServicesAdmin = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 mt-6">
             <button
               type="submit"
@@ -302,7 +298,13 @@ const ServicesAdmin = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {maleServices.map(service => (
-                <ServiceCard key={service._id} service={service} onEdit={handleEdit} onDelete={handleDelete} />
+                <ServiceCard 
+                  key={service._id} 
+                  service={service} 
+                  branches={branches}
+                  onEdit={handleEdit} 
+                  onDelete={handleDelete} 
+                />
               ))}
             </div>
           )}
@@ -322,7 +324,13 @@ const ServicesAdmin = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {femaleServices.map(service => (
-                <ServiceCard key={service._id} service={service} onEdit={handleEdit} onDelete={handleDelete} />
+                <ServiceCard 
+                  key={service._id} 
+                  service={service} 
+                  branches={branches}
+                  onEdit={handleEdit} 
+                  onDelete={handleDelete} 
+                />
               ))}
             </div>
           )}
@@ -332,8 +340,19 @@ const ServicesAdmin = () => {
   );
 };
 
+const ServiceCard = ({ service, branches, onEdit, onDelete }) => {
+  const getBranchNames = () => {
+    if (!service.branches || service.branches.length === 0) return 'No branches';
+    
+    return service.branches.map(branch => {
+      if (typeof branch === 'object' && branch.name) {
+        return branch.name;
+      }
+      const foundBranch = branches.find(b => b._id === branch);
+      return foundBranch ? foundBranch.name : 'Unknown';
+    }).join(', ');
+  };
 
-const ServiceCard = ({ service, onEdit, onDelete }) => {
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition">
       <div className="flex items-start gap-3 mb-3">
@@ -353,9 +372,15 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
           <span className="text-gray-900 font-medium">{service.duration}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <DollarSign className="w-4 h-4 text-gray-400" />
           <span className="text-gray-600">Price:</span>
           <span className="text-[#D4AF37] font-bold">{service.price}</span>
+        </div>
+        <div className="flex items-start gap-2 text-sm">
+          <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <span className="text-gray-600">Branches:</span>
+            <p className="text-gray-900 font-medium text-xs mt-0.5">{getBranchNames()}</p>
+          </div>
         </div>
       </div>
 

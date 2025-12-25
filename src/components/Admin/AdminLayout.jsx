@@ -16,6 +16,7 @@ const AdminLayout = () => {
     { path: '/admin/dashboard/leaves', label: 'Leaves', icon: FileText },
     { path: '/admin/dashboard/admins', label: 'Manage Admins', icon: UserPlus },  
   ]
+  
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');

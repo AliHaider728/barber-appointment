@@ -111,4 +111,5 @@ function ProfileTab({ barberData }) {
   );
 }
 
+
 export default ProfileTab;

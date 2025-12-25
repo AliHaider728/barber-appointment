@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Briefcase, Plus, X, Clock, Trash2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
-const ServicesTab = ({ barberData }) => {
+const API_URL = 'https://barber-appointment-backend.vercel.app/api';
+
+const ServicesTab = ({ barberData, onUpdate }) => {
   const [form, setForm] = useState({ name: '', duration: '', price: '' });
   const [availableServices, setAvailableServices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     fetchAvailableServices();
-  }, []);
+  }, [barberData.gender]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
@@ -21,100 +26,364 @@ const ServicesTab = ({ barberData }) => {
 
   const fetchAvailableServices = async () => {
     try {
-      const res = await axios.get(`https://barber-appointment-backend.vercel.app/api/services/gender/${barberData.gender}`);
+      setInitialLoading(true);
+      setError(null);
+      const res = await axios.get(`${API_URL}/services/gender/${barberData.gender}`);
       setAvailableServices(res.data);
     } catch (err) {
       setError('Failed to load services');
+      console.error('Fetch services error:', err);
+    } finally {
+      setInitialLoading(false);
     }
   };
 
   const handleAddNewService = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.duration || !form.price) return;
+    if (!form.name || !form.duration || !form.price) {
+      setError('All fields are required!');
+      return;
+    }
 
     try {
       setLoading(true);
-      const res = await axios.post('https://barber-appointment-backend.vercel.app/api/services/branch', {
-        ...form,
-        gender: barberData.gender
-      }, { headers: getAuthHeaders() });
+      setError(null);
+
+      // Create new service (Main admin route - no auth needed for creation)
+      const serviceData = {
+        name: form.name.trim(),
+        duration: form.duration.trim(),
+        price: `£${form.price}`,
+        gender: barberData.gender.toLowerCase(),
+        branches: [barberData.branch._id]
+      };
+
+      const res = await axios.post(`${API_URL}/services`, serviceData);
       
-      // Add to specialties
-      await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${barberData._id}`, {
-        specialties: [...barberData.specialties, res.data.name]
-      }, { headers: getAuthHeaders() });
+      // Add to barber's specialties
+      const updatedSpecialties = [...new Set([...barberData.specialties, res.data.name])];
+      await axios.put(
+        `${API_URL}/barbers/${barberData._id}`,
+        { specialties: updatedSpecialties },
+        { headers: getAuthHeaders() }
+      );
       
       setForm({ name: '', duration: '', price: '' });
-      alert('Service added!');
-      fetchAvailableServices();
+      setSuccessMsg('Service added successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+      
+      await fetchAvailableServices();
+      if (onUpdate) onUpdate();
     } catch (err) {
-      setError('Failed to add service');
+      const errMsg = err.response?.data?.message || err.message;
+      setError('Failed to add service: ' + errMsg);
+      console.error('Add service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddExisting = async (serviceId, serviceName) => {
+  const handleAddExisting = async (service) => {
     try {
-      await axios.put(`https://barber-appointment-backend.vercel.app/api/services/${serviceId}`, {
-        $push: { branches: barberData.branch._id }
-      }, { headers: getAuthHeaders() });
+      setLoading(true);
+      setError(null);
+
+      // Get current branch IDs
+      const currentBranches = service.branches.map(b => {
+        if (typeof b === 'string') return b;
+        if (b._id) return b._id;
+        return null;
+      }).filter(Boolean);
+
+      // Check if branch is already added
+      if (!currentBranches.includes(barberData.branch._id)) {
+        // Update service to add current branch
+        await axios.put(
+          `${API_URL}/services/${service._id}`,
+          {
+            name: service.name,
+            duration: service.duration,
+            price: service.price,
+            gender: service.gender,
+            branches: [...currentBranches, barberData.branch._id]
+          }
+        );
+      }
       
-      await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${barberData._id}`, {
-        specialties: [...barberData.specialties, serviceName]
-      }, { headers: getAuthHeaders() });
+      // Add to barber's specialties (avoid duplicates)
+      const updatedSpecialties = [...new Set([...barberData.specialties, service.name])];
+      await axios.put(
+        `${API_URL}/barbers/${barberData._id}`,
+        { specialties: updatedSpecialties },
+        { headers: getAuthHeaders() }
+      );
       
-      alert('Service added to your specialties!');
-      fetchAvailableServices();
+      setSuccessMsg('Service added to your specialties!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+      
+      await fetchAvailableServices();
+      if (onUpdate) onUpdate();
     } catch (err) {
-      setError('Failed to add service');
+      const errMsg = err.response?.data?.message || err.message;
+      setError('Failed to add service: ' + errMsg);
+      console.error('Add existing service error:', err.response?.data || err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRemoveSpecialty = async (serviceName) => {
+    if (!confirm(`Remove "${serviceName}" from your specialties?`)) return;
+    
     try {
-      await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${barberData._id}`, {
-        specialties: barberData.specialties.filter(s => s !== serviceName)
-      }, { headers: getAuthHeaders() });
+      setLoading(true);
+      setError(null);
       
-      alert('Service removed!');
-      fetchAvailableServices();
+      const updatedSpecialties = barberData.specialties.filter(s => s !== serviceName);
+      await axios.put(
+        `${API_URL}/barbers/${barberData._id}`,
+        { specialties: updatedSpecialties },
+        { headers: getAuthHeaders() }
+      );
+      
+      setSuccessMsg('Service removed successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+      
+      await fetchAvailableServices();
+      if (onUpdate) onUpdate();
     } catch (err) {
-      setError('Failed to remove');
+      const errMsg = err.response?.data?.message || err.message;
+      setError('Failed to remove service: ' + errMsg);
+      console.error('Remove specialty error:', err.response?.data || err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <h2>Manage Services</h2>
-      
-      {/* Add new service form */}
-      <form onSubmit={handleAddNewService}>
-        <input name="name" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder="Name" />
-        <input name="duration" value={form.duration} onChange={(e) => setForm({...form, duration: e.target.value})} placeholder="Duration" />
-        <input name="price" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} placeholder="Price" />
-        <button type="submit" disabled={loading}>Add New Service</button>
-      </form>
-
-      {/* Available services not in specialties */}
-      <h3>Available Services</h3>
-      {availableServices.map(s => (
-        !barberData.specialties.includes(s.name) && (
-          <div key={s._id}>
-            {s.name} - {s.duration} - {s.price}
-            <button onClick={() => handleAddExisting(s._id, s.name)}>Add</button>
-          </div>
-        )
-      ))}
-
-      {/* Current specialties */}
-      <h3>Your Specialties</h3>
-      {barberData.specialties.map(s => (
-        <div key={s}>
-          {s}
-          <button onClick={() => handleRemoveSpecialty(s)}>Remove</button>
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Loading services...</p>
         </div>
-      ))}
+      </div>
+    );
+  }
+
+  const mySpecialties = availableServices.filter(s => barberData.specialties.includes(s.name));
+  const availableToAdd = availableServices.filter(s => !barberData.specialties.includes(s.name));
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow border p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Briefcase className="w-8 h-8 text-[#D4AF37]" />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Services Management</h2>
+              <p className="text-sm text-gray-600">Manage your service offerings and specialties</p>
+            </div>
+          </div>
+          <button
+            onClick={fetchAvailableServices}
+            disabled={loading}
+            className="p-2 text-gray-600 hover:text-[#D4AF37] hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
+            title="Refresh services"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Success Message */}
+      {successMsg && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-green-800 flex-1">{successMsg}</p>
+          <button onClick={() => setSuccessMsg('')} className="text-green-400 hover:text-green-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-800 flex-1">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Add New Service Form */}
+      <div className="bg-white rounded-lg shadow border">
+        <div className="border-b px-6 py-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add New Service
+          </h3>
+        </div>
+
+        <form onSubmit={handleAddNewService} className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Service Name *</label>
+              <input 
+                type="text" 
+                value={form.name} 
+                onChange={(e) => setForm({...form, name: e.target.value})} 
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none" 
+                placeholder="e.g. Classic Haircut"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duration *</label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input 
+                  type="text" 
+                  value={form.duration} 
+                  onChange={(e) => setForm({...form, duration: e.target.value})} 
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none" 
+                  placeholder="e.g. 30 minutes"
+                  required 
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">£</span>
+                <input 
+                  type="text" 
+                  value={form.price} 
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setForm({...form, price: value});
+                  }} 
+                  className="w-full pl-8 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none" 
+                  placeholder="25"
+                  required 
+                />
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="px-6 py-2.5 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus className="w-5 h-5" />
+                Add Service
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+
+      {/* Your Current Specialties */}
+      <div className="bg-white rounded-lg shadow border">
+        <div className="border-b px-6 py-4 flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Your Specialties</h3>
+          <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+            {mySpecialties.length} Active
+          </span>
+        </div>
+
+        <div className="p-6">
+          {mySpecialties.length === 0 ? (
+            <div className="text-center py-12">
+              <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-base font-medium text-gray-600">No specialties added yet</p>
+              <p className="text-sm text-gray-500 mt-1">Add services from the available list below</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mySpecialties.map(service => (
+                <div key={service._id} className="border rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition bg-gradient-to-br from-white to-gray-50">
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-bold text-lg text-gray-900">{service.name}</h4>
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  </div>
+                  
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <span>{service.duration}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#D4AF37] text-base">{service.price}</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => handleRemoveSpecialty(service.name)} 
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Available Services to Add */}
+      {availableToAdd.length > 0 && (
+        <div className="bg-white rounded-lg shadow border">
+          <div className="border-b px-6 py-4 flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Available Services</h3>
+            <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
+              {availableToAdd.length}
+            </span>
+          </div>
+
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableToAdd.map(service => (
+                <div key={service._id} className="border rounded-lg p-4 hover:border-[#D4AF37] hover:shadow-md transition">
+                  <h4 className="font-bold text-lg text-gray-900 mb-3">{service.name}</h4>
+                  
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <span>{service.duration}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#D4AF37] text-base">{service.price}</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => handleAddExisting(service)} 
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#C5A028] text-sm font-medium disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add to Specialties
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
