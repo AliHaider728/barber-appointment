@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, CreditCard, ExternalLink, CheckCircle, AlertCircle, Loader, Clock, RefreshCw } from 'lucide-react';
+import { DollarSign, TrendingUp, CreditCard, ExternalLink, CheckCircle, AlertCircle, Loader, Clock, RefreshCw, Building2, Send, Settings } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app/api';
-
 
 function PaymentsTab({ appointments }) {
   const [stripeStatus, setStripeStatus] = useState(null);
@@ -17,16 +16,28 @@ function PaymentsTab({ appointments }) {
   const [loading, setLoading] = useState(true);
   const [connectLoading, setConnectLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [transferring, setTransferring] = useState(false);
   const [error, setError] = useState(null);
+ 
+  // Bank account management
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [appointments]);
 
+  useEffect(() => {
+    if (stripeStatus?.connected) {
+      loadBankAccounts();
+    }
+  }, [stripeStatus]);
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
     if (!token) {
-      console.error('  No auth token found');
+      console.error('No auth token found');
       return null;
     }
     return { Authorization: `Bearer ${token}` };
@@ -47,26 +58,24 @@ function PaymentsTab({ appointments }) {
         setStripeStatus({ connected: false, error: 'Not authenticated' });
         return;
       }
-
-      console.log('  Checking Stripe status...');
-      const res = await axios.get(`${API_BASE}/payments/stripe/status`, { 
+      console.log('Checking Stripe status...');
+      const res = await axios.get(`${API_BASE}/payments/stripe/status`, {
         headers,
-        timeout: 15000 
+        timeout: 15000
       });
-      
-      console.log('  Stripe status:', res.data);
+     
+      console.log('Stripe status:', res.data);
       setStripeStatus(res.data);
     } catch (err) {
-      console.error('  Stripe status error:', err);
+      console.error('Stripe status error:', err);
       const errorMsg = err.response?.data?.error || err.message;
-      console.error('Error details:', errorMsg);
-      setStripeStatus({ 
-        connected: false, 
-        error: errorMsg 
+      setStripeStatus({
+        connected: false,
+        error: errorMsg
       });
     }
   };
- 
+
   const fetchPayments = async () => {
     try {
       setLoading(true);
@@ -82,13 +91,12 @@ function PaymentsTab({ appointments }) {
         setLoading(false);
         return;
       }
-
-      console.log('  Fetching payments...');
-      const res = await axios.get(`${API_BASE}/payments/barber/me`, { 
+      console.log('Fetching payments...');
+      const res = await axios.get(`${API_BASE}/payments/barber/me`, {
         headers,
-        timeout: 15000 
+        timeout: 15000
       });
-      
+     
       const fetchedPayments = res.data.payments || [];
       const fetchedSummary = res.data.summary || {
         totalEarnings: 0,
@@ -96,15 +104,12 @@ function PaymentsTab({ appointments }) {
         transferredAmount: 0,
         totalPayments: 0
       };
-
-      console.log('  Payments loaded:', fetchedPayments.length);
+      console.log('Payments loaded:', fetchedPayments.length);
       setPayments(fetchedPayments);
       setSummary(fetchedSummary);
-      
+     
     } catch (err) {
-      console.error('  Fetch payments error:', err);
-      const errorMsg = err.response?.data?.error || err.message;
-      console.error('Error details:', errorMsg);
+      console.error('Fetch payments error:', err);
       setPayments([]);
       setSummary({
         totalEarnings: 0,
@@ -117,62 +122,44 @@ function PaymentsTab({ appointments }) {
     }
   };
 
-  
-   
   const handleStripeConnect = async () => {
     if (connectLoading) return;
-    
+   
     try {
       setConnectLoading(true);
       setError(null);
-      
+     
       const headers = getAuthHeaders();
       if (!headers) {
         throw new Error('Not authenticated - please login again');
       }
-      
-      console.log('  Connecting to Stripe...');
-      const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, { 
+     
+      console.log('Connecting to Stripe...');
+      const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, {
         headers,
-        timeout: 30000 // 30 second timeout
+        timeout: 30000
       });
-      
-      console.log('  Stripe response:', res.data);
-
+     
+      console.log('Stripe response:', res.data);
       if (res.data.onboardingUrl) {
-        console.log('  Redirecting to onboarding...');
-        // Redirect to Stripe onboarding
+        console.log('Redirecting to onboarding...');
         window.location.href = res.data.onboardingUrl;
-      } else if (res.data.loginUrl) {
-        console.log('  Opening Stripe dashboard...');
-        // Open dashboard in new tab
-        window.open(res.data.loginUrl, '_blank');
-        // Refresh status after short delay
-        
+      } else if (res.data.message === 'Already connected') {
+        alert('Stripe account already connected!');
+        await checkStripeStatus();
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (err) {
-      console.error('  Stripe connect error:', err);
-      
+      console.error('Stripe connect error:', err);
+     
       let errorMsg = 'Failed to connect Stripe';
       if (err.response?.data?.error) {
         errorMsg = err.response.data.error;
-      } else if (err.response?.data?.details) {
-        errorMsg = err.response.data.details;
       } else if (err.message) {
         errorMsg = err.message;
       }
-      
-      // Check for specific errors
-      if (err.code === 'ECONNABORTED') {
-        errorMsg = 'Connection timeout - please check your internet and try again';
-      } else if (err.response?.status === 401) {
-        errorMsg = 'Session expired - please login again';
-      } else if (err.response?.status === 503) {
-        errorMsg = 'Stripe service unavailable - please try again later';
-      }
-      
+     
       setError(errorMsg);
       alert(errorMsg);
     } finally {
@@ -180,21 +167,89 @@ function PaymentsTab({ appointments }) {
     }
   };
 
-  // Calculate from appointments
+  // NEW: Load bank accounts
+  const loadBankAccounts = async () => {
+    try {
+      setLoadingBanks(true);
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      const res = await axios.get(`${API_BASE}/payments/stripe/bank-accounts`, {
+        headers,
+        timeout: 15000
+      });
+     
+      setBankAccounts(res.data.bankAccounts || []);
+    } catch (err) {
+      console.error('Load banks error:', err);
+      alert('Failed to load bank accounts');
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+
+  // NEW: Transfer pending payments
+  const handleTransferPending = async () => {
+    if (transferring) return;
+   
+    if (!window.confirm(`Transfer £${summary.pendingAmount.toFixed(2)} to your bank account?`)) {
+      return;
+    }
+    try {
+      setTransferring(true);
+      setError(null);
+     
+      const headers = getAuthHeaders();
+      if (!headers) {
+        throw new Error('Not authenticated');
+      }
+      const res = await axios.post(
+        `${API_BASE}/payments/stripe/transfer-pending`,
+        {},
+        { headers, timeout: 30000 }
+      );
+      alert(res.data.message || 'Transfer initiated successfully!');
+      await loadData();
+    } catch (err) {
+      console.error('Transfer error:', err);
+      const errorMsg = err.response?.data?.error || err.message;
+      setError(errorMsg);
+      alert('Transfer failed: ' + errorMsg);
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  // NEW: Open Stripe Dashboard for account settings
+  const handleManageAccount = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      const res = await axios.post(
+        `${API_BASE}/payments/stripe/dashboard-link`,
+        {},
+        { headers, timeout: 15000 }
+      );
+      if (res.data.url) {
+        window.open(res.data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Dashboard link error:', err);
+      alert('Failed to open dashboard');
+    }
+  };
+
   const paidAppointments = appointments.filter(apt => apt.paymentStatus === 'paid');
   const pendingAppointments = appointments.filter(apt => apt.paymentStatus === 'pending');
-  
+ 
   const totalPaid = paidAppointments.reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
   const totalPending = pendingAppointments.reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
-
   const barberShareFromAppointments = totalPaid * 0.9;
   const platformFee = totalPaid * 0.1;
-
   const displayEarnings = summary.totalEarnings;
   const displayPending = summary.pendingAmount;
   const displayTransferred = summary.transferredAmount;
   const displayUpcoming = totalPending * 0.9;
-  
+ 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -212,34 +267,31 @@ function PaymentsTab({ appointments }) {
           <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
             Payments & Earnings
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Track your business performance in real-time</p>
+          <p className="text-sm text-gray-500 mt-1">Manage your payments and bank transfers</p>
         </div>
-         
       </div>
-
       {/* Error Banner */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-red-900">Connection Error</p>
+            <p className="font-semibold text-red-900">Error</p>
             <p className="text-sm text-red-700 mt-1">{error}</p>
           </div>
         </div>
       )}
-
       {/* Stripe Connect Banner */}
       {!stripeStatus?.connected ? (
-        <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 rounded-2xl p-6 shadow-sm border border-emerald-100 hover:shadow-xl hover:shadow-emerald-100/50 transition-all duration-300 overflow-hidden">
+        <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 rounded-2xl p-6 shadow-sm border border-emerald-100 hover:shadow-xl transition-all duration-300 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative flex items-start gap-4">
             <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/30">
               <DollarSign className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Connect Stripe Account</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Connect Bank Account</h3>
               <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                Link your Stripe account to receive payments directly. You earn 90% of every booking.
+                Link your bank account to receive payments directly. You earn 90% of every booking.
               </p>
               {stripeStatus?.error && (
                 <p className="text-xs text-red-600 mb-3 font-medium">
@@ -258,8 +310,8 @@ function PaymentsTab({ appointments }) {
                   </>
                 ) : (
                   <>
-                    <ExternalLink className="w-4 h-4" />
-                    <span>Connect Stripe</span>
+                    <Building2 className="w-4 h-4" />
+                    <span>Connect Bank Account</span>
                   </>
                 )}
               </button>
@@ -275,26 +327,33 @@ function PaymentsTab({ appointments }) {
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">Stripe Connected ✓</p>
+                <p className="font-semibold text-gray-900">Bank Account Connected ✓</p>
                 <p className="text-sm text-gray-600">
-                  {stripeStatus.fullyOnboarded 
-                    ? 'Payments transfer automatically' 
-                    : 'Complete onboarding to receive payments'}
+                  {stripeStatus.fullyOnboarded
+                    ? 'Ready to receive payments'
+                    : 'Complete setup to receive payments'}
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleStripeConnect}
-              disabled={connectLoading}
-              className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors disabled:opacity-50"
-            >
-              <ExternalLink className="w-4 h-4" />
-              {connectLoading ? 'Loading...' : 'Manage'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBankModal(true)}
+                className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+              >
+                <Building2 className="w-4 h-4" />
+                View Banks
+              </button>
+              <button
+                onClick={handleManageAccount}
+                className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+              >
+                <Settings className="w-4 h-4" />
+                Manage Account
+              </button>
+            </div>
           </div>
         </div>
       )}
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Earnings */}
@@ -302,7 +361,7 @@ function PaymentsTab({ appointments }) {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-shadow duration-300">
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/30">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">Total</span>
@@ -315,55 +374,73 @@ function PaymentsTab({ appointments }) {
             </div>
           </div>
         </div>
-
         {/* Transferred */}
         <div className="group relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-6 rounded-2xl shadow-sm border border-blue-100 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow duration-300">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30">
                 <CheckCircle className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">Sent</span>
+              <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">Received</span>
             </div>
             <h3 className="text-3xl font-bold text-gray-900 mb-1">£{displayTransferred.toFixed(2)}</h3>
-            <p className="text-sm text-gray-600 font-medium">Transferred to Bank</p>
+            <p className="text-sm text-gray-600 font-medium">In Your Bank</p>
             <div className="mt-4 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" 
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                 style={{ width: displayEarnings > 0 ? `${(displayTransferred / displayEarnings) * 100}%` : '0%' }}
               ></div>
             </div>
           </div>
         </div>
-
-        {/* Pending Transfer */}
+        {/* Pending Transfer - WITH TRANSFER BUTTON */}
         <div className="group relative bg-gradient-to-br from-amber-50 via-white to-amber-50/30 p-6 rounded-2xl shadow-sm border border-amber-100 hover:shadow-xl hover:shadow-amber-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg shadow-amber-500/30 group-hover:shadow-amber-500/50 transition-shadow duration-300">
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg shadow-amber-500/30">
                 <Clock className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Pending</span>
+              <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Awaiting</span>
             </div>
             <h3 className="text-3xl font-bold text-gray-900 mb-1">£{displayPending.toFixed(2)}</h3>
-            <p className="text-sm text-gray-600 font-medium">Awaiting Transfer</p>
-            <div className="mt-4 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500" 
-                style={{ width: displayPending > 0 ? '65%' : '0%' }}
-              ></div>
-            </div>
+            <p className="text-sm text-gray-600 font-medium mb-3">Ready to Transfer</p>
+           
+            {stripeStatus?.fullyOnboarded && displayPending > 0 ? (
+              <button
+                onClick={handleTransferPending}
+                disabled={transferring}
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg hover:shadow-amber-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {transferring ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Transfer Now</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500"
+                  style={{ width: displayPending > 0 ? '65%' : '0%' }}
+                ></div>
+              </div>
+            )}
           </div>
         </div>
-
         {/* Upcoming */}
         <div className="group relative bg-gradient-to-br from-violet-50 via-white to-violet-50/30 p-6 rounded-2xl shadow-sm border border-violet-100 hover:shadow-xl hover:shadow-violet-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 transition-shadow duration-300">
+              <div className="p-3 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl shadow-lg shadow-violet-500/30">
                 <CreditCard className="w-6 h-6 text-white" />
               </div>
               <span className="text-xs font-semibold bg-violet-100 text-violet-700 px-3 py-1 rounded-full">Expected</span>
@@ -372,8 +449,8 @@ function PaymentsTab({ appointments }) {
             <p className="text-sm text-gray-600 font-medium">Upcoming Bookings</p>
             <div className="mt-4 flex gap-1">
               {[...Array(5)].map((_, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
                     i < 3 ? 'bg-gradient-to-r from-violet-500 to-violet-600' : 'bg-gray-100'
                   }`}
@@ -383,7 +460,6 @@ function PaymentsTab({ appointments }) {
           </div>
         </div>
       </div>
-
       {/* Payment Breakdown */}
       <div className="group relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-2xl p-5 shadow-sm border border-blue-100 overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-2xl"></div>
@@ -408,7 +484,6 @@ function PaymentsTab({ appointments }) {
           </div>
         </div>
       </div>
-
       {/* Payment History */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
         <div className="border-b border-gray-100 px-6 py-5 bg-gradient-to-r from-gray-50 to-white">
@@ -417,6 +492,18 @@ function PaymentsTab({ appointments }) {
               <h3 className="text-xl font-bold text-gray-900">Payment History</h3>
               <p className="text-sm text-gray-500 mt-0.5">Latest transactions and their status</p>
             </div>
+            <button
+              onClick={async () => {
+                setRefreshing(true);
+                await loadData();
+                setRefreshing(false);
+              }}
+              disabled={refreshing}
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
           </div>
         </div>
         <div className="p-6">
@@ -459,16 +546,16 @@ function PaymentsTab({ appointments }) {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm font-semibold text-gray-900">
-                          {new Date(payment.createdAt).toLocaleDateString('en-GB', { 
+                          {new Date(payment.createdAt).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric'
                           })}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(payment.createdAt).toLocaleTimeString('en-GB', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {new Date(payment.createdAt).toLocaleTimeString('en-GB', {
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })}
                         </p>
                       </td>
@@ -485,36 +572,85 @@ function PaymentsTab({ appointments }) {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                          payment.status === 'succeeded' 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                          payment.status === 'succeeded'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                             : payment.status === 'failed'
                             ? 'bg-red-50 text-red-700 border border-red-100'
                             : 'bg-amber-50 text-amber-700 border border-amber-100'
                         }`}>
-                          {payment.status === 'succeeded' ? 'Paid' : 
+                          {payment.status === 'succeeded' ? 'Paid' :
                            payment.status === 'failed' ? 'Failed' : 'Pending'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                          payment.transferStatus === 'completed' 
-                            ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                          payment.transferStatus === 'completed'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
                             : payment.transferStatus === 'failed'
                             ? 'bg-red-50 text-red-700 border border-red-100'
-                            : 'bg-gray-50 text-gray-700 border border-gray-100'
+                            : 'bg-amber-50 text-amber-700 border border-amber-100'
                         }`}>
-                          {payment.transferStatus === 'completed' ? 'Sent' : 
-                           payment.transferStatus === 'failed' ? 'Failed' : 'Pending'}
+                          {payment.transferStatus === 'completed' ? 'Transferred' :
+                           payment.transferStatus === 'failed' ? 'Failed' : 'Awaiting'}
                         </span>
                       </td>
                     </tr>
                   ))
-                )}  
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
+      {/* Bank Accounts Modal */}
+      {showBankModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Your Bank Accounts</h3>
+            {loadingBanks ? (
+              <div className="flex justify-center py-8">
+                <Loader className="w-8 h-8 animate-spin text-gray-900" />
+              </div>
+            ) : bankAccounts.length === 0 ? (
+              <p className="text-gray-600 text-center py-4">No bank accounts added yet. Use the Stripe dashboard to add one.</p>
+            ) : (
+              <ul className="space-y-3 mb-6">
+                {bankAccounts.map((bank) => (
+                  <li
+                    key={bank.id}
+                    className="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-200"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-900">{bank.bank_name || 'Bank'}</p>
+                      <p className="text-sm text-gray-600">**** {bank.last4} ({bank.currency.toUpperCase()})</p>
+                    </div>
+                    {bank.default_for_currency && (
+                      <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                        Default
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleManageAccount}
+                className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+              >
+                <Settings className="w-4 h-4" />
+                Manage in Stripe
+              </button>
+              <button
+                onClick={() => setShowBankModal(false)}
+                className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
