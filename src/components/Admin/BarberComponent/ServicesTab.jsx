@@ -15,7 +15,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
 
   useEffect(() => {
     fetchAvailableServices();
-  }, [barberData.gender]);
+  }, [barberData.gender, barberData.specialties]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
@@ -25,7 +25,6 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     };
   };
 
-  // ✅ FIX 1: Helper function to safely extract branch ID
   const getBranchId = () => {
     if (typeof barberData.branch === 'string') {
       return barberData.branch;
@@ -33,7 +32,6 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     return barberData.branch?._id || barberData.branch;
   };
 
-  // ✅ FIX 2: Fetch ALL services for barber's gender (from all branches)
   const fetchAvailableServices = async () => {
     try {
       setInitialLoading(true);
@@ -59,8 +57,9 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setLoading(true);
       setError(null);
 
-      const branchId = getBranchId(); // ✅ Use helper function
+      const branchId = getBranchId();
 
+      // Step 1: Create the service
       const serviceData = {
         name: form.name.trim(),
         duration: form.duration.trim(),
@@ -69,21 +68,24 @@ const ServicesTab = ({ barberData, onUpdate }) => {
         branches: [branchId]
       };
 
-      const res = await axios.post(`${API_URL}/services`, serviceData);
+      const serviceRes = await axios.post(`${API_URL}/services`, serviceData);
       
-      const updatedSpecialties = [...new Set([...barberData.specialties, res.data.name])];
+      // Step 2: Add to barber's specialties
+      const updatedSpecialties = [...barberData.specialties, serviceRes.data.name];
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
         { headers: getAuthHeaders() }
       );
       
+      // Step 3: Reset form and show success
       setForm({ name: '', duration: '', price: '' });
       setSuccessMsg('Service added successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
       
+      // Step 4: Refresh data
       await fetchAvailableServices();
-      if (onUpdate) onUpdate();
+      if (onUpdate) await onUpdate();
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
@@ -98,9 +100,9 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setLoading(true);
       setError(null);
 
-      const branchId = getBranchId(); // ✅ Use helper function
+      const branchId = getBranchId();
 
-      // ✅ FIX 3: Properly extract branch IDs
+      // Extract branch IDs properly
       const currentBranches = service.branches.map(b => {
         if (typeof b === 'string') return b;
         if (b._id) return b._id;
@@ -122,7 +124,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       }
       
       // Add to barber's specialties
-      const updatedSpecialties = [...new Set([...barberData.specialties, service.name])];
+      const updatedSpecialties = [...barberData.specialties, service.name];
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -133,7 +135,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setTimeout(() => setSuccessMsg(''), 3000);
       
       await fetchAvailableServices();
-      if (onUpdate) onUpdate();
+      if (onUpdate) await onUpdate();
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
@@ -143,7 +145,6 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     }
   };
 
-  // ✅ FIX 4: Add UPDATE functionality
   const handleUpdateService = async (e) => {
     e.preventDefault();
     if (!editingService || !form.name || !form.duration || !form.price) {
@@ -194,7 +195,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setTimeout(() => setSuccessMsg(''), 3000);
       
       await fetchAvailableServices();
-      if (onUpdate) onUpdate();
+      if (onUpdate) await onUpdate();
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to update service: ' + errMsg);
@@ -222,7 +223,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setTimeout(() => setSuccessMsg(''), 3000);
       
       await fetchAvailableServices();
-      if (onUpdate) onUpdate();
+      if (onUpdate) await onUpdate();
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to remove service: ' + errMsg);
@@ -239,12 +240,14 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       duration: service.duration,
       price: service.price.replace('£', ''),
     });
+    setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const cancelEditing = () => {
     setEditingService(null);
     setForm({ name: '', duration: '', price: '' });
+    setError(null);
   };
 
   if (initialLoading) {
@@ -270,7 +273,9 @@ const ServicesTab = ({ barberData, onUpdate }) => {
             <Briefcase className="w-8 h-8 text-[#D4AF37]" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Services Management</h2>
-              <p className="text-sm text-gray-600">Manage your service offerings and specialties</p>
+              <p className="text-sm text-gray-600">
+                Manage your service offerings • Total: <span className="font-semibold text-[#D4AF37]">{mySpecialties.length}</span> active
+              </p>
             </div>
           </div>
           <button
@@ -312,12 +317,12 @@ const ServicesTab = ({ barberData, onUpdate }) => {
           <h3 className="text-lg font-semibold flex items-center gap-2">
             {editingService ? (
               <>
-                <Edit2 className="w-5 h-5" />
+                <Edit2 className="w-5 h-5 text-blue-600" />
                 Edit Service
               </>
             ) : (
               <>
-                <Plus className="w-5 h-5" />
+                <Plus className="w-5 h-5 text-[#D4AF37]" />
                 Add New Service
               </>
             )}
@@ -382,7 +387,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
           <button 
             type="submit" 
             disabled={loading} 
-            className="px-6 py-2.5 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-2.5 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] disabled:opacity-50 flex items-center gap-2 transition"
           >
             {loading ? (
               <>
@@ -413,7 +418,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
             <div className="text-center py-12">
               <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-base font-medium text-gray-600">No specialties added yet</p>
-              <p className="text-sm text-gray-500 mt-1">Add services from the available list below</p>
+              <p className="text-sm text-gray-500 mt-1">Add services from the available list below or create a new one</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -438,7 +443,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
                     <button 
                       onClick={() => startEditing(service)} 
                       disabled={loading}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm font-medium disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm font-medium disabled:opacity-50 transition"
                     >
                       <Edit2 className="w-4 h-4" />
                       Edit
@@ -446,7 +451,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
                     <button 
                       onClick={() => handleRemoveSpecialty(service.name)} 
                       disabled={loading}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium disabled:opacity-50 transition"
                     >
                       <X className="w-4 h-4" />
                       Remove
@@ -468,7 +473,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
               <p className="text-sm text-gray-600 mt-1">All {barberData.gender} services from all branches</p>
             </div>
             <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
-              {availableToAdd.length}
+              {availableToAdd.length} Available
             </span>
           </div>
 
@@ -491,7 +496,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
                   <button 
                     onClick={() => handleAddExisting(service)} 
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#C5A028] text-sm font-medium disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#C5A028] text-sm font-medium disabled:opacity-50 transition"
                   >
                     <Plus className="w-4 h-4" />
                     Add to Specialties

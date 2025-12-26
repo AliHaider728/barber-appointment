@@ -1,3 +1,4 @@
+// Barbers React component remains the same, no changes needed (Barbers.jsx)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User } from 'lucide-react';
