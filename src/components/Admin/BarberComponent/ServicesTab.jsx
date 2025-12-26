@@ -40,7 +40,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setAvailableServices(res.data);
     } catch (err) {
       setError('Failed to load services');
-      console.error('Fetch services error:', err);
+      console.error('❌ Fetch services error:', err);
     } finally {
       setInitialLoading(false);
     }
@@ -68,10 +68,13 @@ const ServicesTab = ({ barberData, onUpdate }) => {
         branches: [branchId]
       };
 
+      console.log('📤 Creating new service:', serviceData);
       const serviceRes = await axios.post(`${API_URL}/services`, serviceData);
       
-      // Step 2: Add to barber's specialties
+      // Step 2: Add to barber's specialties (ONLY specialties field)
       const updatedSpecialties = [...barberData.specialties, serviceRes.data.name];
+      
+      console.log('📤 Updating barber specialties:', { specialties: updatedSpecialties });
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -89,7 +92,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
-      console.error('Add service error:', err.response?.data || err);
+      console.error('❌ Add service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -102,6 +105,13 @@ const ServicesTab = ({ barberData, onUpdate }) => {
 
       const branchId = getBranchId();
 
+      // Check if already in specialties
+      if (barberData.specialties.includes(service.name)) {
+        setError('This service is already in your specialties!');
+        setLoading(false);
+        return;
+      }
+
       // Extract branch IDs properly
       const currentBranches = service.branches.map(b => {
         if (typeof b === 'string') return b;
@@ -109,22 +119,31 @@ const ServicesTab = ({ barberData, onUpdate }) => {
         return null;
       }).filter(Boolean);
 
-      // Add branch if not already present
+      // Step 1: Add branch to service if not present
       if (!currentBranches.includes(branchId)) {
+        const numericPrice = service.price.replace('£', '').trim();
+        
+        console.log('📤 Updating service branches:', {
+          serviceId: service._id,
+          branches: [...currentBranches, branchId]
+        });
+
         await axios.put(
           `${API_URL}/services/${service._id}`,
           {
             name: service.name,
             duration: service.duration,
-            price: service.price,
+            price: `£${numericPrice}`,
             gender: service.gender,
             branches: [...currentBranches, branchId]
           }
         );
       }
       
-      // Add to barber's specialties
+      // Step 2: Add to barber's specialties (ONLY specialties field)
       const updatedSpecialties = [...barberData.specialties, service.name];
+      
+      console.log('📤 Updating barber specialties:', { specialties: updatedSpecialties });
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -139,7 +158,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
-      console.error('Add existing service error:', err.response?.data || err);
+      console.error('❌ Add existing service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -165,23 +184,27 @@ const ServicesTab = ({ barberData, onUpdate }) => {
         return null;
       }).filter(Boolean);
 
+      const numericPrice = form.price.replace('£', '').trim();
+
       // Update service
       await axios.put(
         `${API_URL}/services/${editingService._id}`,
         {
           name: form.name.trim(),
           duration: form.duration.trim(),
-          price: `£${form.price}`,
+          price: `£${numericPrice}`,
           gender: serviceToUpdate.gender,
           branches: currentBranches.includes(branchId) ? currentBranches : [...currentBranches, branchId]
         }
       );
 
-      // Update barber's specialties if name changed
+      // Update barber's specialties if name changed (ONLY specialties field)
       if (editingService.name !== form.name.trim()) {
         const updatedSpecialties = barberData.specialties.map(s => 
           s === editingService.name ? form.name.trim() : s
         );
+        
+        console.log('📤 Updating barber specialties after edit:', { specialties: updatedSpecialties });
         await axios.put(
           `${API_URL}/barbers/${barberData._id}`,
           { specialties: updatedSpecialties },
@@ -199,7 +222,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to update service: ' + errMsg);
-      console.error('Update service error:', err.response?.data || err);
+      console.error('❌ Update service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -213,6 +236,8 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setError(null);
       
       const updatedSpecialties = barberData.specialties.filter(s => s !== serviceName);
+      
+      console.log('📤 Removing specialty:', { specialties: updatedSpecialties });
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -227,7 +252,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to remove service: ' + errMsg);
-      console.error('Remove specialty error:', err.response?.data || err);
+      console.error('❌ Remove specialty error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
