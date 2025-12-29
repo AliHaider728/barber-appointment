@@ -37,12 +37,10 @@ const BranchAppointments = () => {
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await fetch(url, { headers: getAuthHeaders() });
-      
-      // Parse body regardless of status
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Error details from backend:', data);  // This will log the full error object
+        console.error('Error details from backend:', data);
         throw new Error(data.error || data.message || 'Failed to fetch appointments');
       }
 
@@ -101,6 +99,15 @@ const BranchAppointments = () => {
       case 'completed': return <CheckCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
+  };
+
+  // Helper function to safely render service name
+  const getServiceName = (service) => {
+    if (typeof service === 'string') return service;
+    if (typeof service === 'object' && service !== null) {
+      return service.name || service.serviceName || JSON.stringify(service);
+    }
+    return 'Unknown Service';
   };
 
   if (loading) {
@@ -268,7 +275,7 @@ const BranchAppointments = () => {
                             key={idx}
                             className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                           >
-                            {service}
+                            {getServiceName(service)}
                           </span>
                         ))}
                       </div>

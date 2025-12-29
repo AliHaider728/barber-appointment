@@ -40,7 +40,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       setAvailableServices(res.data);
     } catch (err) {
       setError('Failed to load services');
-      console.error('❌ Fetch services error:', err);
+      console.error('  Fetch services error:', err);
     } finally {
       setInitialLoading(false);
     }
@@ -68,13 +68,13 @@ const ServicesTab = ({ barberData, onUpdate }) => {
         branches: [branchId]
       };
 
-      console.log('📤 Creating new service:', serviceData);
+      console.log('  Creating new service:', serviceData);
       const serviceRes = await axios.post(`${API_URL}/services`, serviceData);
       
       // Step 2: Add to barber's specialties (ONLY specialties field)
       const updatedSpecialties = [...barberData.specialties, serviceRes.data.name];
       
-      console.log('📤 Updating barber specialties:', { specialties: updatedSpecialties });
+      console.log('  Updating barber specialties:', { specialties: updatedSpecialties });
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -92,7 +92,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
-      console.error('❌ Add service error:', err.response?.data || err);
+      console.error('  Add service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       if (!currentBranches.includes(branchId)) {
         const numericPrice = service.price.replace('£', '').trim();
         
-        console.log('📤 Updating service branches:', {
+        console.log('  Updating service branches:', {
           serviceId: service._id,
           branches: [...currentBranches, branchId]
         });
@@ -143,7 +143,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       // Step 2: Add to barber's specialties (ONLY specialties field)
       const updatedSpecialties = [...barberData.specialties, service.name];
       
-      console.log('📤 Updating barber specialties:', { specialties: updatedSpecialties });
+      console.log('  Updating barber specialties:', { specialties: updatedSpecialties });
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -158,7 +158,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to add service: ' + errMsg);
-      console.error('❌ Add existing service error:', err.response?.data || err);
+      console.error('  Add existing service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -204,7 +204,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
           s === editingService.name ? form.name.trim() : s
         );
         
-        console.log('📤 Updating barber specialties after edit:', { specialties: updatedSpecialties });
+        console.log('  Updating barber specialties after edit:', { specialties: updatedSpecialties });
         await axios.put(
           `${API_URL}/barbers/${barberData._id}`,
           { specialties: updatedSpecialties },
@@ -222,7 +222,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to update service: ' + errMsg);
-      console.error('❌ Update service error:', err.response?.data || err);
+      console.error('  Update service error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -237,7 +237,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
       
       const updatedSpecialties = barberData.specialties.filter(s => s !== serviceName);
       
-      console.log('📤 Removing specialty:', { specialties: updatedSpecialties });
+      console.log('  Removing specialty:', { specialties: updatedSpecialties });
       await axios.put(
         `${API_URL}/barbers/${barberData._id}`,
         { specialties: updatedSpecialties },
@@ -252,7 +252,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message;
       setError('Failed to remove service: ' + errMsg);
-      console.error('❌ Remove specialty error:', err.response?.data || err);
+      console.error('  Remove specialty error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -309,8 +309,7 @@ const ServicesTab = ({ barberData, onUpdate }) => {
             className="p-2 text-gray-600 hover:text-[#D4AF37] hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
             title="Refresh services"
           >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+           </button>
         </div>
       </div>
 

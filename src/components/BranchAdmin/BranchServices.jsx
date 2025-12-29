@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign, User } from 'lucide-react';
 
+const API_BASE = 'https://barber-appointment-backend.vercel.app';
+
 const BranchServices = () => {
   const [services, setServices] = useState([]);
   const [form, setForm] = useState({ name: '', duration: '', price: '', gender: '' });
@@ -14,14 +16,25 @@ const BranchServices = () => {
     fetchServices();
   }, []);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth-token');
+    return {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    };
+  };
+
   const fetchServices = async () => {
     try {
       setInitialLoading(true);
-      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/services/branch');
+      // Use the correct authenticated endpoint
+      const res = await axios.get(`${API_BASE}/api/services/branch-admin`, getAuthHeaders());
       setServices(res.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load services. Please refresh the page.');
+      setError('Failed to load services. Please refresh the page or check your login.');
       console.error('Fetch error:', err);
     } finally {
       setInitialLoading(false);
@@ -39,7 +52,7 @@ const BranchServices = () => {
     const data = {
       name: form.name.trim(),
       duration: form.duration.trim(),
-      price: `£${form.price}`, // Backend expects £ symbol
+      price: `£${form.price}`,
       gender: form.gender.toLowerCase()
     };
 
@@ -48,10 +61,12 @@ const BranchServices = () => {
       setError(null);
 
       if (editingId) {
-        await axios.put(`https://barber-appointment-backend.vercel.app/api/services/${editingId}`, data);
+        // Update existing service
+        await axios.put(`${API_BASE}/api/services/${editingId}`, data, getAuthHeaders());
         alert('Service updated!');
       } else {
-        await axios.post('https://barber-appointment-backend.vercel.app/api/services/branch', data);
+        // Create new service using branch-admin endpoint
+        await axios.post(`${API_BASE}/api/services/branch-admin`, data, getAuthHeaders());
         alert('Service added!');
       }
 
@@ -68,7 +83,6 @@ const BranchServices = () => {
   };
 
   const handleEdit = (s) => {
-    // Remove £ symbol when editing
     const priceWithoutSymbol = s.price.replace('£', '');
     setForm({
       name: s.name,
@@ -85,8 +99,9 @@ const BranchServices = () => {
     if (window.confirm('Are you sure you want to delete this service?')) {
       try {
         setLoading(true);
-        await axios.delete(`https://barber-appointment-backend.vercel.app/api/services/${id}`);
+        await axios.delete(`${API_BASE}/api/services/${id}`, getAuthHeaders());
         fetchServices();
+        alert('Service deleted successfully!');
       } catch (err) {
         alert('Delete failed: ' + (err.response?.data?.message || err.message));
       } finally {
@@ -277,7 +292,6 @@ const BranchServices = () => {
     </div>
   );
 };
-
 
 const ServiceCard = ({ service, onEdit, onDelete }) => {
   return (
