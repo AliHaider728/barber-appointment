@@ -28,8 +28,15 @@ const BranchServices = () => {
     try {
       setInitialLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE}/api/services/branch-admin`, { headers: getAuthHeaders() });
-      if (!response.ok) throw new Error('Failed to fetch services');
+      const response = await fetch(`${API_BASE}/api/services/branch-admin`, { 
+        headers: getAuthHeaders() 
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch services');
+      }
+      
       const data = await response.json();
       setServices(data);
     } catch (err) {
