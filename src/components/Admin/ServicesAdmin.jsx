@@ -10,22 +10,34 @@ const ServicesAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
-   useEffect(() => {
+  
+  useEffect(() => {
     fetchData();
   }, []);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth-token');
+    if (!token) throw new Error('No authentication token found.');
+    return {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    };
+  };
 
   const fetchData = async () => {
     try {
       setInitialLoading(true);
       const [servicesRes, branchesRes] = await Promise.all([
-        axios.get('https://barber-appointment-backend.vercel.app/api/services'),
-        axios.get('https://barber-appointment-backend.vercel.app/api/branches')
+        axios.get('https://barber-appointment-backend.vercel.app/api/services', getAuthHeaders()),
+        axios.get('https://barber-appointment-backend.vercel.app/api/branches', getAuthHeaders())
       ]);
       setServices(servicesRes.data);
       setBranches(branchesRes.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load data. Please refresh the page.');
+      setError('Failed to load data. Please refresh the page or check your login.');
       console.error('Fetch error:', err);
     } finally {
       setInitialLoading(false);
@@ -34,7 +46,7 @@ const ServicesAdmin = () => {
 
   const fetchServices = async () => {
     try {
-      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/services');
+      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/services', getAuthHeaders());
       setServices(res.data);
       setError(null);
     } catch (err) {
@@ -63,11 +75,16 @@ const ServicesAdmin = () => {
       setLoading(true);
       setError(null);
 
+      if (data.branches.length === 0) {
+        alert('Please select at least one branch!');
+        return;
+      }
+
       if (editingId) {
-        await axios.put(`https://barber-appointment-backend.vercel.app/api/services/${editingId}`, data);
+        await axios.put(`https://barber-appointment-backend.vercel.app/api/services/${editingId}`, data, getAuthHeaders());
         alert('Service updated!');
       } else {
-        await axios.post('https://barber-appointment-backend.vercel.app/api/services', data);
+        await axios.post('https://barber-appointment-backend.vercel.app/api/services', data, getAuthHeaders());
         alert('Service added!');
       }
 
@@ -103,7 +120,7 @@ const ServicesAdmin = () => {
     if (window.confirm('Are you sure you want to delete this service?')) {
       try {
         setLoading(true);
-        await axios.delete(`https://barber-appointment-backend.vercel.app/api/services/${id}`);
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/services/${id}`, getAuthHeaders());
         fetchServices();
       } catch (err) {
         alert('Delete failed: ' + (err.response?.data?.message || err.message));
@@ -131,6 +148,7 @@ const ServicesAdmin = () => {
   const maleServices = services.filter(s => s.gender === 'male');
   const femaleServices = services.filter(s => s.gender === 'female');
 
+  
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -403,4 +421,4 @@ const ServiceCard = ({ service, branches, onEdit, onDelete }) => {
   );
 };
 
-export default ServicesAdmin;
+export default ServicesAdmin; 

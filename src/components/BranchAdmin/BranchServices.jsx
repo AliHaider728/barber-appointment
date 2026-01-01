@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign, User } from 'lucide-react';
+import { Scissors, Plus, Edit2, Trash2, X, Clock, DollarSign, User, AlertCircle, CheckCircle } from 'lucide-react';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
@@ -11,6 +10,7 @@ const BranchServices = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     fetchServices();
@@ -19,22 +19,21 @@ const BranchServices = () => {
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
     return {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
     };
   };
 
   const fetchServices = async () => {
     try {
       setInitialLoading(true);
-      // Use the correct authenticated endpoint
-      const res = await axios.get(`${API_BASE}/api/services/branch-admin`, getAuthHeaders());
-      setServices(res.data);
       setError(null);
+      const response = await fetch(`${API_BASE}/api/services/branch-admin`, { headers: getAuthHeaders() });
+      if (!response.ok) throw new Error('Failed to fetch services');
+      const data = await response.json();
+      setServices(data);
     } catch (err) {
-      setError('Failed to load services. Please refresh the page or check your login.');
+      setError('Failed to load services: ' + err.message);
       console.error('Fetch error:', err);
     } finally {
       setInitialLoading(false);
@@ -45,7 +44,7 @@ const BranchServices = () => {
     e.preventDefault();
 
     if (!form.name.trim() || !form.duration.trim() || !form.price.trim() || !form.gender) {
-      alert('All fields are required!');
+      setError('All fields are required!');
       return;
     }
 
@@ -59,23 +58,29 @@ const BranchServices = () => {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(null);
 
-      if (editingId) {
-        // Update existing service
-        await axios.put(`${API_BASE}/api/services/${editingId}`, data, getAuthHeaders());
-        alert('Service updated!');
-      } else {
-        // Create new service using branch-admin endpoint
-        await axios.post(`${API_BASE}/api/services/branch-admin`, data, getAuthHeaders());
-        alert('Service added!');
+      const url = editingId 
+        ? `${API_BASE}/api/services/branch-admin/${editingId}`
+        : `${API_BASE}/api/services/branch-admin`;
+      
+      const response = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save service');
       }
 
+      setSuccess(editingId ? '✅ Service updated successfully!' : '✅ Service added successfully!');
       resetForm();
       fetchServices();
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      const msg = err.response?.data?.message || err.message;
-      setError('Save failed: ' + msg);
-      alert('Error: ' + msg);
+      setError('Failed to save service: ' + err.message);
       console.error('Save error:', err);
     } finally {
       setLoading(false);
@@ -92,21 +97,33 @@ const BranchServices = () => {
     });
     setEditingId(s._id);
     setError(null);
+    setSuccess(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this service?')) {
-      try {
-        setLoading(true);
-        await axios.delete(`${API_BASE}/api/services/${id}`, getAuthHeaders());
-        fetchServices();
-        alert('Service deleted successfully!');
-      } catch (err) {
-        alert('Delete failed: ' + (err.response?.data?.message || err.message));
-      } finally {
-        setLoading(false);
+    if (!window.confirm('⚠️ Are you sure you want to delete this service?')) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${API_BASE}/api/services/branch-admin/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete');
       }
+      
+      setSuccess('✅ Service deleted successfully!');
+      fetchServices();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError('Failed to delete: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,22 +149,22 @@ const BranchServices = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <div className="flex items-center gap-3">
           <Scissors className="w-8 h-8 text-[#D4AF37]" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Services Management</h2>
-            <p className="text-sm text-gray-600">Add, edit, or remove barber services for your branch</p>
+            <p className="text-sm text-gray-600">Manage services for your branch</p>
           </div>
         </div>
       </div>
 
-      {/* Error Alert */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-red-800">{error}</p>
+            <p className="text-sm font-semibold text-red-800">Error</p>
+            <p className="text-sm text-red-700">{error}</p>
           </div>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
             <X className="w-5 h-5" />
@@ -155,7 +172,18 @@ const BranchServices = () => {
         </div>
       )}
 
-      {/* Form */}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-green-800">{success}</p>
+          </div>
+          <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="border-b border-gray-200 px-6 py-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -164,9 +192,8 @@ const BranchServices = () => {
           </h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Service Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Service Name *</label>
               <input
@@ -175,11 +202,9 @@ const BranchServices = () => {
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                required
               />
             </div>
 
-            {/* Duration */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Duration *</label>
               <input
@@ -188,11 +213,9 @@ const BranchServices = () => {
                 value={form.duration}
                 onChange={e => setForm({ ...form, duration: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                required
               />
             </div>
 
-            {/* Price */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
               <div className="relative">
@@ -206,19 +229,16 @@ const BranchServices = () => {
                     setForm({ ...form, price: value });
                   }}
                   className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                  required
                 />
               </div>
             </div>
 
-            {/* Gender */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
               <select
                 value={form.gender}
                 onChange={e => setForm({ ...form, gender: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                required
               >
                 <option value="">Select Gender</option>
                 <option value="male">Male</option>
@@ -227,19 +247,27 @@ const BranchServices = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 mt-6">
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={loading}
-              className="px-6 py-2 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {loading ? 'Saving...' : editingId ? 'Update Service' : 'Add Service'}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  {editingId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editingId ? 'Update Service' : 'Add Service'}
+                </>
+              )}
             </button>
 
             {editingId && (
               <button
-                type="button"
                 onClick={resetForm}
                 className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition"
               >
@@ -247,10 +275,9 @@ const BranchServices = () => {
               </button>
             )}
           </div>
-        </form>
+        </div>
       </div>
 
-      {/* Male Services */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="border-b border-gray-200 px-6 py-4 bg-blue-50">
           <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
@@ -259,7 +286,7 @@ const BranchServices = () => {
         </div>
         <div className="p-6">
           {maleServices.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No male services yet</p>
+            <p className="text-center text-gray-500 py-8">No male services available</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {maleServices.map(service => (
@@ -270,7 +297,6 @@ const BranchServices = () => {
         </div>
       </div>
 
-      {/* Female Services */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="border-b border-gray-200 px-6 py-4 bg-pink-50">
           <h3 className="text-lg font-semibold text-pink-900 flex items-center gap-2">
@@ -279,7 +305,7 @@ const BranchServices = () => {
         </div>
         <div className="p-6">
           {femaleServices.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No female services yet</p>
+            <p className="text-center text-gray-500 py-8">No female services available</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {femaleServices.map(service => (
@@ -303,6 +329,11 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-gray-900 truncate">{service.name}</h4>
           <p className="text-xs text-gray-500 capitalize">{service.gender}</p>
+          {service.isGlobal && (
+            <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">
+              Global Service
+            </span>
+          )}
         </div>
       </div>
 
@@ -327,13 +358,15 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
           <Edit2 className="w-4 h-4" />
           Edit
         </button>
-        <button
-          onClick={() => onDelete(service._id)}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete
-        </button>
+        {!service.isGlobal && (
+          <button
+            onClick={() => onDelete(service._id)}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

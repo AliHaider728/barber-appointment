@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import { useState, useEffect } from 'react';
 import { Menu, X, Scissors, User, LogOut, LayoutDashboard, User2Icon } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
@@ -49,6 +48,7 @@ export default function Header() {
 
   const getDashboardLink = () => {
     if (userRole === 'admin') return '/admin/dashboard';
+    if (userRole === 'branch_admin') return '/branch-admin/dashboard';
     if (userRole === 'barber') return '/barber/dashboard';
     return '/user/dashboard';
   };
@@ -128,6 +128,7 @@ export default function Header() {
                   >
                     <User className="w-6 h-6 text-black" />
                   </button>
+
 
                   {/* Dropdown Menu */}
                   {showDropdown && (
