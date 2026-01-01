@@ -412,7 +412,7 @@ const BookingPage = () => {
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || 'Booking failed');
-      }
+      } 
       const data = await res.json();
       setBookingRef(data._id);
       setBookingComplete(true);

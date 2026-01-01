@@ -1,9 +1,11 @@
+// Barbers React component remains the same, no changes needed (Barbers.jsx)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User } from 'lucide-react';
 
-const BranchBarbers = () => {
+const Barbers = () => {
   const [barbers, setBarbers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [services, setServices] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [form, setForm] = useState({ 
@@ -11,6 +13,7 @@ const BranchBarbers = () => {
     experienceYears: '', 
     gender: '',
     services: [],
+    branch: '',
     email: '',
     password: ''
   });
@@ -56,11 +59,13 @@ const BranchBarbers = () => {
     try {
       setInitialLoading(true);
       const headers = getAuthHeaders();
-      const [barbersRes, servicesRes] = await Promise.all([
-        axios.get('https://barber-appointment-backend.vercel.app/api/branch-admin/barbers', { headers }),
-        axios.get('https://barber-appointment-backend.vercel.app/api/branch-admin/services', { headers })
+      const [barbersRes, branchesRes, servicesRes] = await Promise.all([
+        axios.get('https://barber-appointment-backend.vercel.app/api/barbers', { headers }),
+        axios.get('https://barber-appointment-backend.vercel.app/api/branches', { headers }),
+        axios.get('https://barber-appointment-backend.vercel.app/api/services', { headers })
       ]);
       setBarbers(barbersRes.data);
+      setBranches(branchesRes.data);
       setServices(servicesRes.data);
       setError(null);
     } catch (err) {
@@ -78,7 +83,7 @@ const BranchBarbers = () => {
   const fetchBarbers = async () => {
     try {
       const headers = getAuthHeaders();
-      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/branch-admin/barbers', { headers });
+      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/barbers', { headers });
       setBarbers(res.data);
       setError(null);
     } catch (err) {
@@ -94,9 +99,8 @@ const BranchBarbers = () => {
   const fetchBarberShifts = async (barberId) => {
     try {
       const headers = getAuthHeaders();
-      const res = await axios.get('https://barber-appointment-backend.vercel.app/api/branch-admin/shifts', { headers });
-      const barberShifts = res.data.filter(shift => shift.barber._id === barberId);
-      setShifts(Array.isArray(barberShifts) ? barberShifts : []);
+      const res = await axios.get(`https://barber-appointment-backend.vercel.app/api/barber-shifts?barber=${barberId}`, { headers });
+      setShifts(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       if (err.response?.status === 404) {
         setShifts([]);
@@ -112,7 +116,7 @@ const BranchBarbers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.email) {
+    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.branch || !form.email) {
       alert('All fields are required!');
       return;
     }
@@ -127,11 +131,12 @@ const BranchBarbers = () => {
       experienceYears: Number(form.experienceYears),
       gender: form.gender,
       specialties: form.services,
+      branch: form.branch,
       email: form.email
     };
 
     if (form.password) {
-      data.password = form.password;
+      data.password = form.password; // Send password to backend for handling (create or update)
     }
 
     try {
@@ -141,9 +146,9 @@ const BranchBarbers = () => {
       
       let barberRes;
       if (editingId) {
-        barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/branch-admin/barbers/${editingId}`, data, { headers });
+        barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data, { headers });
       } else {
-        barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/branch-admin/barbers', data, { headers });
+        barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data, { headers });
       }
       
       resetForm();
@@ -152,8 +157,6 @@ const BranchBarbers = () => {
       const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
       if (err.response?.status === 401) {
         setError('Authentication failed. Please login again.');
-      } else if (err.response?.status === 403) {
-        setError('Permission denied: You can only manage barbers in your branch.');
       } else {
         setError('Save failed: ' + errorMsg);
       }
@@ -169,6 +172,7 @@ const BranchBarbers = () => {
       experienceYears: b.experienceYears,
       gender: b.gender,
       services: Array.isArray(b.specialties) ? b.specialties : [],
+      branch: b.branch?._id || '',
       email: b.email || '',
       password: ''
     });
@@ -183,13 +187,11 @@ const BranchBarbers = () => {
       try {
         setLoading(true);
         const headers = getAuthHeaders();
-        await axios.delete(`https://barber-appointment-backend.vercel.app/api/branch-admin/barbers/${id}`, { headers });
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barbers/${id}`, { headers });
         fetchBarbers();
       } catch (err) {
         if (err.response?.status === 401) {
           alert('Authentication failed. Please login again.');
-        } else if (err.response?.status === 403) {
-          alert('Permission denied: You can only delete barbers in your branch.');
         } else {
           alert('Delete failed: ' + (err.response?.data?.error || err.message));
         }
@@ -200,7 +202,7 @@ const BranchBarbers = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: '', experienceYears: '', gender: '', services: [], email: '', password: '' });
+    setForm({ name: '', experienceYears: '', gender: '', services: [], branch: '', email: '', password: '' });
     setEditingId(null);
     setError(null);
   };
@@ -218,11 +220,6 @@ const BranchBarbers = () => {
     e.preventDefault();
     if (!selectedBarber) return;
 
-    if (!shiftForm.isOff && (!shiftForm.startTime || !shiftForm.endTime)) {
-      alert('Start and end times are required if not a day off!');
-      return;
-    }
-
     try {
       setLoading(true);
       const payload = {
@@ -237,15 +234,13 @@ const BranchBarbers = () => {
       }
 
       const headers = getAuthHeaders();
-      await axios.post('https://barber-appointment-backend.vercel.app/api/branch-admin/shifts', payload, { headers });
+      await axios.post('https://barber-appointment-backend.vercel.app/api/barber-shifts', payload, { headers });
       await fetchBarberShifts(selectedBarber._id);
       setShiftForm({ dayOfWeek: 1, startTime: '09:00', endTime: '19:00', isOff: false });
       alert('Shift added successfully!');
     } catch (err) {
       if (err.response?.status === 401) {
         alert('Authentication failed. Please login again.');
-      } else if (err.response?.status === 403) {
-        alert('Permission denied: You can only manage shifts for your branch.');
       } else {
         alert('Failed to add shift: ' + (err.response?.data?.message || err.message));
       }
@@ -258,16 +253,14 @@ const BranchBarbers = () => {
     if (window.confirm('Are you sure you want to delete this shift? This action cannot be undone.')) {
       try {
         const headers = getAuthHeaders();
-        await axios.delete(`https://barber-appointment-backend.vercel.app/api/branch-admin/shifts/${shiftId}`, { headers });
+        await axios.delete(`https://barber-appointment-backend.vercel.app/api/barber-shifts/${shiftId}`, { headers });
         await fetchBarberShifts(selectedBarber._id);
         alert('Shift deleted!');
       } catch (err) {
         if (err.response?.status === 401) {
           alert('Authentication failed. Please login again.');
-        } else if (err.response?.status === 403) {
-          alert('Permission denied: You can only delete shifts in your branch.');
         } else {
-          alert('Failed to delete shift: ' + (err.response?.data?.message || err.message));
+          alert('Failed to delete shift');
         }
       }
     }
@@ -389,6 +382,23 @@ const BranchBarbers = () => {
                     <option value="">Select Gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
+                  <select
+                    value={form.branch}
+                    onChange={e => setForm({ ...form, branch: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                    required
+                  >
+                    <option value="">Select a branch</option>
+                    {branches.map(b => (
+                      <option key={b._id} value={b._id}>
+                        {b.name} - {b.city}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -524,7 +534,7 @@ const BranchBarbers = () => {
                         <MapPin className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-600">Branch:</span>
                         <span className="text-gray-900 font-medium">
-                          {barber.branch?.name || 'Your Branch'}
+                          {barber.branch?.name || 'Not Assigned'}
                         </span>
                       </div>
 
@@ -627,7 +637,7 @@ const BranchBarbers = () => {
               <option value="">Choose a barber</option>
               {barbers.map(b => (
                 <option key={b._id} value={b._id}>
-                  {b.name}
+                  {b.name} - {b.branch?.name}
                 </option>
               ))}
             </select>
@@ -649,7 +659,7 @@ const BranchBarbers = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Day *</label>
                       <select
                         value={shiftForm.dayOfWeek}
-                        onChange={e => setShiftForm({ ...shiftForm, dayOfWeek: Number(e.target.value) })}
+                        onChange={e => setShiftForm({ ...shiftForm, dayOfWeek: parseInt(e.target.value) })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
                       >
                         {daysOfWeek.map(d => (
@@ -665,7 +675,6 @@ const BranchBarbers = () => {
                         value={shiftForm.startTime}
                         onChange={e => setShiftForm({ ...shiftForm, startTime: e.target.value })}
                         disabled={shiftForm.isOff}
-                        required={!shiftForm.isOff}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition disabled:bg-gray-100"
                       />
                     </div>
@@ -677,7 +686,6 @@ const BranchBarbers = () => {
                         value={shiftForm.endTime}
                         onChange={e => setShiftForm({ ...shiftForm, endTime: e.target.value })}
                         disabled={shiftForm.isOff}
-                        required={!shiftForm.isOff}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition disabled:bg-gray-100"
                       />
                     </div>
@@ -772,4 +780,4 @@ const BranchBarbers = () => {
   );
 };
 
-export default BranchBarbers;
+export default Barbers;

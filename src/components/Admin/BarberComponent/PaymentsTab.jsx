@@ -166,7 +166,7 @@ function PaymentsTab({ appointments }) {
       setConnectLoading(false);
     }
   };
-
+ 
   // NEW: Load bank accounts
   const loadBankAccounts = async () => {
     try {

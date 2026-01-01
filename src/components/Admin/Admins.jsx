@@ -183,14 +183,14 @@ const ManageAdmins = () => {
   const getRoleBadge = (role) => {
     if (role === 'main_admin') {
       return (
-        <span className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-xs font-bold flex items-center gap-1 inline-flex">
+        <span className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-xs font-bold   items-center gap-1 inline-flex">
           <Shield className="w-3 h-3" />
           Main Admin
         </span>
       );
     }
     return (
-      <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-full text-xs font-bold flex items-center gap-1 inline-flex">
+      <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-full text-xs font-bold   items-center gap-1 inline-flex">
         <UserCheck className="w-3 h-3" />
         Branch Admin
       </span>
