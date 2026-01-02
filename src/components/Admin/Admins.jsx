@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck, Mail, Clock } from 'lucide-react';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
@@ -18,11 +18,29 @@ const ManageAdmins = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // OTP verification states
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [pendingAdminId, setPendingAdminId] = useState(null);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [otpTimer, setOtpTimer] = useState(600); // 10 minutes
 
   useEffect(() => {
     fetchAdmins();
     fetchBranches();
   }, []);
+
+  // OTP Timer countdown
+  useEffect(() => {
+    let interval;
+    if (showOTPModal && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showOTPModal, otpTimer]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
@@ -82,6 +100,7 @@ const ManageAdmins = () => {
       }
       
       if (editingId) {
+        // Update existing admin
         if (formData.password && formData.password.trim() !== '') {
           dataToSend.password = formData.password;
         }
@@ -98,13 +117,17 @@ const ManageAdmins = () => {
         }
         
         setSuccess('✅ Admin updated successfully');
+        fetchAdmins();
+        resetForm();
+        setTimeout(() => setSuccess(''), 5000);
       } else {
+        // Create new admin - request OTP
         if (!formData.password) {
           throw new Error('Password is required');
         }
         dataToSend.password = formData.password;
         
-        const response = await fetch(`${API_BASE}/api/admins`, {
+        const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
           method: 'POST',
           headers,
           body: JSON.stringify(dataToSend)
@@ -115,12 +138,82 @@ const ManageAdmins = () => {
           throw new Error(errorData.message || 'Creation failed');
         }
         
-        setSuccess('✅ Admin created successfully! They can now login.');
+        const result = await response.json();
+        
+        // Show OTP modal
+        setPendingAdminId(result.adminId);
+        setPendingEmail(result.email);
+        setShowOTPModal(true);
+        setOtpTimer(600);
+        setSuccess('📧 Verification code sent to ' + result.email);
       }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const headers = getAuthHeaders();
       
+      const response = await fetch(`${API_BASE}/api/admins/verify-otp`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          adminId: pendingAdminId,
+          otp: otp
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Verification failed');
+      }
+
+      setSuccess('✅ Admin verified and activated successfully!');
+      setShowOTPModal(false);
+      setOtp('');
+      setPendingAdminId(null);
+      setPendingEmail('');
       fetchAdmins();
       resetForm();
       setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const headers = getAuthHeaders();
+      
+      const response = await fetch(`${API_BASE}/api/admins/resend-otp`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ adminId: pendingAdminId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Resend failed');
+      }
+
+      setOtpTimer(600);
+      setSuccess('📧 New verification code sent!');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -183,22 +276,97 @@ const ManageAdmins = () => {
   const getRoleBadge = (role) => {
     if (role === 'main_admin') {
       return (
-        <span className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-xs font-bold   items-center gap-1 inline-flex">
+        <span className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-xs font-bold items-center gap-1 inline-flex">
           <Shield className="w-3 h-3" />
           Main Admin
         </span>
       );
     }
     return (
-      <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-full text-xs font-bold   items-center gap-1 inline-flex">
+      <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-full text-xs font-bold items-center gap-1 inline-flex">
         <UserCheck className="w-3 h-3" />
         Branch Admin
       </span>
     );
   };
 
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
+      {/* OTP Verification Modal */}
+      {showOTPModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Verify Email</h3>
+              <p className="text-gray-600 text-sm">
+                We've sent a 6-digit code to<br />
+                <span className="font-semibold text-gray-800">{pendingEmail}</span>
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">
+                Enter Verification Code
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+                placeholder="000000"
+                maxLength={6}
+              />
+              
+              <div className="flex items-center justify-center gap-2 mt-3 text-sm">
+                <Clock className="w-4 h-4 text-gray-500" />
+                <span className={`font-semibold ${otpTimer < 60 ? 'text-red-600' : 'text-gray-600'}`}>
+                  {formatTime(otpTimer)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleVerifyOTP}
+                disabled={loading || otp.length !== 6}
+                className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg font-bold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {loading ? 'Verifying...' : 'Verify & Create Account'}
+              </button>
+
+              <button
+                onClick={handleResendOTP}
+                disabled={loading || otpTimer > 540}
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                Resend Code
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowOTPModal(false);
+                  setOtp('');
+                  setPendingAdminId(null);
+                  setPendingEmail('');
+                }}
+                className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
         <div className="p-3 bg-gradient-to-br from-[#D4AF37] to-yellow-600 rounded-xl">
@@ -281,7 +449,7 @@ const ManageAdmins = () => {
           )}
         </h3>
         
-        <form onSubmit={handleSubmit}>
+        <div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -390,7 +558,7 @@ const ManageAdmins = () => {
               </button>
             )}
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={loading}
               className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold transition-all"
             >
@@ -407,7 +575,7 @@ const ManageAdmins = () => {
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Admins Table */}
@@ -493,10 +661,11 @@ const ManageAdmins = () => {
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <p className="font-semibold mb-1">💡 Admin Types:</p>
+            <p className="font-semibold mb-1">💡 Admin Creation Process:</p>
             <ul className="space-y-1 ml-4 list-disc">
-              <li><strong>Main Admin:</strong> Full system access - manage all branches, barbers, services, and admins</li>
-              <li><strong>Branch Admin:</strong> Limited to assigned branch - manage only that branch's barbers, appointments, and shifts</li>
+              <li>When you create a new admin, they will receive a 6-digit OTP via email</li>
+              <li>Enter the OTP to verify their email and activate the account</li>
+              <li>After verification, they can log in with their email and password</li>
             </ul>
           </div>
         </div>
