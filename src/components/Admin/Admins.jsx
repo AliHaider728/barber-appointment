@@ -61,7 +61,12 @@ const ManageAdmins = () => {
     try {
       const headers = getAuthHeaders();
       const response = await fetch(`${API_BASE}/api/admins`, { headers });
-      if (!response.ok) throw new Error('Failed to fetch admins');
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('You do not have permission to manage admins. Only Main Admins can access this page.');
+        }
+        throw new Error('Failed to fetch admins');
+      }
       const data = await response.json();
       setAdmins(data);
     } catch (err) {
@@ -89,21 +94,21 @@ const ManageAdmins = () => {
       setLoading(true);
       const headers = getAuthHeaders();
       
-      const dataToSend = {
-        fullName: formData.fullName,
-        email: formData.email,
-        role: formData.role,
-      };
-
-      if (formData.role === 'branch_admin') {
-        if (!formData.assignedBranch) {
-          throw new Error('Please select a branch for Branch Admin');
-        }
-        dataToSend.assignedBranch = formData.assignedBranch;
-      }
-      
       if (editingId) {
         // Update existing admin
+        const dataToSend = {
+          fullName: formData.fullName,
+          email: formData.email,
+          role: formData.role,
+        };
+
+        if (formData.role === 'branch_admin') {
+          if (!formData.assignedBranch) {
+            throw new Error('Please select a branch for Branch Admin');
+          }
+          dataToSend.assignedBranch = formData.assignedBranch;
+        }
+        
         if (formData.password && formData.password.trim() !== '') {
           dataToSend.password = formData.password;
         }
@@ -128,7 +133,15 @@ const ManageAdmins = () => {
         if (!formData.password) {
           throw new Error('Password is required');
         }
-        dataToSend.password = formData.password;
+        
+        if (formData.role === 'branch_admin' && !formData.assignedBranch) {
+          throw new Error('Please select a branch for Branch Admin');
+        }
+
+        const dataToSend = {
+          fullName: formData.fullName,
+          email: formData.email
+        };
         
         const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
           method: 'POST',
@@ -180,6 +193,27 @@ const ManageAdmins = () => {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Verification failed');
+      }
+
+      // After verification, complete the setup by updating with password, role, etc.
+      const updateData = {
+        password: formData.password,
+        role: formData.role
+      };
+
+      if (formData.role === 'branch_admin') {
+        updateData.assignedBranch = formData.assignedBranch;
+      }
+
+      const updateResponse = await fetch(`${API_BASE}/api/admins/${pendingAdminId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(updateData)
+      });
+
+      if (!updateResponse.ok) {
+        const updateErrorData = await updateResponse.json();
+        throw new Error(updateErrorData.message || 'Failed to complete admin setup');
       }
 
       setSuccess('✅ Admin verified and activated successfully!');
