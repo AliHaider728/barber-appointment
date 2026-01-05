@@ -1,7 +1,7 @@
-// Barbers React component remains the same, no changes needed (Barbers.jsx)
+// Barbers.jsx (updated with stepped form like ManageAdmins: Step 1 name/email OTP, Step 2 complete setup)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, X, Award, MapPin, Clock, Calendar, User, Mail } from 'lucide-react';
 
 const Barbers = () => {
   const [barbers, setBarbers] = useState([]);
@@ -18,6 +18,8 @@ const Barbers = () => {
     password: ''
   });
   const [editingId, setEditingId] = useState(null);
+  const [step, setStep] = useState(1); // 1: Basic details + OTP, 2: Complete setup
+  const [verifiedBarber, setVerifiedBarber] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,6 +31,13 @@ const Barbers = () => {
     endTime: '19:00',
     isOff: false
   });
+
+  // OTP states
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [pendingBarberId, setPendingBarberId] = useState(null);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [otpTimer, setOtpTimer] = useState(600); // 10 minutes
 
   const daysOfWeek = [
     { value: 0, label: 'Sunday' },
@@ -49,6 +58,17 @@ const Barbers = () => {
       fetchBarberShifts(selectedBarber._id);
     }
   }, [selectedBarber]);
+
+  // OTP Timer
+  useEffect(() => {
+    let interval;
+    if (showOTPModal && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showOTPModal, otpTimer]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
@@ -115,52 +135,140 @@ const Barbers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
+    try {
+      setLoading(true);
+      const headers = getAuthHeaders();
+      
+      if (editingId) {
+        // Update existing barber (no OTP for edits)
+        const dataToSend = {
+          name: form.name,
+          experienceYears: form.experienceYears,
+          gender: form.gender,
+          specialties: form.services,
+          branch: form.branch,
+          email: form.email
+        };
 
-    if (!form.name || !form.experienceYears || !form.gender || form.services.length === 0 || !form.branch || !form.email) {
-      alert('All fields are required!');
-      return;
+        if (form.password && form.password.trim() !== '') {
+          dataToSend.password = form.password;
+        }
+        
+        const response = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, dataToSend, { headers });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Update failed');
+        }
+        
+        alert('✅ Barber updated successfully');
+        fetchBarbers();
+        resetForm();
+      } else {
+        // Create new barber
+        if (step === 1) {
+          // Step 1: Request creation with name and email
+          const dataToSend = {
+            name: form.name,
+            email: form.email
+          };
+          
+          const response = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers/request-creation', dataToSend, { headers });
+          
+          const result = response.data;
+          
+          setPendingBarberId(result.barberId);
+          setPendingEmail(result.email);
+          setShowOTPModal(true);
+          setOtpTimer(600);
+          alert('📧 Verification code sent to ' + result.email);
+        } else if (step === 2) {
+          // Step 2: Complete setup with gender, experience, services, branch, password
+          if (!form.password) {
+            throw new Error('Password is required');
+          }
+          
+          const dataToSend = {
+            experienceYears: form.experienceYears,
+            gender: form.gender,
+            specialties: form.services,
+            branch: form.branch,
+            password: form.password
+          };
+          
+          const response = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${pendingBarberId}`, dataToSend, { headers });
+          
+          alert('✅ Barber created and activated successfully!');
+          fetchBarbers();
+          resetForm();
+          setStep(1);
+          setVerifiedBarber(null);
+          setPendingBarberId(null);
+          setPendingEmail('');
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (!editingId && !form.password) {
-      alert('Password is required for new barbers!');
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      setError('Please enter a valid 6-digit code');
       return;
-    }
-
-    const data = {
-      name: form.name.trim(),
-      experienceYears: Number(form.experienceYears),
-      gender: form.gender,
-      specialties: form.services,
-      branch: form.branch,
-      email: form.email
-    };
-
-    if (form.password) {
-      data.password = form.password; // Send password to backend for handling (create or update)
     }
 
     try {
       setLoading(true);
-      setError(null);
+      setError('');
       const headers = getAuthHeaders();
       
-      let barberRes;
-      if (editingId) {
-        barberRes = await axios.put(`https://barber-appointment-backend.vercel.app/api/barbers/${editingId}`, data, { headers });
-      } else {
-        barberRes = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers', data, { headers });
-      }
-      
-      resetForm();
-      fetchBarbers();
+      const response = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers/verify-otp', {
+        barberId: pendingBarberId,
+        otp: otp
+      }, { headers });
+
+      const result = response.data;
+      setVerifiedBarber(result.barber);
+      setShowOTPModal(false);
+      setOtp('');
+      setStep(2);
+      alert('✅ Email verified! Proceed to complete setup.');
+
+      // Update form with verified details
+      setForm(prev => ({
+        ...prev,
+        name: result.barber.name,
+        email: result.barber.email,
+        experienceYears: '',
+        gender: '',
+        services: [],
+        branch: '',
+        password: ''
+      }));
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
-      if (err.response?.status === 401) {
-        setError('Authentication failed. Please login again.');
-      } else {
-        setError('Save failed: ' + errorMsg);
-      }
-      console.error('Save error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const headers = getAuthHeaders();
+      
+      const response = await axios.post('https://barber-appointment-backend.vercel.app/api/barbers/resend-otp', { barberId: pendingBarberId }, { headers });
+
+      setOtpTimer(600);
+      alert('📧 New verification code sent!');
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -177,6 +285,7 @@ const Barbers = () => {
       password: ''
     });
     setEditingId(b._id);
+    setStep(1); // For editing, no steps needed
     setError(null);
     setActiveTab('barbers');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -204,6 +313,8 @@ const Barbers = () => {
   const resetForm = () => {
     setForm({ name: '', experienceYears: '', gender: '', services: [], branch: '', email: '', password: '' });
     setEditingId(null);
+    setStep(1);
+    setVerifiedBarber(null);
     setError(null);
   };
 
@@ -268,6 +379,12 @@ const Barbers = () => {
 
   const availableServices = services.filter(s => s.gender === form.gender);
 
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -281,6 +398,82 @@ const Barbers = () => {
 
   return (
     <div className="space-y-6">
+      {/* OTP Modal */}
+      {showOTPModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Verify Email</h3>
+              <p className="text-gray-600 text-sm">
+                We've sent a 6-digit code to<br />
+                <span className="font-semibold text-gray-800">{pendingEmail}</span>
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">
+                Enter Verification Code
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+                placeholder="000000"
+                maxLength={6}
+              />
+              
+              <div className="flex items-center justify-center gap-2 mt-3 text-sm">
+                <Clock className="w-4 h-4 text-gray-500" />
+                <span className={`font-semibold ${otpTimer < 60 ? 'text-red-600' : 'text-gray-600'}`}>
+                  {formatTime(otpTimer)}
+                </span>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <button
+                onClick={handleVerifyOTP}
+                disabled={loading || otp.length !== 6}
+                className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg font-bold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {loading ? 'Verifying...' : 'Verify Email'}
+              </button>
+
+              <button
+                onClick={handleResendOTP}
+                disabled={loading || otpTimer > 540}
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                Resend Code
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowOTPModal(false);
+                  setOtp('');
+                  setPendingBarberId(null);
+                  setPendingEmail('');
+                  setError('');
+                }}
+                className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <div className="flex items-center gap-3">
@@ -340,98 +533,114 @@ const Barbers = () => {
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 {editingId ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                {editingId ? 'Edit Barber' : 'Add New Barber'}
+                {editingId ? 'Edit Barber' : step === 1 ? 'Add New Barber - Step 1: Basic Details' : 'Add New Barber - Step 2: Complete Setup'}
               </h3>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                  <input
-                    type="text"
-                    placeholder="Enter barber name"
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required
-                  />
-                </div>
+                {(editingId || step === 1) && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                      <input
+                        type="text"
+                        placeholder="Enter barber name"
+                        value={form.name}
+                        onChange={e => setForm({ ...form, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years) *</label>
-                  <input
-                    type="number"
-                    placeholder="Years of experience"
-                    value={form.experienceYears}
-                    onChange={e => setForm({ ...form, experienceYears: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    min="0"
-                    required
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email (for login) *</label>
+                      <input
+                        type="email"
+                        placeholder="barber@example.com"
+                        value={form.email}
+                        onChange={e => setForm({ ...form, email: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-                  <select
-                    value={form.gender}
-                    onChange={e => setForm({ ...form, gender: e.target.value, services: [] })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
+                {step === 2 && (
+                  <div className="md:col-span-2 mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800 font-medium">
+                      Email verified: <span className="font-bold">{form.email}</span>
+                    </p>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
-                  <select
-                    value={form.branch}
-                    onChange={e => setForm({ ...form, branch: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required
-                  >
-                    <option value="">Select a branch</option>
-                    {branches.map(b => (
-                      <option key={b._id} value={b._id}>
-                        {b.name} - {b.city}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {(editingId || step === 2) && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years) *</label>
+                      <input
+                        type="number"
+                        placeholder="Years of experience"
+                        value={form.experienceYears}
+                        onChange={e => setForm({ ...form, experienceYears: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                        min="0"
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email (for login) *</label>
-                  <input
-                    type="email"
-                    placeholder="barber@example.com"
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                      <select
+                        value={form.gender}
+                        onChange={e => setForm({ ...form, gender: e.target.value, services: [] })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                        required
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {editingId ? 'New Password (leave blank to keep current)' : 'Initial Password *'}
-                  </label>
-                  <input
-                    type="password"
-                    placeholder={editingId ? 'Enter new password to update' : 'Set password'}
-                    value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
-                    required={!editingId}
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
+                      <select
+                        value={form.branch}
+                        onChange={e => setForm({ ...form, branch: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                        required
+                      >
+                        <option value="">Select a branch</option>
+                        {branches.map(b => (
+                          <option key={b._id} value={b._id}>
+                            {b.name} - {b.city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {editingId ? 'New Password (leave blank to keep current)' : 'Initial Password *'}
+                      </label>
+                      <input
+                        type="password"
+                        placeholder={editingId ? 'Enter new password to update' : 'Set password'}
+                        value={form.password}
+                        onChange={e => setForm({ ...form, password: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent outline-none transition"
+                        required={!editingId}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
 
               {/* Services Selection */}
-              {form.gender && (
+              {form.gender && (editingId || step === 2) && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Services * (Select at least one)
@@ -472,23 +681,21 @@ const Barbers = () => {
                   disabled={loading}
                   className="px-6 py-2 bg-[#D4AF37] text-white font-medium rounded-lg hover:bg-[#C5A028] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Saving...' : editingId ? 'Update Barber' : 'Add Barber'}
+                  {loading ? 'Saving...' : editingId ? 'Update Barber' : step === 1 ? 'Send Verification Code' : 'Complete Creation'}
                 </button>
                 
-                {editingId && (
-                  <button 
-                    type="button" 
-                    onClick={resetForm} 
-                    className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button 
+                  type="button" 
+                  onClick={resetForm} 
+                  className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
 
-          {/* Barbers List */}
+          {/* Barbers List - same as before */}
           <div className="bg-white rounded-lg shadow border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -619,7 +826,7 @@ const Barbers = () => {
         </>
       )}
 
-      {/* Shifts Tab */}
+       {/* Shifts Tab */}
       {activeTab === 'shifts' && (
         <>
           <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
