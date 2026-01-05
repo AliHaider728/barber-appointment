@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck, Mail, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck, Mail, Clock } from 'lucide-react';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
@@ -15,7 +15,6 @@ const ManageAdmins = () => {
   });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,10 +24,11 @@ const ManageAdmins = () => {
   const [otp, setOtp] = useState('');
   const [pendingAdminId, setPendingAdminId] = useState(null);
   const [pendingEmail, setPendingEmail] = useState('');
-  const [otpTimer, setOtpTimer] = useState(600);
+  const [otpTimer, setOtpTimer] = useState(600); // 10 minutes
 
   useEffect(() => {
-    loadInitialData();
+    fetchAdmins();
+    fetchBranches();
   }, []);
 
   // OTP Timer countdown
@@ -42,12 +42,6 @@ const ManageAdmins = () => {
     return () => clearInterval(interval);
   }, [showOTPModal, otpTimer]);
 
-  const loadInitialData = async () => {
-    setInitialLoading(true);
-    await Promise.all([fetchAdmins(), fetchBranches()]);
-    setInitialLoading(false);
-  };
-
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
     if (!token) throw new Error('No authentication token found.');
@@ -59,19 +53,17 @@ const ManageAdmins = () => {
 
   const fetchAdmins = async () => {
     try {
+      setLoading(true);
       const headers = getAuthHeaders();
       const response = await fetch(`${API_BASE}/api/admins`, { headers });
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('You do not have permission to manage admins. Only Main Admins can access this page.');
-        }
-        throw new Error('Failed to fetch admins');
-      }
+      if (!response.ok) throw new Error('Failed to fetch admins');
       const data = await response.json();
       setAdmins(data);
     } catch (err) {
       setError(err.message);
       setAdmins([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,21 +86,21 @@ const ManageAdmins = () => {
       setLoading(true);
       const headers = getAuthHeaders();
       
+      const dataToSend = {
+        fullName: formData.fullName,
+        email: formData.email,
+        role: formData.role,
+      };
+
+      if (formData.role === 'branch_admin') {
+        if (!formData.assignedBranch) {
+          throw new Error('Please select a branch for Branch Admin');
+        }
+        dataToSend.assignedBranch = formData.assignedBranch;
+      }
+      
       if (editingId) {
         // Update existing admin
-        const dataToSend = {
-          fullName: formData.fullName,
-          email: formData.email,
-          role: formData.role,
-        };
-
-        if (formData.role === 'branch_admin') {
-          if (!formData.assignedBranch) {
-            throw new Error('Please select a branch for Branch Admin');
-          }
-          dataToSend.assignedBranch = formData.assignedBranch;
-        }
-        
         if (formData.password && formData.password.trim() !== '') {
           dataToSend.password = formData.password;
         }
@@ -133,15 +125,7 @@ const ManageAdmins = () => {
         if (!formData.password) {
           throw new Error('Password is required');
         }
-        
-        if (formData.role === 'branch_admin' && !formData.assignedBranch) {
-          throw new Error('Please select a branch for Branch Admin');
-        }
-
-        const dataToSend = {
-          fullName: formData.fullName,
-          email: formData.email
-        };
+        dataToSend.password = formData.password;
         
         const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
           method: 'POST',
@@ -193,27 +177,6 @@ const ManageAdmins = () => {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Verification failed');
-      }
-
-      // After verification, complete the setup by updating with password, role, etc.
-      const updateData = {
-        password: formData.password,
-        role: formData.role
-      };
-
-      if (formData.role === 'branch_admin') {
-        updateData.assignedBranch = formData.assignedBranch;
-      }
-
-      const updateResponse = await fetch(`${API_BASE}/api/admins/${pendingAdminId}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(updateData)
-      });
-
-      if (!updateResponse.ok) {
-        const updateErrorData = await updateResponse.json();
-        throw new Error(updateErrorData.message || 'Failed to complete admin setup');
       }
 
       setSuccess('✅ Admin verified and activated successfully!');
@@ -327,41 +290,11 @@ const ManageAdmins = () => {
     );
   };
 
-  const getVerificationBadge = (admin) => {
-    if (admin.isEmailVerified) {
-      return (
-        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold inline-flex items-center gap-1">
-          <CheckCircle className="w-3 h-3" />
-          Verified
-        </span>
-      );
-    }
-    return (
-      <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold inline-flex items-center gap-1">
-        <XCircle className="w-3 h-3" />
-        Pending
-      </span>
-    );
-  };
-
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  // Initial loading state
-  if (initialLoading) {
-    return (
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-[#D4AF37] rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600 font-semibold text-lg">Loading Admin Management...</p>
-          <p className="text-gray-500 text-sm mt-2">Please wait while we fetch the data</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
@@ -401,12 +334,6 @@ const ManageAdmins = () => {
               </div>
             </div>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
             <div className="space-y-3">
               <button
                 onClick={handleVerifyOTP}
@@ -421,7 +348,7 @@ const ManageAdmins = () => {
                 disabled={loading || otpTimer > 540}
                 className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                Resend Code {otpTimer > 540 && `(${Math.floor((600 - otpTimer) / 60)}m)`}
+                Resend Code
               </button>
 
               <button
@@ -430,7 +357,6 @@ const ManageAdmins = () => {
                   setOtp('');
                   setPendingAdminId(null);
                   setPendingEmail('');
-                  setError('');
                 }}
                 className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold"
               >
@@ -448,7 +374,7 @@ const ManageAdmins = () => {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Manage Administrators</h2>
-          <p className="text-sm text-gray-600">Create and manage Main & Branch Admins with email verification</p>
+          <p className="text-sm text-gray-600">Create and manage Main & Branch Admins</p>
         </div>
       </div>
       
@@ -471,7 +397,7 @@ const ManageAdmins = () => {
       )}
 
       {/* Admin Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-purple-600" />
@@ -491,18 +417,6 @@ const ManageAdmins = () => {
               <p className="text-sm text-yellow-700 font-medium">Branch Admins</p>
               <p className="text-2xl font-bold text-yellow-900">
                 {admins.filter(a => a.role === 'branch_admin').length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-            <div>
-              <p className="text-sm text-green-700 font-medium">Verified</p>
-              <p className="text-2xl font-bold text-green-900">
-                {admins.filter(a => a.isEmailVerified).length}
               </p>
             </div>
           </div>
@@ -535,7 +449,7 @@ const ManageAdmins = () => {
           )}
         </h3>
         
-        <form onSubmit={handleSubmit}>
+        <div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -644,7 +558,7 @@ const ManageAdmins = () => {
               </button>
             )}
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={loading}
               className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold transition-all"
             >
@@ -661,7 +575,7 @@ const ManageAdmins = () => {
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Admins Table */}
@@ -672,15 +586,23 @@ const ManageAdmins = () => {
               <th className="p-4 text-left font-bold text-gray-700">Name</th>
               <th className="p-4 text-left font-bold text-gray-700">Email</th>
               <th className="p-4 text-left font-bold text-gray-700">Role</th>
-              <th className="p-4 text-left font-bold text-gray-700">Status</th>
               <th className="p-4 text-left font-bold text-gray-700">Branch</th>
               <th className="p-4 text-left font-bold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {admins.length === 0 ? (
+            {loading && !admins.length ? (
               <tr>
-                <td colSpan="6" className="p-12 text-center">
+                <td colSpan="5" className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin"></div>
+                    <p className="text-gray-600">Loading admins...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : admins.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="p-12 text-center">
                   <UserCog className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-600 font-semibold">No admins found</p>
                   <p className="text-sm text-gray-500 mt-1">Create your first admin above</p>
@@ -696,7 +618,6 @@ const ManageAdmins = () => {
                     <p className="text-gray-700">{admin.email}</p>
                   </td>
                   <td className="p-4">{getRoleBadge(admin.role)}</td>
-                  <td className="p-4">{getVerificationBadge(admin)}</td>
                   <td className="p-4">
                     {admin.assignedBranch ? (
                       <div className="flex items-center gap-2">
@@ -735,7 +656,7 @@ const ManageAdmins = () => {
         </table>
       </div>
 
-          {/* Info Footer */}
+      {/* Info Footer */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
