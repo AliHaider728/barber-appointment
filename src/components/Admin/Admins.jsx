@@ -14,6 +14,8 @@ const ManageAdmins = () => {
     assignedBranch: ''
   });
   const [editingId, setEditingId] = useState(null);
+  const [step, setStep] = useState(1); // 1: Initial details, 2: Complete setup after verification
+  const [verifiedAdmin, setVerifiedAdmin] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -86,21 +88,21 @@ const ManageAdmins = () => {
       setLoading(true);
       const headers = getAuthHeaders();
       
-      const dataToSend = {
-        fullName: formData.fullName,
-        email: formData.email,
-        role: formData.role,
-      };
-
-      if (formData.role === 'branch_admin') {
-        if (!formData.assignedBranch) {
-          throw new Error('Please select a branch for Branch Admin');
-        }
-        dataToSend.assignedBranch = formData.assignedBranch;
-      }
-      
       if (editingId) {
         // Update existing admin
+        const dataToSend = {
+          fullName: formData.fullName,
+          email: formData.email,
+          role: formData.role,
+        };
+
+        if (formData.role === 'branch_admin') {
+          if (!formData.assignedBranch) {
+            throw new Error('Please select a branch for Branch Admin');
+          }
+          dataToSend.assignedBranch = formData.assignedBranch;
+        }
+        
         if (formData.password && formData.password.trim() !== '') {
           dataToSend.password = formData.password;
         }
@@ -121,31 +123,70 @@ const ManageAdmins = () => {
         resetForm();
         setTimeout(() => setSuccess(''), 5000);
       } else {
-        // Create new admin - request OTP
-        if (!formData.password) {
-          throw new Error('Password is required');
+        // Create new admin
+        if (step === 1) {
+          // Step 1: Request creation with name and email
+          const dataToSend = {
+            fullName: formData.fullName,
+            email: formData.email
+          };
+          
+          const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(dataToSend)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Creation request failed');
+          }
+          
+          const result = await response.json();
+          
+          setPendingAdminId(result.adminId);
+          setPendingEmail(result.email);
+          setShowOTPModal(true);
+          setOtpTimer(600);
+          setSuccess('📧 Verification code sent to ' + result.email);
+        } else if (step === 2) {
+          // Step 2: Complete setup with role, password, branch
+          if (!formData.password) {
+            throw new Error('Password is required');
+          }
+          
+          const dataToSend = {
+            password: formData.password,
+            role: formData.role,
+          };
+          
+          if (formData.role === 'branch_admin') {
+            if (!formData.assignedBranch) {
+              throw new Error('Please select a branch for Branch Admin');
+            }
+            dataToSend.assignedBranch = formData.assignedBranch;
+          }
+          
+          const response = await fetch(`${API_BASE}/api/admins/${pendingAdminId}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(dataToSend)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Setup failed');
+          }
+          
+          setSuccess('✅ Admin created and activated successfully!');
+          fetchAdmins();
+          resetForm();
+          setStep(1);
+          setVerifiedAdmin(null);
+          setPendingAdminId(null);
+          setPendingEmail('');
+          setTimeout(() => setSuccess(''), 5000);
         }
-        dataToSend.password = formData.password;
-        
-        const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(dataToSend)
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Creation failed');
-        }
-        
-        const result = await response.json();
-        
-        // Show OTP modal
-        setPendingAdminId(result.adminId);
-        setPendingEmail(result.email);
-        setShowOTPModal(true);
-        setOtpTimer(600);
-        setSuccess('📧 Verification code sent to ' + result.email);
       }
     } catch (err) {
       setError(err.message);
@@ -179,14 +220,22 @@ const ManageAdmins = () => {
         throw new Error(errorData.message || 'Verification failed');
       }
 
-      setSuccess('✅ Admin verified and activated successfully!');
+      const result = await response.json();
+      setVerifiedAdmin(result.admin);
       setShowOTPModal(false);
       setOtp('');
-      setPendingAdminId(null);
-      setPendingEmail('');
-      fetchAdmins();
-      resetForm();
-      setTimeout(() => setSuccess(''), 5000);
+      setStep(2);
+      setSuccess('✅ Email verified! Proceed to complete setup.');
+
+      // Update formData with verified details
+      setFormData(prev => ({
+        ...prev,
+        fullName: result.admin.fullName,
+        email: result.admin.email,
+        password: '',
+        role: 'branch_admin',
+        assignedBranch: ''
+      }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -230,13 +279,14 @@ const ManageAdmins = () => {
       assignedBranch: admin.assignedBranch?._id || ''
     });
     setEditingId(admin._id);
+    setStep(1); // For editing, no steps needed
     setError('');
     setSuccess('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('⚠️ Delete this admin? This action cannot be undone.')) return;
+    if (!window.confirm('⚠️ Are you sure you want to delete this admin? This action cannot be undone.')) return;
     
     try {
       setLoading(true);
@@ -270,6 +320,8 @@ const ManageAdmins = () => {
       assignedBranch: ''
     });
     setEditingId(null);
+    setStep(1);
+    setVerifiedAdmin(null);
     setShowPassword(false);
   };
 
@@ -334,13 +386,19 @@ const ManageAdmins = () => {
               </div>
             </div>
 
+            {error && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-3">
               <button
                 onClick={handleVerifyOTP}
                 disabled={loading || otp.length !== 6}
                 className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg font-bold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
+                {loading ? 'Verifying...' : 'Verify Email'}
               </button>
 
               <button
@@ -357,6 +415,7 @@ const ManageAdmins = () => {
                   setOtp('');
                   setPendingAdminId(null);
                   setPendingEmail('');
+                  setError('');
                 }}
                 className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold"
               >
@@ -441,124 +500,139 @@ const ManageAdmins = () => {
               <Edit className="w-5 h-5 text-blue-600" />
               Edit Admin
             </>
+          ) : step === 1 ? (
+            <>
+              <Plus className="w-5 h-5 text-green-600" />
+              Add New Admin - Step 1: Basic Details
+            </>
           ) : (
             <>
               <Plus className="w-5 h-5 text-green-600" />
-              Add New Admin
+              Add New Admin - Step 2: Complete Setup
             </>
           )}
         </h3>
         
-        <div>
+        <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
-                placeholder="John Doe"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
-                placeholder="admin@example.com"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password {editingId ? '(Leave blank to keep current)' : <span className="text-red-500">*</span>}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all pr-12"
-                  placeholder="••••••••"
-                  minLength={6}
-                  required={!editingId}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {!editingId && (
-                <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Admin Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: ''})}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
-                required
-              >
-                <option value="branch_admin">Branch Admin (Limited Access)</option>
-                <option value="main_admin">Main Admin (Full Access)</option>
-              </select>
-            </div>
-            
-            {formData.role === 'branch_admin' && ( 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Building2 className="w-4 h-4 inline mr-1" />
-                  Assigned Branch <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.assignedBranch}
-                  onChange={(e) => setFormData({...formData, assignedBranch: e.target.value})}
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
-                  required={formData.role === 'branch_admin'}
-                >
-                  <option value="">-- Select a branch --</option>
-                  {branches.map(branch => (
-                    <option key={branch._id} value={branch._id}>
-                      {branch.name} - {branch.city} ({branch.address})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Branch Admin will only manage this specific branch
+            {editingId || step === 1 ? (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="md:col-span-2 mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800 font-medium">
+                  Email verified: <span className="font-bold">{formData.email}</span>
                 </p>
               </div>
+            )}
+
+            {(editingId || step === 2) && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Password {editingId ? '(Leave blank to keep current)' : <span className="text-red-500">*</span>}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all pr-12"
+                      placeholder="••••••••"
+                      minLength={6}
+                      required={!editingId}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Admin Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: formData.role === 'main_admin' ? '' : formData.assignedBranch})}
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                    required
+                  >
+                    <option value="branch_admin">Branch Admin (Limited Access)</option>
+                    <option value="main_admin">Main Admin (Full Access)</option>
+                  </select>
+                </div>
+                
+                {formData.role === 'branch_admin' && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Building2 className="w-4 h-4 inline mr-1" />
+                      Assigned Branch <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.assignedBranch}
+                      onChange={(e) => setFormData({...formData, assignedBranch: e.target.value})}
+                      className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
+                      required
+                    >
+                      <option value="">-- Select a branch --</option>
+                      {branches.map(branch => (
+                        <option key={branch._id} value={branch._id}>
+                          {branch.name} - {branch.city} ({branch.address})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Branch Admin will only manage this specific branch
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
           
           <div className="mt-6 flex gap-3">
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
-              >
-                Cancel
-              </button>
-            )}
             <button
-              onClick={handleSubmit}
+              type="button"
+              onClick={resetForm}
+              className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
               disabled={loading}
               className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold transition-all"
             >
@@ -570,12 +644,12 @@ const ManageAdmins = () => {
               ) : (
                 <>
                   {editingId ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                  {editingId ? 'Update Admin' : 'Create Admin'}
+                  {editingId ? 'Update Admin' : step === 1 ? 'Send Verification Code' : 'Complete Creation'}
                 </>
               )}
             </button>
           </div>
-        </div>
+        </form>
       </div>
 
       {/* Admins Table */}
@@ -663,9 +737,10 @@ const ManageAdmins = () => {
           <div className="text-sm text-blue-800">
             <p className="font-semibold mb-1">💡 Admin Creation Process:</p>
             <ul className="space-y-1 ml-4 list-disc">
-              <li>When you create a new admin, they will receive a 6-digit OTP via email</li>
-              <li>Enter the OTP to verify their email and activate the account</li>
-              <li>After verification, they can log in with their email and password</li>
+              <li>Enter name and email to send OTP</li>
+              <li>Verify email with OTP</li>
+              <li>Set password, role, and branch (if applicable)</li>
+              <li>Account activates and welcome email is sent</li>
             </ul>
           </div>
         </div>
