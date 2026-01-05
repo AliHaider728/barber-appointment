@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck, Mail, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, UserCog, Building2, Eye, EyeOff, Shield, UserCheck, Mail, Clock, Loader2 } from 'lucide-react';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
@@ -15,6 +15,7 @@ const ManageAdmins = () => {
   });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -53,7 +54,6 @@ const ManageAdmins = () => {
 
   const fetchAdmins = async () => {
     try {
-      setLoading(true);
       const headers = getAuthHeaders();
       const response = await fetch(`${API_BASE}/api/admins`, { headers });
       if (!response.ok) throw new Error('Failed to fetch admins');
@@ -64,7 +64,7 @@ const ManageAdmins = () => {
       setError(err.message);
       setAdmins([]);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -118,7 +118,7 @@ const ManageAdmins = () => {
         }
         
         setSuccess('✅ Admin updated successfully');
-        fetchAdmins();
+        await fetchAdmins();
         resetForm();
         setTimeout(() => setSuccess(''), 5000);
       } else {
@@ -128,9 +128,7 @@ const ManageAdmins = () => {
         }
         dataToSend.password = formData.password;
         
-        console.log('[CREATION ATTEMPT]', dataToSend);
-        
-        let response = await fetch(`${API_BASE}/api/admins/request-creation`, {
+        const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
           method: 'POST',
           headers,
           body: JSON.stringify(dataToSend)
@@ -138,54 +136,10 @@ const ManageAdmins = () => {
         
         if (!response.ok) {
           const errorData = await response.json();
-          console.log('[CREATION ERROR DATA]', errorData);
-          
-          if (errorData.message && errorData.message.includes('already exists') && errorData.canCleanup) {
-            const cleanupConfirm = confirm(
-              '⚠️ An unverified admin with this email exists. Do you want to remove it and create a new one?\n\n(Is email ke saath ek unverified admin mojood hai. Kya aap ise remove kar ke new create karna chahte hain?)'
-            );
-            
-            console.log('[CLEANUP CONFIRM]', cleanupConfirm);
-            
-            if (cleanupConfirm) {
-              console.log('[PERFORMING CLEANUP]');
-              const cleanupResponse = await fetch(
-                `${API_BASE}/api/admins/cleanup-unverified/${encodeURIComponent(dataToSend.email)}`,
-                {
-                  method: 'DELETE',
-                  headers
-                }
-              );
-              
-              const cleanupData = await cleanupResponse.json();
-              console.log('[CLEANUP RESULT]', cleanupData);
-              
-              if (cleanupResponse.ok) {
-                // Retry creation
-                response = await fetch(`${API_BASE}/api/admins/request-creation`, {
-                  method: 'POST',
-                  headers,
-                  body: JSON.stringify(dataToSend)
-                });
-                
-                if (!response.ok) {
-                  const retryError = await response.json();
-                  console.log('[RETRY ERROR]', retryError);
-                  throw new Error(retryError.message || 'Creation failed after cleanup');
-                }
-              } else {
-                throw new Error(cleanupData.message || 'Failed to clean up unverified admin');
-              }
-            } else {
-              throw new Error(errorData.message);
-            }
-          } else {
-            throw new Error(errorData.message || 'Creation failed');
-          }
+          throw new Error(errorData.message || 'Creation failed');
         }
         
         const result = await response.json();
-        console.log('[CREATION SUCCESS]', result);
         
         // Show OTP modal
         setPendingAdminId(result.adminId);
@@ -232,7 +186,7 @@ const ManageAdmins = () => {
       setOtp('');
       setPendingAdminId(null);
       setPendingEmail('');
-      fetchAdmins();
+      await fetchAdmins();
       resetForm();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
@@ -302,7 +256,7 @@ const ManageAdmins = () => {
       }
       
       setSuccess('✅ Admin deleted successfully');
-      fetchAdmins();
+      await fetchAdmins();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('[DELETE ERROR]', err);
@@ -347,6 +301,19 @@ const ManageAdmins = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Initial loading screen
+  if (initialLoading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-[#D4AF37] animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-semibold text-lg">Loading Admin Panel...</p>
+          <p className="text-gray-500 text-sm mt-2">Please wait</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
       {/* OTP Verification Modal */}
@@ -366,7 +333,13 @@ const ManageAdmins = () => {
 
             {error && (
               <div className="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">
-                <p className="text-sm">{error}</p>
+                <p className="text-sm font-semibold">{error}</p>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded">
+                <p className="text-sm font-semibold">{success}</p>
               </div>
             )}
 
@@ -381,6 +354,7 @@ const ManageAdmins = () => {
                 className="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
                 placeholder="000000"
                 maxLength={6}
+                disabled={loading}
               />
               
               <div className="flex items-center justify-center gap-2 mt-3 text-sm">
@@ -395,9 +369,16 @@ const ManageAdmins = () => {
               <button
                 onClick={handleVerifyOTP}
                 disabled={loading || otp.length !== 6}
-                className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg font-bold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg font-bold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & Create Account'
+                )}
               </button>
 
               <button
@@ -415,8 +396,10 @@ const ManageAdmins = () => {
                   setPendingAdminId(null);
                   setPendingEmail('');
                   setError('');
+                  setSuccess('');
                 }}
-                className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold"
+                disabled={loading}
+                className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -448,7 +431,7 @@ const ManageAdmins = () => {
       )}
 
       {/* Success Alert */}
-      {success && (
+      {success && !showOTPModal && (
         <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg mb-4 shadow-sm">
           <p className="font-semibold">{success}</p>
         </div>
@@ -520,6 +503,7 @@ const ManageAdmins = () => {
                 className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                 placeholder="John Doe"
                 required
+                disabled={loading}
               />
             </div>
             
@@ -534,6 +518,7 @@ const ManageAdmins = () => {
                 className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                 placeholder="admin@example.com"
                 required
+                disabled={loading}
               />
             </div>
             
@@ -550,11 +535,13 @@ const ManageAdmins = () => {
                   placeholder="••••••••"
                   minLength={6}
                   required={!editingId}
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -573,6 +560,7 @@ const ManageAdmins = () => {
                 onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: e.target.value === 'main_admin' ? '' : formData.assignedBranch})}
                 className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                 required
+                disabled={loading}
               >
                 <option value="branch_admin">Branch Admin (Limited Access)</option>
                 <option value="main_admin">Main Admin (Full Access)</option>
@@ -590,6 +578,7 @@ const ManageAdmins = () => {
                   onChange={(e) => setFormData({...formData, assignedBranch: e.target.value})}
                   className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                   required={formData.role === 'branch_admin'}
+                  disabled={loading}
                 >
                   <option value="">-- Select a branch --</option>
                   {branches.map(branch => (
@@ -610,7 +599,8 @@ const ManageAdmins = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+                disabled={loading}
+                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -622,7 +612,7 @@ const ManageAdmins = () => {
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Processing...
                 </>
               ) : (
@@ -649,16 +639,7 @@ const ManageAdmins = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {loading && !admins.length ? (
-              <tr>
-                <td colSpan="5" className="p-8 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-gray-300 border-t-[#D4AF37] rounded-full animate-spin"></div>
-                    <p className="text-gray-600">Loading admins...</p>
-                  </div>
-                </td>
-              </tr>
-            ) : admins.length === 0 ? (
+            {admins.length === 0 ? (
               <tr>
                 <td colSpan="5" className="p-12 text-center">
                   <UserCog className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -693,14 +674,16 @@ const ManageAdmins = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(admin)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        disabled={loading}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
                         title="Edit Admin"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(admin._id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        disabled={loading}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                         title="Delete Admin"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -712,9 +695,8 @@ const ManageAdmins = () => {
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* Info Footer */}
+      </div>   
+       {/* Info Footer */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -724,7 +706,6 @@ const ManageAdmins = () => {
               <li>When you create a new admin, they will receive a 6-digit OTP via email</li>
               <li>Enter the OTP to verify their email and activate the account</li>
               <li>After verification, they can log in with their email and password</li>
-              <li>If "email already exists", check if it's an active admin or confirm the cleanup prompt to remove unverified one</li>
             </ul>
           </div>
         </div>
@@ -734,3 +715,5 @@ const ManageAdmins = () => {
 };
 
 export default ManageAdmins;
+
+      
