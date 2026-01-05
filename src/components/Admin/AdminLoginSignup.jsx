@@ -134,7 +134,7 @@ const LoginSignup = () => {
   };
 
   const handleSendOtp = async () => {
-    setLoading(true);
+    setLoading(true);  
     setError('');
     try {
       const res = await fetch('https://barber-appointment-backend.vercel.app/api/auth/send-otp', {
@@ -152,9 +152,10 @@ const LoginSignup = () => {
     }
   };
 
-  const handleVerifyOtpAndSignup = async () => {
+  const handleVerifyOtpAndSignup = async () => { 
+
     setLoading(true);
-    setError('');
+    setError(''); 
     try {
       // Verify OTP
       const verifyRes = await fetch('https://barber-appointment-backend.vercel.app/api/auth/verify-otp', {

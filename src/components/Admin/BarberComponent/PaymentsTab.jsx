@@ -297,7 +297,7 @@ function PaymentsTab({ appointments }) {
                 <p className="text-xs text-red-600 mb-3 font-medium">
                   {stripeStatus.error}
                 </p>
-              )}
+              )} 
               <button
                 onClick={handleStripeConnect}
                 disabled={connectLoading}

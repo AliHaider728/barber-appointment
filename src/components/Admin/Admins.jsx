@@ -479,6 +479,7 @@ const ManageAdmins = () => {
               />
             </div>
             
+            
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Password {editingId ? '(Leave blank to keep current)' : <span className="text-red-500">*</span>}
@@ -521,7 +522,7 @@ const ManageAdmins = () => {
               </select>
             </div>
             
-            {formData.role === 'branch_admin' && (
+            {formData.role === 'branch_admin' && ( 
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   <Building2 className="w-4 h-4 inline mr-1" />
