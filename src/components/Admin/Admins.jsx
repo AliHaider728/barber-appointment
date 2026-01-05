@@ -60,6 +60,7 @@ const ManageAdmins = () => {
       const data = await response.json();
       setAdmins(data);
     } catch (err) {
+      console.error('[FETCH ADMINS ERROR]', err);
       setError(err.message);
       setAdmins([]);
     } finally {
@@ -73,7 +74,7 @@ const ManageAdmins = () => {
       const data = await response.json();
       setBranches(data);
     } catch (err) {
-      console.error('Failed to fetch branches:', err);
+      console.error('[FETCH BRANCHES ERROR]', err);
     }
   };
 
@@ -127,23 +128,27 @@ const ManageAdmins = () => {
         }
         dataToSend.password = formData.password;
         
+        console.log('[CREATION ATTEMPT]', dataToSend);
+        
         let response = await fetch(`${API_BASE}/api/admins/request-creation`, {
           method: 'POST',
           headers,
           body: JSON.stringify(dataToSend)
         });
         
-        // If email already exists, try to clean up unverified admin
         if (!response.ok) {
           const errorData = await response.json();
+          console.log('[CREATION ERROR DATA]', errorData);
           
           if (errorData.message && errorData.message.includes('already exists') && errorData.canCleanup) {
             const cleanupConfirm = confirm(
-              '⚠️ An unverified admin with this email exists. Do you want to remove it and create a new one?'
+              '⚠️ An unverified admin with this email exists. Do you want to remove it and create a new one?\n\n(Is email ke saath ek unverified admin mojood hai. Kya aap ise remove kar ke new create karna chahte hain?)'
             );
             
+            console.log('[CLEANUP CONFIRM]', cleanupConfirm);
+            
             if (cleanupConfirm) {
-              // Clean up unverified admin
+              console.log('[PERFORMING CLEANUP]');
               const cleanupResponse = await fetch(
                 `${API_BASE}/api/admins/cleanup-unverified/${encodeURIComponent(dataToSend.email)}`,
                 {
@@ -151,6 +156,9 @@ const ManageAdmins = () => {
                   headers
                 }
               );
+              
+              const cleanupData = await cleanupResponse.json();
+              console.log('[CLEANUP RESULT]', cleanupData);
               
               if (cleanupResponse.ok) {
                 // Retry creation
@@ -162,10 +170,11 @@ const ManageAdmins = () => {
                 
                 if (!response.ok) {
                   const retryError = await response.json();
+                  console.log('[RETRY ERROR]', retryError);
                   throw new Error(retryError.message || 'Creation failed after cleanup');
                 }
               } else {
-                throw new Error('Failed to clean up unverified admin');
+                throw new Error(cleanupData.message || 'Failed to clean up unverified admin');
               }
             } else {
               throw new Error(errorData.message);
@@ -176,6 +185,7 @@ const ManageAdmins = () => {
         }
         
         const result = await response.json();
+        console.log('[CREATION SUCCESS]', result);
         
         // Show OTP modal
         setPendingAdminId(result.adminId);
@@ -185,6 +195,7 @@ const ManageAdmins = () => {
         setSuccess('📧 Verification code sent to ' + result.email);
       }
     } catch (err) {
+      console.error('[HANDLE SUBMIT ERROR]', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -225,6 +236,7 @@ const ManageAdmins = () => {
       resetForm();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
+      console.error('[VERIFY OTP ERROR]', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -252,6 +264,7 @@ const ManageAdmins = () => {
       setSuccess('📧 New verification code sent!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      console.error('[RESEND OTP ERROR]', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -292,6 +305,7 @@ const ManageAdmins = () => {
       fetchAdmins();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      console.error('[DELETE ERROR]', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -493,7 +507,7 @@ const ManageAdmins = () => {
           )}
         </h3>
         
-        <div>
+        <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -522,7 +536,6 @@ const ManageAdmins = () => {
                 required
               />
             </div>
-            
             
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -557,7 +570,7 @@ const ManageAdmins = () => {
               </label>
               <select
                 value={formData.role}
-                onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: ''})}
+                onChange={(e) => setFormData({...formData, role: e.target.value, assignedBranch: e.target.value === 'main_admin' ? '' : formData.assignedBranch})}
                 className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                 required
               >
@@ -603,7 +616,7 @@ const ManageAdmins = () => {
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              type="submit"
               disabled={loading}
               className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-yellow-600 text-black rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold transition-all"
             >
@@ -620,7 +633,7 @@ const ManageAdmins = () => {
               )}
             </button>
           </div>
-        </div>
+        </form>
       </div>
 
       {/* Admins Table */}
@@ -701,7 +714,7 @@ const ManageAdmins = () => {
         </table>
       </div>
 
-     {/* Info Footer */}
+      {/* Info Footer */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -711,6 +724,7 @@ const ManageAdmins = () => {
               <li>When you create a new admin, they will receive a 6-digit OTP via email</li>
               <li>Enter the OTP to verify their email and activate the account</li>
               <li>After verification, they can log in with their email and password</li>
+              <li>If "email already exists", check if it's an active admin or confirm the cleanup prompt to remove unverified one</li>
             </ul>
           </div>
         </div>
@@ -719,4 +733,4 @@ const ManageAdmins = () => {
   );
 };
 
-export default ManageAdmins;       
+export default ManageAdmins;
