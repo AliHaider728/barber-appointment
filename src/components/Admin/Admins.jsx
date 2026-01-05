@@ -127,15 +127,52 @@ const ManageAdmins = () => {
         }
         dataToSend.password = formData.password;
         
-        const response = await fetch(`${API_BASE}/api/admins/request-creation`, {
+        let response = await fetch(`${API_BASE}/api/admins/request-creation`, {
           method: 'POST',
           headers,
           body: JSON.stringify(dataToSend)
         });
         
+        // If email already exists, try to clean up unverified admin
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Creation failed');
+          
+          if (errorData.message && errorData.message.includes('already exists') && errorData.canCleanup) {
+            const cleanupConfirm = confirm(
+              '⚠️ An unverified admin with this email exists. Do you want to remove it and create a new one?'
+            );
+            
+            if (cleanupConfirm) {
+              // Clean up unverified admin
+              const cleanupResponse = await fetch(
+                `${API_BASE}/api/admins/cleanup-unverified/${encodeURIComponent(dataToSend.email)}`,
+                {
+                  method: 'DELETE',
+                  headers
+                }
+              );
+              
+              if (cleanupResponse.ok) {
+                // Retry creation
+                response = await fetch(`${API_BASE}/api/admins/request-creation`, {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify(dataToSend)
+                });
+                
+                if (!response.ok) {
+                  const retryError = await response.json();
+                  throw new Error(retryError.message || 'Creation failed after cleanup');
+                }
+              } else {
+                throw new Error('Failed to clean up unverified admin');
+              }
+            } else {
+              throw new Error(errorData.message);
+            }
+          } else {
+            throw new Error(errorData.message || 'Creation failed');
+          }
         }
         
         const result = await response.json();
@@ -313,6 +350,12 @@ const ManageAdmins = () => {
               </p>
             </div>
 
+            {error && (
+              <div className="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">
                 Enter Verification Code
@@ -348,7 +391,7 @@ const ManageAdmins = () => {
                 disabled={loading || otpTimer > 540}
                 className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                Resend Code
+                {otpTimer > 540 ? `Resend available in ${formatTime(otpTimer - 540)}` : 'Resend Code'}
               </button>
 
               <button
@@ -357,6 +400,7 @@ const ManageAdmins = () => {
                   setOtp('');
                   setPendingAdminId(null);
                   setPendingEmail('');
+                  setError('');
                 }}
                 className="w-full py-3 text-gray-600 hover:text-gray-800 font-semibold"
               >
@@ -379,7 +423,7 @@ const ManageAdmins = () => {
       </div>
       
       {/* Error Alert */}
-      {error && (
+      {error && !showOTPModal && (
         <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-start gap-2 shadow-sm">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
@@ -657,7 +701,7 @@ const ManageAdmins = () => {
         </table>
       </div>
 
-      {/* Info Footer */}
+     {/* Info Footer */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -675,4 +719,4 @@ const ManageAdmins = () => {
   );
 };
 
-export default ManageAdmins;
+export default ManageAdmins;       
