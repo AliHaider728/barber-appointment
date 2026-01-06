@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, CreditCard, ExternalLink, CheckCircle, AlertCircle, Loader, Clock, RefreshCw, Building2, Send, Settings } from 'lucide-react';
+import { 
+  DollarSign, TrendingUp, CreditCard, ExternalLink, CheckCircle, 
+  AlertCircle, Loader, Clock, RefreshCw, Building2, Send, Settings,
+  Plus, Trash2, Star, Check, X, Info
+} from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app/api';
@@ -18,11 +22,23 @@ function PaymentsTab({ appointments }) {
   const [refreshing, setRefreshing] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
  
   // Bank account management
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
+  const [deletingBank, setDeletingBank] = useState(null);
+  
+  // Add bank form
+  const [bankForm, setBankForm] = useState({
+    accountHolderName: '',
+    accountNumber: '',
+    sortCode: '',
+    setAsDefault: true
+  });
+  const [addingBank, setAddingBank] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -58,13 +74,11 @@ function PaymentsTab({ appointments }) {
         setStripeStatus({ connected: false, error: 'Not authenticated' });
         return;
       }
-      console.log('Checking Stripe status...');
       const res = await axios.get(`${API_BASE}/payments/stripe/status`, {
         headers,
         timeout: 15000
       });
      
-      console.log('Stripe status:', res.data);
       setStripeStatus(res.data);
     } catch (err) {
       console.error('Stripe status error:', err);
@@ -91,7 +105,6 @@ function PaymentsTab({ appointments }) {
         setLoading(false);
         return;
       }
-      console.log('Fetching payments...');
       const res = await axios.get(`${API_BASE}/payments/barber/me`, {
         headers,
         timeout: 15000
@@ -104,7 +117,6 @@ function PaymentsTab({ appointments }) {
         transferredAmount: 0,
         totalPayments: 0
       };
-      console.log('Payments loaded:', fetchedPayments.length);
       setPayments(fetchedPayments);
       setSummary(fetchedSummary);
      
@@ -134,21 +146,24 @@ function PaymentsTab({ appointments }) {
         throw new Error('Not authenticated - please login again');
       }
      
-      console.log('Connecting to Stripe...');
       const res = await axios.post(`${API_BASE}/payments/stripe/connect`, {}, {
         headers,
         timeout: 30000
       });
      
-      console.log('Stripe response:', res.data);
-      if (res.data.onboardingUrl) {
-        console.log('Redirecting to onboarding...');
-        window.location.href = res.data.onboardingUrl;
-      } else if (res.data.message === 'Already connected') {
-        alert('Stripe account already connected!');
-        await checkStripeStatus();
+      if (res.data.needsOnboarding) {
+        // Create onboarding link
+        const linkRes = await axios.post(`${API_BASE}/payments/stripe/onboarding-link`, {}, {
+          headers,
+          timeout: 15000
+        });
+        
+        if (linkRes.data.url) {
+          window.location.href = linkRes.data.url;
+        }
       } else {
-        throw new Error('Invalid response from server');
+        setSuccess('Stripe account already connected!');
+        await checkStripeStatus();
       }
     } catch (err) {
       console.error('Stripe connect error:', err);
@@ -161,13 +176,11 @@ function PaymentsTab({ appointments }) {
       }
      
       setError(errorMsg);
-      alert(errorMsg);
     } finally {
       setConnectLoading(false);
     }
   };
  
-  // NEW: Load bank accounts
   const loadBankAccounts = async () => {
     try {
       setLoadingBanks(true);
@@ -181,13 +194,91 @@ function PaymentsTab({ appointments }) {
       setBankAccounts(res.data.bankAccounts || []);
     } catch (err) {
       console.error('Load banks error:', err);
-      alert('Failed to load bank accounts');
+      setError('Failed to load bank accounts');
     } finally {
       setLoadingBanks(false);
     }
   };
 
-  // NEW: Transfer pending payments
+  const handleAddBank = async (e) => {
+    e.preventDefault();
+    if (addingBank) return;
+    
+    try {
+      setAddingBank(true);
+      setError(null);
+      
+      const headers = getAuthHeaders();
+      if (!headers) throw new Error('Not authenticated');
+      
+      const res = await axios.post(
+        `${API_BASE}/payments/stripe/add-bank-account`,
+        bankForm,
+        { headers, timeout: 15000 }
+      );
+      
+      setSuccess('Bank account added successfully!');
+      setBankForm({
+        accountHolderName: '',
+        accountNumber: '',
+        sortCode: '',
+        setAsDefault: true
+      });
+      setShowAddBankModal(false);
+      await loadBankAccounts();
+      
+    } catch (err) {
+      console.error('Add bank error:', err);
+      setError(err.response?.data?.details || err.response?.data?.error || 'Failed to add bank account');
+    } finally {
+      setAddingBank(false);
+    }
+  };
+
+  const handleDeleteBank = async (bankId) => {
+    if (!window.confirm('Are you sure you want to remove this bank account?')) return;
+    
+    try {
+      setDeletingBank(bankId);
+      const headers = getAuthHeaders();
+      if (!headers) throw new Error('Not authenticated');
+      
+      await axios.delete(
+        `${API_BASE}/payments/stripe/bank-accounts/${bankId}`,
+        { headers, timeout: 15000 }
+      );
+      
+      setSuccess('Bank account removed');
+      await loadBankAccounts();
+      
+    } catch (err) {
+      console.error('Delete bank error:', err);
+      setError('Failed to remove bank account');
+    } finally {
+      setDeletingBank(null);
+    }
+  };
+
+  const handleSetDefaultBank = async (bankId) => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) throw new Error('Not authenticated');
+      
+      await axios.put(
+        `${API_BASE}/payments/stripe/bank-accounts/${bankId}/default`,
+        {},
+        { headers, timeout: 15000 }
+      );
+      
+      setSuccess('Default bank account updated');
+      await loadBankAccounts();
+      
+    } catch (err) {
+      console.error('Set default error:', err);
+      setError('Failed to set default bank');
+    }
+  };
+
   const handleTransferPending = async () => {
     if (transferring) return;
    
@@ -207,19 +298,17 @@ function PaymentsTab({ appointments }) {
         {},
         { headers, timeout: 30000 }
       );
-      alert(res.data.message || 'Transfer initiated successfully!');
+      setSuccess(res.data.message || 'Transfer initiated successfully!');
       await loadData();
     } catch (err) {
       console.error('Transfer error:', err);
       const errorMsg = err.response?.data?.error || err.message;
       setError(errorMsg);
-      alert('Transfer failed: ' + errorMsg);
     } finally {
       setTransferring(false);
     }
   };
 
-  // NEW: Open Stripe Dashboard for account settings
   const handleManageAccount = async () => {
     try {
       const headers = getAuthHeaders();
@@ -234,7 +323,7 @@ function PaymentsTab({ appointments }) {
       }
     } catch (err) {
       console.error('Dashboard link error:', err);
-      alert('Failed to open dashboard');
+      setError('Failed to open Stripe dashboard');
     }
   };
 
@@ -243,8 +332,6 @@ function PaymentsTab({ appointments }) {
  
   const totalPaid = paidAppointments.reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
   const totalPending = pendingAppointments.reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
-  const barberShareFromAppointments = totalPaid * 0.9;
-  const platformFee = totalPaid * 0.1;
   const displayEarnings = summary.totalEarnings;
   const displayPending = summary.pendingAmount;
   const displayTransferred = summary.transferredAmount;
@@ -270,16 +357,35 @@ function PaymentsTab({ appointments }) {
           <p className="text-sm text-gray-500 mt-1">Manage your payments and bank transfers</p>
         </div>
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-emerald-900">Success</p>
+            <p className="text-sm text-emerald-700 mt-1">{success}</p>
+          </div>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-800">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Error Banner */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="font-semibold text-red-900">Error</p>
             <p className="text-sm text-red-700 mt-1">{error}</p>
           </div>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
+
       {/* Stripe Connect Banner */}
       {!stripeStatus?.connected ? (
         <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 rounded-2xl p-6 shadow-sm border border-emerald-100 hover:shadow-xl transition-all duration-300 overflow-hidden">
@@ -321,7 +427,7 @@ function PaymentsTab({ appointments }) {
       ) : (
         <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 rounded-2xl p-5 shadow-sm border border-emerald-100 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full blur-2xl"></div>
-          <div className="relative flex items-center justify-between">
+          <div className="relative flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/30">
                 <CheckCircle className="w-5 h-5 text-white" />
@@ -341,19 +447,20 @@ function PaymentsTab({ appointments }) {
                 className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
               >
                 <Building2 className="w-4 h-4" />
-                View Banks
+                Manage Banks
               </button>
               <button
                 onClick={handleManageAccount}
                 className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
               >
-                <Settings className="w-4 h-4" />
-                Manage Account
+                <ExternalLink className="w-4 h-4" />
+                Stripe Dashboard
               </button>
             </div>
           </div>
         </div>
       )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Earnings */}
@@ -374,6 +481,7 @@ function PaymentsTab({ appointments }) {
             </div>
           </div>
         </div>
+
         {/* Transferred */}
         <div className="group relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 p-6 rounded-2xl shadow-sm border border-blue-100 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-2xl"></div>
@@ -394,7 +502,8 @@ function PaymentsTab({ appointments }) {
             </div>
           </div>
         </div>
-        {/* Pending Transfer - WITH TRANSFER BUTTON */}
+
+        {/* Pending Transfer */}
         <div className="group relative bg-gradient-to-br from-amber-50 via-white to-amber-50/30 p-6 rounded-2xl shadow-sm border border-amber-100 hover:shadow-xl hover:shadow-amber-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-transparent rounded-full blur-2xl"></div>
           <div className="relative">
@@ -435,6 +544,7 @@ function PaymentsTab({ appointments }) {
             )}
           </div>
         </div>
+
         {/* Upcoming */}
         <div className="group relative bg-gradient-to-br from-violet-50 via-white to-violet-50/30 p-6 rounded-2xl shadow-sm border border-violet-100 hover:shadow-xl hover:shadow-violet-100/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-400/10 to-transparent rounded-full blur-2xl"></div>
@@ -460,30 +570,7 @@ function PaymentsTab({ appointments }) {
           </div>
         </div>
       </div>
-      {/* Payment Breakdown */}
-      <div className="group relative bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-2xl p-5 shadow-sm border border-blue-100 overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-2xl"></div>
-        <div className="relative flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-semibold text-gray-900 mb-3">Payment Breakdown</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white/60 rounded-xl p-3 border border-blue-100/50">
-                <p className="text-xs text-gray-600 mb-1 font-medium">Total Received</p>
-                <p className="text-xl font-bold text-gray-900">£{totalPaid.toFixed(2)}</p>
-              </div>
-              <div className="bg-white/60 rounded-xl p-3 border border-emerald-100/50">
-                <p className="text-xs text-gray-600 mb-1 font-medium">Your Share (90%)</p>
-                <p className="text-xl font-bold text-emerald-600">£{barberShareFromAppointments.toFixed(2)}</p>
-              </div>
-              <div className="bg-white/60 rounded-xl p-3 border border-gray-100/50">
-                <p className="text-xs text-gray-600 mb-1 font-medium">Platform Fee (10%)</p>
-                <p className="text-xl font-bold text-gray-600">£{platformFee.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
       {/* Payment History */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
         <div className="border-b border-gray-100 px-6 py-5 bg-gradient-to-r from-gray-50 to-white">
@@ -602,52 +689,217 @@ function PaymentsTab({ appointments }) {
           </div>
         </div>
       </div>
+
       {/* Bank Accounts Modal */}
       {showBankModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Your Bank Accounts</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Bank Accounts</h3>
+              <button
+                onClick={() => setShowBankModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             {loadingBanks ? (
               <div className="flex justify-center py-8">
                 <Loader className="w-8 h-8 animate-spin text-gray-900" />
               </div>
             ) : bankAccounts.length === 0 ? (
-              <p className="text-gray-600 text-center py-4">No bank accounts added yet. Use the Stripe dashboard to add one.</p>
+              <div className="text-center py-8">
+                <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600 mb-4">No bank accounts added yet</p>
+                <button
+                  onClick={() => {
+                    setShowBankModal(false);
+                    setShowAddBankModal(true);
+                  }}
+                  className="bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition"
+                >
+                  Add Bank Account
+                </button>
+              </div>
             ) : (
-              <ul className="space-y-3 mb-6">
-                {bankAccounts.map((bank) => (
-                  <li
-                    key={bank.id}
-                    className="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-200"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900">{bank.bank_name || 'Bank'}</p>
-                      <p className="text-sm text-gray-600">**** {bank.last4} ({bank.currency.toUpperCase()})</p>
-                    </div>
-                    {bank.default_for_currency && (
-                      <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-                        Default
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-3 mb-6">
+                  {bankAccounts.map((bank) => (
+                    <li
+                      key={bank.id}
+                      className="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Building2 className="w-5 h-5 text-gray-600" />
+                        <div>
+                          <p className="font-semibold text-gray-900">{bank.bank_name || 'Bank Account'}</p>
+                          <p className="text-sm text-gray-600">
+                            Sort Code: {bank.routing_number} • Account: ****{bank.last4}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {bank.default_for_currency ? (
+                          <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-emerald-700" />
+                            Default
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleSetDefaultBank(bank.id)}
+                            className="text-xs text-gray-600 hover:text-gray-900 font-semibold px-2 py-1 rounded hover:bg-gray-100"
+                          >
+                            Set Default
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteBank(bank.id)}
+                          disabled={deletingBank === bank.id}
+                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {deletingBank === bank.id ? (
+                            <Loader className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => {
+                    setShowBankModal(false);
+                    setShowAddBankModal(true);
+                  }}
+                  className="w-full bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Another Bank
+                </button>
+              </>
             )}
-            <div className="flex justify-end gap-3">
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={handleManageAccount}
-                className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
+                className="text-sm text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-1"
               >
-                <Settings className="w-4 h-4" />
-                Manage in Stripe
-              </button>
-              <button
-                onClick={() => setShowBankModal(false)}
-                className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
-              >
-                Close
+                <ExternalLink className="w-4 h-4" />
+                Advanced Settings (Stripe Dashboard)
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Bank Modal */}
+      {showAddBankModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Add Bank Account</h3>
+              <button
+                onClick={() => setShowAddBankModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBank} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Account Holder Name
+                </label>
+                <input
+                  type="text"
+                  value={bankForm.accountHolderName}
+                  onChange={(e) => setBankForm({...bankForm, accountHolderName: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="John Smith"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Sort Code (6 digits)
+                </label>
+                <input
+                  type="text"
+                  value={bankForm.sortCode}
+                  onChange={(e) => setBankForm({...bankForm, sortCode: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="12-34-56"
+                  maxLength="8"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Format: 12-34-56 or 123456</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Account Number (8 digits)
+                </label>
+                <input
+                  type="text"
+                  value={bankForm.accountNumber}
+                  onChange={(e) => setBankForm({...bankForm, accountNumber: e.target.value.replace(/\D/g, '').slice(0, 8)})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="12345678"
+                  maxLength="8"
+                  required
+                />
+              </div>
+
+              <div className="flex items-start gap-2 bg-blue-50 p-3 rounded-lg">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800">
+                  For testing, use Stripe's test bank account:<br/>
+                  Sort Code: <strong>108800</strong><br/>
+                  Account: <strong>00012345</strong>
+                </p>
+              </div>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={bankForm.setAsDefault}
+                  onChange={(e) => setBankForm({...bankForm, setAsDefault: e.target.checked})}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+                <span className="text-sm text-gray-700">Set as default bank account</span>
+              </label>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddBankModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingBank}
+                  className="flex-1 bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {addingBank ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Add Bank</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
