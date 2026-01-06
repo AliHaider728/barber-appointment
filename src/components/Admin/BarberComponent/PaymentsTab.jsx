@@ -881,7 +881,7 @@ function PaymentsTab({ appointments }) {
                 >
                   Cancel
                 </button>
-                <button
+                <button 
                   type="submit"
                   disabled={addingBank}
                   className="flex-1 bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
