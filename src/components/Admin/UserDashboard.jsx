@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, Calendar, MapPin, Clock, Phone, Mail, User, Check, X, Settings, Bell, CreditCard, Star, TrendingUp, Activity, AlertCircle } from 'lucide-react';
+import { LogOut, Calendar, MapPin, Clock, Phone, Mail, User, Check, X, Settings, Bell, CreditCard, Star, TrendingUp, Activity, AlertCircle, Scissors } from 'lucide-react';
 
 const UserDashboard = () => {
   const [userData, setUserData] = useState(null);
@@ -49,6 +49,7 @@ const UserDashboard = () => {
 
       userAppointments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+      console.log('User appointments:', userAppointments);
       setAppointments(userAppointments);
     } catch (error) {
       console.error('Load error:', error);
@@ -67,13 +68,12 @@ const UserDashboard = () => {
       setCancellingId(appointmentId);
       const token = localStorage.getItem('auth-token');
       
-      await axios.patch(
-        `https://barber-appointment-backend.vercel.app/api/appointments/${appointmentId}`,
-        { status: 'cancelled' },
+      await axios.put(
+        `https://barber-appointment-backend.vercel.app/api/appointments/${appointmentId}/cancel`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update local state
       setAppointments(prev => prev.map(apt => 
         apt._id === appointmentId ? { ...apt, status: 'cancelled' } : apt
       ));
@@ -81,7 +81,7 @@ const UserDashboard = () => {
       alert('Appointment cancelled successfully');
     } catch (error) {
       console.error('Cancel error:', error);
-      alert('Failed to cancel appointment. Please try again.');
+      alert(error.response?.data?.message || 'Failed to cancel appointment. Please try again.');
     } finally {
       setCancellingId(null);
     }
@@ -92,7 +92,20 @@ const UserDashboard = () => {
     navigate('/login');
   };
 
-  // Calculate stats
+  const formatTime = (date) => {
+    if (!date) return 'N/A';
+    try {
+      const appointmentDate = new Date(date);
+      return appointmentDate.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
   const stats = {
     total: appointments.length,
     upcoming: appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').length,
@@ -127,7 +140,6 @@ const UserDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      {/* Header */}
       <header className="backdrop-blur-xl bg-black/40 border-b border-gray-800/50 sticky top-0 z-50 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -158,7 +170,6 @@ const UserDashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Tabs */}
         <div className="flex gap-2 mb-8 p-1.5 bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview', icon: Activity },
@@ -181,10 +192,8 @@ const UserDashboard = () => {
           ))}
         </div>
 
-        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { label: 'Total Bookings', value: stats.total, icon: Calendar, color: 'from-blue-500/20 to-blue-600/20', border: 'border-blue-500/30', text: 'text-blue-400' },
@@ -210,7 +219,6 @@ const UserDashboard = () => {
               ))}
             </div>
 
-            {/* Upcoming Appointments */}
             <div className="bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-2xl">
               <div className="px-6 py-5 border-b border-gray-700/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -237,7 +245,7 @@ const UserDashboard = () => {
                 <div className="p-6 space-y-4">
                   {upcomingAppointments.map(apt => (
                     <div key={apt._id} className="bg-gray-900/50 rounded-xl border border-gray-700/50 p-5 hover:border-[#D4AF37]/30 transition-all duration-300 group">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#F4D03F] flex items-center justify-center">
@@ -247,26 +255,29 @@ const UserDashboard = () => {
                               <p className="font-semibold text-white">{new Date(apt.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                               <p className="text-sm text-gray-400 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {apt.time}
+                                {formatTime(apt.date)}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                          <div className="flex items-center gap-2 text-sm text-gray-400 mb-3">
                             <User className="w-4 h-4" />
                             <span>Barber: <span className="text-white font-medium">{apt.barber?.name || 'Not Assigned'}</span></span>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {apt.services?.map((s, i) => (
-                              <span key={i} className="px-3 py-1 rounded-lg bg-gray-800/50 border border-gray-700/50 text-xs text-gray-300">
-                                {s.name}
-                              </span>
-                            ))}
-                          </div>
                           {apt.barberChanged && (
-                            <p className="mt-2 text-sm text-yellow-400 flex items-center gap-2 bg-yellow-900/20 p-2 rounded-lg">
-                              <AlertCircle className="w-4 h-4" />
-                              Your barber has been changed from {apt.originalBarber?.name || 'previous barber'} to {apt.barber?.name} due to barber leave.
-                            </p>
+                            <div className="mb-3 p-3 bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-lg">
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-semibold text-yellow-400 mb-1">Barber Change Notice</p>
+                                  <p className="text-sm text-gray-300">
+                                    Your appointment has been reassigned from <span className="font-semibold text-white">{apt.originalBarber?.name || 'previous barber'}</span> to <span className="font-semibold text-green-400">{apt.barber?.name}</span>
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Reason: {apt.reassignmentReason || 'Barber leave'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
                         <div className="text-right">
@@ -279,13 +290,28 @@ const UserDashboard = () => {
                           </span>
                         </div>
                       </div>
+                      
+                      {apt.services && apt.services.length > 0 && (
+                        <div className="border-t border-gray-700/50 pt-3">
+                          <p className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-1">
+                            <Scissors className="w-4 h-4" />
+                            Services:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {apt.services.map((s, i) => (
+                              <span key={i} className="px-3 py-1.5 rounded-lg bg-gray-800/50 border border-gray-700/50 text-xs text-gray-300">
+                                {s.name} • {s.duration} • {s.price?.toString().startsWith('£') ? s.price : `£${s.price}`}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-[#D4AF37]/10 to-[#F4D03F]/10 backdrop-blur-xl rounded-2xl border border-[#D4AF37]/30 p-6 hover:scale-105 transition-all duration-300 shadow-lg cursor-pointer">
                 <div className="flex items-center gap-4">
@@ -314,7 +340,6 @@ const UserDashboard = () => {
           </div>
         )}
 
-        {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-2xl">
             <div className="px-6 py-8 border-b border-gray-700/50">
@@ -388,7 +413,6 @@ const UserDashboard = () => {
           </div>
         )}
 
-        {/* Appointments Tab */}
         {activeTab === 'appointments' && (
           <div className="bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-2xl">
             <div className="px-6 py-5 border-b border-gray-700/50 flex items-center justify-between">
@@ -427,7 +451,7 @@ const UserDashboard = () => {
                       const totalDuration = apt.services?.reduce((sum, s) => {
                         const duration = parseInt(s.duration) || 0;
                         return sum + duration;
-                      }, 0) || 0;
+                      }, 0) || apt.duration || 0;
                       
                       const canCancel = (apt.status === 'pending' || apt.status === 'confirmed') && 
                                        new Date(apt.date) > new Date();
@@ -448,26 +472,40 @@ const UserDashboard = () => {
                                 <div className="text-sm font-semibold text-white">{new Date(apt.date).toLocaleDateString('en-GB')}</div>
                                 <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
                                   <Clock className="w-3 h-3" />
-                                  {apt.time || 'N/A'}
+                                  {formatTime(apt.date)}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-9 h-9 rounded-lg bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
-                                <User className="w-4 h-4 text-gray-400" />
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-9 h-9 rounded-lg bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <span className="text-sm font-medium text-white">{apt.barber?.name || 'Not Assigned'}</span>
                               </div>
-                              <span className="text-sm font-medium text-white">{apt.barber?.name || 'Not Assigned'}</span>
+                              {apt.barberChanged && (
+                                <div className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded border border-yellow-500/30">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Changed from {apt.originalBarber?.name}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="max-w-xs space-y-1">
-                              {apt.services?.map((s, i) => (
-                                <div key={i} className="text-xs text-gray-400">
-                                  • {s.name} <span className="text-gray-500">({s.price})</span>
-                                </div>
-                              )) || <span className="text-xs text-gray-500">N/A</span>}
+                              {apt.services && apt.services.length > 0 ? (
+                                apt.services.map((s, i) => (
+                                  <div key={i} className="text-xs text-gray-300 bg-gray-800/30 px-2 py-1 rounded">
+                                    <span className="font-medium">{s.name}</span>
+                                    <span className="text-gray-500 ml-1">• {s.duration}</span>
+                                    <span className="text-[#D4AF37] ml-1">• {s.price?.toString().startsWith('£') ? s.price : `£${s.price}`}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-500">No services</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -527,7 +565,6 @@ const UserDashboard = () => {
           </div>
         )}
 
-        {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div className="bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden shadow-2xl">

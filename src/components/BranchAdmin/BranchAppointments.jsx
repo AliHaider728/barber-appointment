@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Phone, Mail, Search, Filter, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Mail, Search, Filter, CheckCircle, XCircle, AlertCircle, Scissors } from 'lucide-react';
 
 const API_BASE = 'https://barber-appointment-backend.vercel.app';
 
@@ -44,6 +44,7 @@ const BranchAppointments = () => {
         throw new Error(data.error || data.message || 'Failed to fetch appointments');
       }
 
+      console.log('Appointments data:', data); // Debug log
       setAppointments(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
@@ -72,10 +73,34 @@ const BranchAppointments = () => {
     }
   };
 
+  const formatTime = (date) => {
+    if (!date) return 'N/A';
+    try {
+      const appointmentDate = new Date(date);
+      return appointmentDate.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    try {
+      return new Date(date).toLocaleDateString('en-GB');
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = 
-      apt.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apt.customerName || '')?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apt.email || '')?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apt.phone || '')?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apt.barber?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesSearch;
@@ -86,6 +111,7 @@ const BranchAppointments = () => {
       case 'confirmed': return 'bg-green-100 text-green-800 border-green-300';
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-300';
+      case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
       case 'completed': return 'bg-blue-100 text-blue-800 border-blue-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -96,18 +122,10 @@ const BranchAppointments = () => {
       case 'confirmed': return <CheckCircle className="w-4 h-4" />;
       case 'pending': return <AlertCircle className="w-4 h-4" />;
       case 'cancelled': return <XCircle className="w-4 h-4" />;
+      case 'rejected': return <XCircle className="w-4 h-4" />;
       case 'completed': return <CheckCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
-  };
-
-  // Helper function to safely render service name
-  const getServiceName = (service) => {
-    if (typeof service === 'string') return service;
-    if (typeof service === 'object' && service !== null) {
-      return service.name || service.serviceName || JSON.stringify(service);
-    }
-    return 'Unknown Service';
   };
 
   if (loading) {
@@ -225,15 +243,17 @@ const BranchAppointments = () => {
                         <User className="w-5 h-5 text-gray-600" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">{appointment.customerName}</h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        <h4 className="font-semibold text-gray-900">
+                          {appointment.customerName || 'N/A'}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mt-1">
                           <span className="flex items-center gap-1">
                             <Mail className="w-4 h-4" />
-                            {appointment.customerEmail}
+                            {appointment.email || 'N/A'}
                           </span>
                           <span className="flex items-center gap-1">
                             <Phone className="w-4 h-4" />
-                            {appointment.customerPhone}
+                            {appointment.phone || 'N/A'}
                           </span>
                         </div>
                       </div>
@@ -256,31 +276,55 @@ const BranchAppointments = () => {
                       <Calendar className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">Date:</span>
                       <span className="text-gray-900 font-medium">
-                        {new Date(appointment.date).toLocaleDateString()}
+                        {formatDate(appointment.date)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">Time:</span>
-                      <span className="text-gray-900 font-medium">{appointment.timeSlot}</span>
+                      <span className="text-gray-900 font-medium">
+                        {formatTime(appointment.date)}
+                      </span>
                     </div>
                   </div>
 
-                  {appointment.services && appointment.services.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-600 mb-2">Services:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {appointment.services.map((service, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                          >
-                            {getServiceName(service)}
+                  {/* Services - Always show section */}
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                      <Scissors className="w-4 h-4" />
+                      Services:
+                    </p>
+                    {appointment.services && appointment.services.length > 0 ? (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {appointment.services.map((service, idx) => (
+                            <div
+                              key={idx}
+                              className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs rounded-lg border border-blue-200"
+                            >
+                              <span className="font-medium">{service.name || 'Service'}</span>
+                              {service.duration && <span className="text-blue-600 ml-2">• {service.duration}</span>}
+                              {service.price && <span className="text-blue-600 ml-2">• {service.price.toString().startsWith('£') ? service.price : `£${service.price}`}</span>}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 text-sm">
+                          <span className="text-gray-600">Total: </span>
+                          <span className="font-semibold text-gray-900">
+                            £{appointment.totalPrice?.toFixed(2) || '0.00'}
                           </span>
-                        ))}
+                          <span className="text-gray-600 ml-3">Duration: </span>
+                          <span className="font-semibold text-gray-900">
+                            {appointment.duration || 0} mins
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded">
+                        No services listed
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Action Buttons */}
                   {appointment.status === 'pending' && (
