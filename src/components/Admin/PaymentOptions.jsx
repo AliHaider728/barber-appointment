@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, Loader, AlertCircle } from 'lucide-react';
+import { CreditCard, Loader, AlertCircle, Info } from 'lucide-react';
 
 const PaymentOptions = ({ appointmentData, onSuccess }) => {
   const stripe = useStripe();
@@ -24,15 +24,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
     setError('');
 
     try {
-      console.log('🎯 Starting payment process...');
-      console.log('📝 Appointment data:', {
-        totalPrice: appointmentData.totalPrice,
-        barberId: appointmentData.barber,
-        customerName: appointmentData.customerName
-      });
-
-      // STEP 1: Create Payment Intent
-      console.log('1️⃣ Creating payment intent...');
+      // Create Payment Intent with barber ID for split payment
       const response = await fetch(
         'https://barber-appointment-backend.vercel.app/api/payments/create-payment-intent',
         {
@@ -42,22 +34,21 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
             totalPrice: appointmentData.totalPrice,
             customerEmail: appointmentData.email || 'no-email@temp.com',
             customerName: appointmentData.customerName || 'Guest',
-            barberId: appointmentData.barber
+            barberId: appointmentData.barber // IMPORTANT: For split payment
           }),
         }
       ); 
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || 'Failed to create payment intent');
+        throw new Error(err.error || 'Failed to create payment');
       }
 
       const { clientSecret, paymentIntentId, platformFee, barberAmount } = await response.json();
-      console.log('✅ Payment intent created:', paymentIntentId);
-      console.log('💰 Barber will receive: £' + barberAmount);
 
-      // STEP 2: Confirm Payment with Stripe
-      console.log('2️⃣ Confirming payment with Stripe...');
+      console.log(`Payment split - Barber: £${barberAmount}, Platform: £${platformFee}`);
+
+      // Confirm Payment
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
@@ -70,17 +61,11 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       });
 
       if (result.error) {
-        console.error('❌ Payment failed:', result.error.message);
         throw new Error(result.error.message);
       }
 
-      console.log('✅ Payment succeeded:', result.paymentIntent.id);
-      console.log('💳 Status:', result.paymentIntent.status);
-
-      // STEP 3: Create Booking with Payment
       if (result.paymentIntent.status === 'succeeded') {
-        console.log('3️⃣ Creating booking with payment...');
-        
+        // Create booking with payment
         const bookRes = await fetch(
           'https://barber-appointment-backend.vercel.app/api/payments/create-appointment-with-payment',
           {
@@ -96,33 +81,30 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
 
         if (!bookRes.ok) {
           const errorData = await bookRes.json();
-          console.error('❌ Booking failed:', errorData);
           
           if (bookRes.status === 409) {
-            throw new Error('Time slot no longer available! Someone just booked it. Please select another time.');
+            throw new Error('Time slot no longer available! Someone just booked it. Please select another time and try again.');
           } else if (bookRes.status === 400) {
-            throw new Error(errorData.message || errorData.error || 'Invalid booking details.');
+            throw new Error(errorData.message || errorData.error || 'Invalid booking details. Please check and try again.');
           } else {
-            throw new Error(errorData.error || errorData.message || 'Booking failed. Please contact support.');
+            throw new Error(errorData.error || errorData.message || 'Booking failed after payment. Please contact support with your payment confirmation.');
           }
         }
 
         const data = await bookRes.json();
-        console.log('✅ Booking created:', data.appointment._id);
         
-        // Clear card input
         elements.getElement(CardElement)?.clear();
         
-        // Success!
         onSuccess(data.appointment._id);
       }
     } catch (err) {
-      console.error('❌ Payment error:', err);
       setError(err.message || 'Payment failed. Please try again.');
+      console.error('Payment error:', err);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const CARD_STYLE = {
     style: {
@@ -136,18 +118,47 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
     },
   };
 
+  // Calculate split
+  const barberAmount = appointmentData.totalPrice * 0.9;
+  const platformFee = appointmentData.totalPrice * 0.1;
+
   return (
     <form onSubmit={handleCardPayment} className="mt-6">
-      {/* Card Input */}
       <div className="bg-white border-2 border-gray-300 rounded-xl p-5 mb-5">
         <div className="flex items-center gap-3 mb-4">
           <CreditCard className="w-6 h-6 text-[#D4AF37]" />
-          <h3 className="font-bold text-gray-900">Card Details</h3>
+          <h3 className="font-bold">Card Details</h3>
         </div>
         <CardElement options={CARD_STYLE} className="p-3 bg-gray-50 rounded-lg" />
       </div>
 
-      {/* Error Display */}
+      {/* Payment Split Info */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-5">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-blue-900 mb-2">Payment Breakdown:</p>
+            <div className="space-y-1 text-blue-800">
+              <div className="flex justify-between">
+                <span>Total Amount:</span>
+                <span className="font-bold">£{appointmentData.totalPrice.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Barber receives (90%):</span>
+                <span className="font-bold text-green-600">£{barberAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform fee (10%):</span>
+                <span className="font-medium">£{platformFee.toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              The platform fee helps maintain the booking system and payment processing.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {error && (
         <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-5">
           <div className="flex items-start gap-3">
@@ -160,7 +171,6 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
         </div>
       )}
 
-      {/* Pay Button */}
       <button
         type="submit"
         disabled={loading}
@@ -179,12 +189,15 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
         )}
       </button>
 
-      {/* Footer Info */}
       <p className="text-center text-xs text-gray-500 mt-4">
-       Safe & Secure - Powered by <strong>Stripe</strong>
+        Safe & Secure - Powered by <strong>Stripe</strong> Payments
       </p>
       
-      
+      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+        <p className="text-xs text-gray-600 text-center">
+          Test Card: 4242 4242 4242 4242 | Exp: Any future date | CVC: Any 3 digits
+        </p>
+      </div>
     </form>
   );
 };
