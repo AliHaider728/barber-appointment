@@ -5,16 +5,7 @@ const Card = ({ children, className = '' }) => (
   <div className={`bg-white rounded-xl shadow-sm p-6 ${className}`}>{children}</div>
 );
 
-const BookingSummary = ({ 
-  selectedBranchData, 
-  selectedBarberData, 
-  selectedServicesData, 
-  selectedDate, 
-  selectedTime, 
-  selectedTimeSlot, 
-  totalPrice, 
-  totalMinutes 
-}) => {
+const BookingSummary = ({ selectedBranchData, selectedBarberData, selectedServicesData, selectedDate, selectedTime, selectedTimeSlot, totalPrice, totalMinutes }) => {
   return (
     <Card className="sticky top-6 border-2 border-[#D4AF37]">
       <h3 className="text-lg font-black mb-4 flex items-center gap-2">
@@ -72,16 +63,8 @@ const BookingSummary = ({
             <div className="flex items-start gap-2">
               <Clock className="w-4 h-4 text-[#D4AF37] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">
-                  {new Date(selectedDate).toLocaleDateString('en-GB', { 
-                    weekday: 'long', 
-                    day: 'numeric', 
-                    month: 'long' 
-                  })}
-                </p>
-                <p className="text-xs text-gray-600">
-                  {selectedTime} - {selectedTimeSlot?.end} ({totalMinutes} min)
-                </p>
+                <p className="font-bold">{new Date(selectedDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                <p className="text-xs text-gray-600">{selectedTime} - {selectedTimeSlot?.end} ({totalMinutes} min)</p>
               </div>
             </div>
           </div>
@@ -94,9 +77,7 @@ const BookingSummary = ({
                 <CreditCard className="w-4 h-4 text-[#D4AF37]" />
                 <span className="font-bold">Total</span>
               </div>
-              <span className="text-2xl font-black text-[#D4AF37]">
-                £{totalPrice.toFixed(2)}
-              </span>
+              <span className="text-2xl font-black text-[#D4AF37]">£{totalPrice.toFixed(2)}</span>
             </div>
           </div>
         )}
