@@ -106,7 +106,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
   };
   
 
-  const CARD_STYLE = {
+  const CARD_STYLE = { 
     style: {
       base: {
         fontSize: '16px',
@@ -136,7 +136,7 @@ const PaymentOptions = ({ appointmentData, onSuccess }) => {
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-5">
         <div className="flex items-start gap-3">
           <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
+          <div className="text-sm"> 
             <p className="font-semibold text-blue-900 mb-2">Payment Breakdown:</p>
             <div className="space-y-1 text-blue-800">
               <div className="flex justify-between">
