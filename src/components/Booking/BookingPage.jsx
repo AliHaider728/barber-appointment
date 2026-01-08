@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Scissors, Check, Home, CalendarPlus, Mail } from 'lucide-react';
+import { Scissors, Check, Home, CalendarPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProgressSteps from  "./ProgressSteps.jsx";
 import BookingSummary from  "./BookingSummary.jsx";
@@ -193,6 +193,7 @@ const BookingPage = () => {
     }
   }, [selectedBarber, selectedDate]);
 
+  //  UPDATED: Fetch APPROVED leaves for the selected barber and date
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       fetch(`https://barber-appointment-backend.vercel.app/api/leaves/barber/${selectedBarber}/date/${selectedDate}`)
@@ -201,6 +202,8 @@ const BookingPage = () => {
           return r.json();
         })
         .then(data => {
+          //  CRITICAL: Backend already filters only approved leaves
+          // But we double-check here for safety
           const approvedLeaves = Array.isArray(data) 
             ? data.filter(leave => leave.status === 'approved')
             : [];
@@ -224,6 +227,7 @@ const BookingPage = () => {
     }, 0);
   }, [selectedServices, services]);
 
+  //  UPDATED: timeSlots calculation now properly filters APPROVED leaves
   const timeSlots = useMemo(() => {
     if (!selectedDate || !selectedBarber || totalMinutes === 0 || !barberShift) return [];
 
@@ -239,6 +243,7 @@ const BookingPage = () => {
     const isToday = selectedDate === now.toISOString().split('T')[0];
 
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
+      // Skip past times for today
       if (isToday && current < now) {
         current = addMinutes(current, totalMinutes);
         continue;
@@ -246,21 +251,26 @@ const BookingPage = () => {
 
       const slotEnd = addMinutes(current, totalMinutes);
 
+      // Check for existing booking conflicts
       const hasBookingConflict = existingBookings.some(booking => {
         const bookingStart = new Date(booking.date);
         const bookingEnd = addMinutes(bookingStart, booking.duration);
         return (current < bookingEnd && slotEnd > bookingStart);
       });
 
+      //  UPDATED: Check for APPROVED leave conflicts
       const hasLeaveConflict = barberLeaves.some(leave => {
+        // Double-check status (backend should already filter, but safety first)
         if (leave.status !== 'approved') return false;
         
         const leaveStart = new Date(leave.startDate);
         const leaveEnd = new Date(leave.endDate);
         
+        // Check if slot overlaps with leave period
         return (current < leaveEnd && slotEnd > leaveStart);
       });
 
+      //  Only add slot if NO conflicts (bookings OR leaves)
       if (!hasBookingConflict && !hasLeaveConflict) {
         slots.push({
           start: formatTime(current),
@@ -425,35 +435,15 @@ const BookingPage = () => {
 
   if (bookingComplete) return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="text-center p-12 border-2 border-[#D4AF37] max-w-md">
+      <Card className="text-center p-12 border-2 border-[#D4AF37]">
         <div className="w-20 h-20 bg-green-500 text-white rounded-full mx-auto mb-6 flex items-center justify-center">
           <Check className="w-12 h-12" />
         </div>
-        <h1 className="text-3xl font-black mb-4">Booking Confirmed! </h1>
-        <p className="text-xl mb-2">Reference Number</p>
-        <p className="text-2xl font-bold text-[#D4AF37] mb-6">{bookingRef}</p>
-        
-        {/* Email Confirmation Notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Mail className="w-5 h-5 text-blue-600" />
-            <p className="font-semibold text-blue-900">Confirmation Email Sent!</p>
-          </div>
-          <p className="text-sm text-blue-700">
-            Check your email at <strong>{userDetails.email}</strong> for booking details.
-          </p>
-          <p className="text-xs text-blue-600 mt-2">
-            (Don't forget to check your spam folder)
-          </p>
-        </div>
-
+        <h1 className="text-2xl font-black mb-4">Booking Confirmed!</h1>
+        <p className="text-2xl mb-6">Reference: <strong>{bookingRef}</strong></p>
         <div className="flex gap-4 justify-center">
-          <Button variant="outline" onClick={() => window.location.href = '/'}>
-            <Home className="w-4 h-4 mr-2" />Home
-          </Button>
-          <Button onClick={() => window.location.reload()}>
-            <CalendarPlus className="w-4 h-4 mr-2" />Book Again
-          </Button>
+          <Button variant="outline" onClick={() => window.location.href = '/'}><Home className="w-4 h-4 mr-2" />Home</Button>
+          <Button onClick={() => window.location.reload()}><CalendarPlus className="w-4 h-4 mr-2" />Book Again</Button>
         </div>
       </Card>
     </div>
