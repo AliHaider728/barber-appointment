@@ -408,7 +408,7 @@ const BookingPage = () => {
         headers,
         body: JSON.stringify(payload)
       });
-
+ 
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || 'Booking failed');
