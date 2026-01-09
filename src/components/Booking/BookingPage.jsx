@@ -193,7 +193,6 @@ const BookingPage = () => {
     }
   }, [selectedBarber, selectedDate]);
 
-  //  UPDATED: Fetch APPROVED leaves for the selected barber and date
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       fetch(`https://barber-appointment-backend.vercel.app/api/leaves/barber/${selectedBarber}/date/${selectedDate}`)
@@ -202,8 +201,6 @@ const BookingPage = () => {
           return r.json();
         })
         .then(data => {
-          //  CRITICAL: Backend already filters only approved leaves
-          // But we double-check here for safety
           const approvedLeaves = Array.isArray(data) 
             ? data.filter(leave => leave.status === 'approved')
             : [];
@@ -227,7 +224,6 @@ const BookingPage = () => {
     }, 0);
   }, [selectedServices, services]);
 
-  //  UPDATED: timeSlots calculation now properly filters APPROVED leaves
   const timeSlots = useMemo(() => {
     if (!selectedDate || !selectedBarber || totalMinutes === 0 || !barberShift) return [];
 
@@ -243,7 +239,6 @@ const BookingPage = () => {
     const isToday = selectedDate === now.toISOString().split('T')[0];
 
     while (current.getTime() + totalMinutes * 60000 <= shiftEnd.getTime()) {
-      // Skip past times for today
       if (isToday && current < now) {
         current = addMinutes(current, totalMinutes);
         continue;
@@ -251,26 +246,21 @@ const BookingPage = () => {
 
       const slotEnd = addMinutes(current, totalMinutes);
 
-      // Check for existing booking conflicts
       const hasBookingConflict = existingBookings.some(booking => {
         const bookingStart = new Date(booking.date);
         const bookingEnd = addMinutes(bookingStart, booking.duration);
         return (current < bookingEnd && slotEnd > bookingStart);
       });
 
-      //  UPDATED: Check for APPROVED leave conflicts
       const hasLeaveConflict = barberLeaves.some(leave => {
-        // Double-check status (backend should already filter, but safety first)
         if (leave.status !== 'approved') return false;
         
         const leaveStart = new Date(leave.startDate);
         const leaveEnd = new Date(leave.endDate);
         
-        // Check if slot overlaps with leave period
         return (current < leaveEnd && slotEnd > leaveStart);
       });
 
-      //  Only add slot if NO conflicts (bookings OR leaves)
       if (!hasBookingConflict && !hasLeaveConflict) {
         slots.push({
           start: formatTime(current),
@@ -387,21 +377,35 @@ const BookingPage = () => {
         headers.Authorization = `Bearer ${token}`;
       }
 
+      // ✅ FIXED: Better service mapping with error handling
+      const servicesPayload = selectedServices.map(id => {
+        const s = services.find(x => x._id === id);
+        if (!s) {
+          console.error(`Service not found for ID: ${id}`);
+          throw new Error(`Service details missing for ID: ${id}`);
+        }
+        return { 
+          serviceRef: id, 
+          name: s.name, 
+          price: s.price, 
+          duration: s.duration 
+        };
+      });
+
       const payload = {
         customerName: userDetails.fullName,
         email: userDetails.email,
         phone: userDetails.phone,
         date: `${selectedDate}T${selectedTime}:00`,
-        selectedServices: selectedServices.map(id => {
-          const s = services.find(x => x._id === id);
-          return { serviceRef: id, name: s.name, price: s.price, duration: s.duration };
-        }),
+        selectedServices: servicesPayload,
         barber: selectedBarber,
         branch: selectedBranch,
         duration: totalMinutes,
         totalPrice,
         payOnline: false
       };
+
+      console.log('Booking Payload:', payload); // Debug log
 
       const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
         method: 'POST',
@@ -428,7 +432,7 @@ const BookingPage = () => {
 
   const selectedBranchData = Array.isArray(branches) ? branches.find(b => b._id === selectedBranch) : null;    
   const selectedBarberData = barbers.find(b => b._id === selectedBarber);
-  const selectedServicesData = selectedServices.map(id => services.find(s => s._id === id));
+  const selectedServicesData = selectedServices.map(id => services.find(s => s._id === id)).filter(Boolean);
   const selectedTimeSlot = timeSlots.find(s => s.start === selectedTime);
 
   if (fetching) return <div className="min-h-screen flex items-center justify-center"><Scissors className="w-12 h-12 animate-spin text-[#D4AF37]" /></div>;

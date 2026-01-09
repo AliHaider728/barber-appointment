@@ -83,7 +83,7 @@ const StepContent = ({
 }) => {
   const navigate = useNavigate();
 
-  return (
+  return ( 
     <>
       {step === 1 && (
         <Card>
