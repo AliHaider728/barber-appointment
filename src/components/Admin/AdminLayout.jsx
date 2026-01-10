@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText, UserPlus } from 'lucide-react'; // Added UserPlus for Admins icon
+import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText, UserPlus, Clock } from 'lucide-react';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -15,8 +15,8 @@ const AdminLayout = () => {
     { path: '/admin/dashboard/services', label: 'Services', icon: Scissors },
     { path: '/admin/dashboard/leaves', label: 'Leaves', icon: FileText },
     { path: '/admin/dashboard/admins', label: 'Manage Admins', icon: UserPlus },  
+    { path: '/admin/dashboard/ReminderSettings', label: 'Reminder Settings', icon: Clock },  
   ]
-  
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -60,6 +60,16 @@ const AdminLayout = () => {
             0%   { left: -150%; }
             100% { left: 150%; }
           }
+
+          /* Hide scrollbar */
+          .sidebar-scroll::-webkit-scrollbar {
+            display: none;
+          }
+          
+          .sidebar-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
         `}
       </style>
 
@@ -73,17 +83,17 @@ const AdminLayout = () => {
             ></div>
           )}
 
-          {/* Desktop Sidebar */}
+          {/* Desktop Sidebar - Now Sticky */}
           <aside 
-            className={`hidden lg:block ${
+            className={`hidden lg:flex lg:flex-col ${
               sidebarOpen ? 'w-72' : 'w-20'
-            } bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-all duration-300 relative border-r border-[#D4AF37]/20`}
+            } bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-all duration-300 sticky top-0 h-screen border-r border-[#D4AF37]/20`}
           >
             {/* Decorative Background */}
             <div className="absolute top-0 left-0 w-full h-64 bg-[#D4AF37]/5 rounded-full blur-3xl"></div>
             
-            {/* Header */}
-            <div className="relative p-6 border-b border-[#D4AF37]/20">
+            {/* Header - Fixed at top */}
+            <div className="relative p-6 border-b border-[#D4AF37]/20 flex-shrink-0">
               <div className="flex items-center justify-between">
                 {sidebarOpen && (
                   <div className="flex items-center gap-3">
@@ -100,8 +110,8 @@ const AdminLayout = () => {
               </div>
             </div>
 
-            {/* Navigation */}
-            <nav className="relative mt-6 px-3 space-y-2">
+            {/* Navigation - Scrollable */}
+            <nav className="relative mt-6 px-3 space-y-2 flex-1 overflow-y-auto sidebar-scroll pb-6">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -140,7 +150,7 @@ const AdminLayout = () => {
 
           {/* Mobile Sidebar */}
           <aside 
-            className={`fixed top-0 left-0 z-50 h-full w-72 bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-transform duration-300 lg:hidden ${
+            className={`fixed top-0 left-0 z-50 h-full w-72 bg-gradient-to-b from-black via-gray-900 to-black shadow-2xl transition-transform duration-300 lg:hidden flex flex-col ${
               mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`}
           >
@@ -148,7 +158,7 @@ const AdminLayout = () => {
             <div className="absolute top-0 left-0 w-full h-64 bg-[#D4AF37]/5 rounded-full blur-3xl"></div>
             
             {/* Header */}
-            <div className="relative p-6 border-b border-[#D4AF37]/20">
+            <div className="relative p-6 border-b border-[#D4AF37]/20 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Scissors className="w-8 h-8 text-[#D4AF37]" />
@@ -163,8 +173,8 @@ const AdminLayout = () => {
               </div>
             </div>
 
-            {/* Navigation */}
-            <nav className="relative mt-6 px-3 space-y-2">
+            {/* Navigation - Scrollable */}
+            <nav className="relative mt-6 px-3 space-y-2 flex-1 overflow-y-auto sidebar-scroll pb-6">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;

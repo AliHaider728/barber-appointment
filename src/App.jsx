@@ -15,6 +15,7 @@ import UserDashboard from "./components/Admin/UserDashboard.jsx";
 import ScrollToTop from "./components/scrolltotop.jsx";
 import AboutPage from "./components/aboutPage.jsx";
 
+
 // Admin Pages
 import Overview from "./components/Admin/Overview.jsx";
 import Appointments from "./components/Admin/Appointments.jsx";
@@ -23,7 +24,7 @@ import Branches from "./components/Admin/Branches.jsx";
 import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import Leaves from "./components/Admin/Leaves.jsx";
 import ManageAdmins from "./components/Admin/Admins.jsx";
-
+import ReminderSettings from "./components/Admin/ReminderSettings.jsx";
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
 
@@ -78,6 +79,7 @@ function AppContent() {
             <Route path="services" element={<ServicesAdmin />} />
             <Route path="leaves" element={<Leaves/>} />
             <Route path="admins" element={<ManageAdmins/>} />
+            <Route path="ReminderSettings" element={<ReminderSettings/>} />
           </Route>
           
           {/* Branch Admin Dashboard */}
