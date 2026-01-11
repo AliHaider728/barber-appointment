@@ -19,7 +19,12 @@ const AdminLayout = () => {
   ]
 
   const handleLogout = () => {
+    // ✅ Clear all admin-related data
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('user-email');
+    localStorage.removeItem('user-role');
+    localStorage.removeItem('user-id');
+    localStorage.removeItem('auth-token'); // Clear old token too
     window.location.href = '/';
   };
 
