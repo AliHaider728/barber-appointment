@@ -6,6 +6,8 @@ import BookingSummary from  "./BookingSummary.jsx";
 import StepContent from  "./StepContent.jsx";
 import StepNavigation from  "./StepNavigation.jsx";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const Card = ({ children, className = '' }) => (
   <div className={`bg-white rounded-xl shadow-sm p-6 ${className}`}>{children}</div>
 );
@@ -65,7 +67,7 @@ const BookingPage = () => {
   useEffect(() => {
     if (isLoggedIn && step === 4) {
       const token = localStorage.getItem('auth-token');
-      fetch('https://barber-appointment-backend.vercel.app/api/auth/me', {
+      fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => {
@@ -80,7 +82,7 @@ const BookingPage = () => {
           });
         })
         .catch(err => {
-          console.error('User fetch error:', err);
+          console.error('❌ User fetch error:', err);
           alert('Failed to load user details. Please try again.');
         });
     }
@@ -91,9 +93,9 @@ const BookingPage = () => {
       try {  
         setFetching(true);  
         const [bRes, sRes, barbRes] = await Promise.all([  
-          fetch('https://barber-appointment-backend.vercel.app/api/branches'),  
-          fetch('https://barber-appointment-backend.vercel.app/api/services'),  
-          fetch('https://barber-appointment-backend.vercel.app/api/barbers')  
+          fetch(`${API_BASE_URL}/api/branches`),  
+          fetch(`${API_BASE_URL}/api/services`),  
+          fetch(`${API_BASE_URL}/api/barbers`)  
         ]);  
 
         const parseAndValidate = async (res) => {  
@@ -108,11 +110,17 @@ const BookingPage = () => {
         const s = await parseAndValidate(sRes);  
         const barb = await parseAndValidate(barbRes);  
 
+        console.log('✅ Fetched data:', {
+          branches: b.length,
+          services: s.length,
+          barbers: barb.length
+        });
+
         setBranches(b);  
         setServices(s);  
         setBarbers(barb);  
       } catch (err) {  
-        console.error('Fetch error:', err);  
+        console.error('❌ Fetch error:', err);  
         alert('Failed to load data. Please try again.');  
         setBranches([]);  
         setServices([]);  
@@ -132,6 +140,7 @@ const BookingPage = () => {
         return branchMatch && genderMatch;
       });
 
+      console.log('✅ Filtered barbers:', filtered.length);
       setBranchBarbers(filtered);
       setSelectedBarber('');
       setSelectedServices([]);
@@ -139,15 +148,36 @@ const BookingPage = () => {
   }, [selectedBranch, gender, barbers]);
 
   useEffect(() => {
-    if (selectedBarber) {
+    if (selectedBarber && selectedBranch) {
       const barber = barbers.find(b => b._id === selectedBarber);
       if (barber) {
-        const specs = services.filter(s => barber.specialties.includes(s.name) && s.gender === gender);
+        // ✅ FIXED: Filter services by branch AND barber specialties
+        const specs = services.filter(s => {
+          const matchesGender = s.gender === gender;
+          const matchesSpecialty = barber.specialties.includes(s.name);
+          
+          // ✅ Check if service belongs to selected branch
+          const matchesBranch = s.isGlobal || 
+            (Array.isArray(s.branches) && s.branches.some(b => {
+              const branchId = typeof b === 'string' ? b : b._id;
+              return branchId === selectedBranch;
+            }));
+          
+          return matchesGender && matchesSpecialty && matchesBranch;
+        });
+
+        console.log('✅ Barber specialties:', {
+          barberName: barber.name,
+          specialties: barber.specialties,
+          matchedServices: specs.length,
+          serviceNames: specs.map(s => s.name)
+        });
+
         setBarberSpecialties(specs);
         setSelectedServices([]);
       }
     }
-  }, [selectedBarber, barbers, services, gender]);
+  }, [selectedBarber, selectedBranch, barbers, services, gender]);
 
   useEffect(() => {
     if (selectedBarber && selectedDate) {
@@ -158,7 +188,7 @@ const BookingPage = () => {
           setSelectedTime('');
 
           const res = await fetch(
-            `https://barber-appointment-backend.vercel.app/api/barber-shifts/barber/${selectedBarber}/date/${selectedDate}`
+            `${API_BASE_URL}/api/barber-shifts/barber/${selectedBarber}/date/${selectedDate}`
           );
  
           if (res.ok) {
@@ -168,7 +198,7 @@ const BookingPage = () => {
             setBarberShift({ noShift: true });
           }
         } catch (err) {
-          console.error('Shift fetch error:', err);
+          console.error('❌ Shift fetch error:', err);
           setBarberShift({ noShift: true });
         } finally {
           setShiftLoading(false);
@@ -181,7 +211,7 @@ const BookingPage = () => {
 
   useEffect(() => {
     if (selectedBarber && selectedDate) {
-      fetch(`https://barber-appointment-backend.vercel.app/api/appointments/barber/${selectedBarber}/date/${selectedDate}`)
+      fetch(`${API_BASE_URL}/api/appointments/barber/${selectedBarber}/date/${selectedDate}`)
         .then(r => {
           if (!r.ok) throw new Error('No bookings');
           return r.json();
@@ -195,7 +225,7 @@ const BookingPage = () => {
 
   useEffect(() => {
     if (selectedBarber && selectedDate) {
-      fetch(`https://barber-appointment-backend.vercel.app/api/leaves/barber/${selectedBarber}/date/${selectedDate}`)
+      fetch(`${API_BASE_URL}/api/leaves/barber/${selectedBarber}/date/${selectedDate}`)
         .then(r => {
           if (!r.ok) throw new Error('No leaves');
           return r.json();
@@ -377,18 +407,26 @@ const BookingPage = () => {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      // ✅ FIXED: Better service mapping with error handling
+      // ✅ FIXED: Proper service mapping with all required fields
       const servicesPayload = selectedServices.map(id => {
-        const s = services.find(x => x._id === id);
-        if (!s) {
-          console.error(`Service not found for ID: ${id}`);
+        const service = services.find(x => x._id === id);
+        if (!service) {
+          console.error(`❌ Service not found for ID: ${id}`);
           throw new Error(`Service details missing for ID: ${id}`);
         }
+        
+        console.log('✅ Mapping service:', {
+          id: service._id,
+          name: service.name,
+          price: service.price,
+          duration: service.duration
+        });
+        
         return { 
-          serviceRef: id, 
-          name: s.name, 
-          price: s.price, 
-          duration: s.duration 
+          serviceRef: service._id,
+          name: service.name,
+          price: service.price,
+          duration: service.duration
         };
       });
 
@@ -405,9 +443,9 @@ const BookingPage = () => {
         payOnline: false
       };
 
-      console.log('Booking Payload:', payload); // Debug log
+      console.log('📤 Booking Payload:', JSON.stringify(payload, null, 2));
 
-      const res = await fetch('https://barber-appointment-backend.vercel.app/api/appointments', {
+      const res = await fetch(`${API_BASE_URL}/api/appointments`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload)
@@ -415,13 +453,16 @@ const BookingPage = () => {
 
       if (!res.ok) {
         const errData = await res.json();
+        console.error('❌ Booking failed:', errData);
         throw new Error(errData.error || 'Booking failed');
       } 
+      
       const data = await res.json();
+      console.log('✅ Booking successful:', data);
       setBookingRef(data._id);
       setBookingComplete(true);
     } catch (err) {
-      console.error('Booking error:', err);
+      console.error('❌ Booking error:', err);
       alert('Booking failed: ' + (err.message || 'Please try again.'));
     } finally {
       setLoading(false);
