@@ -33,7 +33,7 @@ const ReminderSettings = () => {
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
     if (!token) {
-      console.error('❌ No auth token found in localStorage');
+      console.error('  No auth token found in localStorage');
       showMessage('error', 'Authentication required. Please login again.');
       return null;
     }
@@ -57,15 +57,15 @@ const ReminderSettings = () => {
         return;
       }
 
-      console.log('🔄 Fetching reminder settings...');
+      console.log('  Fetching reminder settings...');
       const response = await axios.get(`${API_URL}/api/reminders/settings`, {
         headers
       });
       
-      console.log('✅ Settings fetched:', response.data);
+      console.log('  Settings fetched:', response.data);
       setSettings(response.data);
     } catch (error) {
-      console.error('❌ Failed to fetch settings:', error);
+      console.error('  Failed to fetch settings:', error);
       
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
@@ -94,7 +94,7 @@ const ReminderSettings = () => {
       setSettings(response.data);
       showMessage('success', 'Reminder updated successfully');
     } catch (error) {
-      console.error('❌ Toggle error:', error);
+      console.error('  Toggle error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -111,7 +111,7 @@ const ReminderSettings = () => {
       return;
     }
 
-    // ✅ Convert to total minutes (integer only)
+    //   Convert to total minutes (integer only)
     const totalMinutes = (newReminder.hours * 60) + newReminder.minutes;
 
     if (totalMinutes <= 0) {
@@ -127,7 +127,7 @@ const ReminderSettings = () => {
         return;
       }
 
-      console.log('📤 Sending:', { 
+      console.log('Sending:', { 
         name: newReminder.name, 
         minutesBeforeAppointment: totalMinutes 
       });
@@ -136,7 +136,7 @@ const ReminderSettings = () => {
         `${API_URL}/api/reminders/settings/reminder`,
         {
           name: newReminder.name,
-          minutesBeforeAppointment: totalMinutes, // ✅ Changed from hoursBeforeAppointment
+          minutesBeforeAppointment: totalMinutes, //   Changed from hoursBeforeAppointment
           enabled: newReminder.enabled,
           emailSubject: newReminder.emailSubject
         },
@@ -152,9 +152,9 @@ const ReminderSettings = () => {
         enabled: true,
         emailSubject: 'Appointment Reminder'
       });
-      showMessage('success', '✅ Reminder added successfully');
+      showMessage('success', '  Reminder added successfully');
     } catch (error) {
-      console.error('❌ Add reminder error:', error);
+      console.error('  Add reminder error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -166,7 +166,7 @@ const ReminderSettings = () => {
   };
 
   const handleDeleteReminder = async (reminderId) => {
-    if (!confirm('⚠️ Are you sure you want to delete this reminder? This action cannot be undone.')) return;
+    if (!confirm('  Are you sure you want to delete this reminder? This action cannot be undone.')) return;
 
     try {
       const headers = getAuthHeaders();
@@ -177,9 +177,9 @@ const ReminderSettings = () => {
         { headers }
       );
       setSettings(response.data);
-      showMessage('success', '✅ Reminder deleted successfully');
+      showMessage('success', '  Reminder deleted successfully');
     } catch (error) {
-      console.error('❌ Delete error:', error);
+      console.error('  Delete error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -193,7 +193,7 @@ const ReminderSettings = () => {
       const headers = getAuthHeaders();
       if (!headers) return;
 
-      // ✅ Convert to total minutes (integer only)
+      //   Convert to total minutes (integer only)
       const totalMinutes = (parseInt(hours) * 60) + parseInt(minutes);
 
       if (totalMinutes < 0) {
@@ -202,9 +202,9 @@ const ReminderSettings = () => {
       }
 
       const updatedReminders = [...settings.reminders];
-      updatedReminders[index].minutesBeforeAppointment = totalMinutes; // ✅ Changed
+      updatedReminders[index].minutesBeforeAppointment = totalMinutes; //   Changed
 
-      console.log('📤 Updating to:', totalMinutes, 'minutes');
+      console.log('  Updating to:', totalMinutes, 'minutes');
 
       const response = await axios.put(
         `${API_URL}/api/reminders/settings`,
@@ -212,9 +212,9 @@ const ReminderSettings = () => {
         { headers }
       );
       setSettings(response.data);
-      showMessage('success', '✅ Time updated successfully');
+      showMessage('success', '  Time updated successfully');
     } catch (error) {
-      console.error('❌ Update time error:', error);
+      console.error('  Update time error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -223,7 +223,7 @@ const ReminderSettings = () => {
     }
   };
 
-  // ✅ Convert minutes to hours and minutes for display
+  //   Convert minutes to hours and minutes for display
   const convertMinutesToHoursMinutes = (totalMinutes) => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -472,7 +472,7 @@ const ReminderSettings = () => {
           </div>
         ) : (
           settings?.reminders?.map((reminder, index) => {
-            // ✅ Convert minutes back to hours/minutes for display
+            //   Convert minutes back to hours/minutes for display
             const { hours, minutes } = convertMinutesToHoursMinutes(
               reminder.minutesBeforeAppointment
             );
