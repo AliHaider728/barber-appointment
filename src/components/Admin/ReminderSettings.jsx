@@ -30,14 +30,11 @@ const ReminderSettings = () => {
 
   const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://barber-appointment-backend.vercel.app';
 
-  // Helper function to get auth headers
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('auth-token'); // Changed from 'adminToken' to 'auth-token'
+    const token = localStorage.getItem('auth-token');
     if (!token) {
-      console.error('❌ No auth token found in localStorage'); // Updated log message for clarity
+      console.error('❌ No auth token found in localStorage');
       showMessage('error', 'Authentication required. Please login again.');
-      // Optionally redirect to login
-      // window.location.href = '/admin/login';
       return null;
     }
     return {
@@ -72,10 +69,7 @@ const ReminderSettings = () => {
       
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
-        // Clear invalid token
-        localStorage.removeItem('auth-token'); // Changed to 'auth-token'
-        // Optionally redirect to login
-        // setTimeout(() => window.location.href = '/admin/login', 2000);
+        localStorage.removeItem('auth-token');
       } else {
         showMessage('error', 'Failed to load reminder settings');
       }
@@ -117,10 +111,11 @@ const ReminderSettings = () => {
       return;
     }
 
-    const totalHours = newReminder.hours + (newReminder.minutes / 60);
+    // ✅ Convert to total minutes (integer only)
+    const totalMinutes = (newReminder.hours * 60) + newReminder.minutes;
 
-    if (totalHours <= 0) {
-      showMessage('error', 'Please set a valid time');
+    if (totalMinutes <= 0) {
+      showMessage('error', 'Please set a valid time (must be greater than 0)');
       return;
     }
 
@@ -132,16 +127,22 @@ const ReminderSettings = () => {
         return;
       }
 
+      console.log('📤 Sending:', { 
+        name: newReminder.name, 
+        minutesBeforeAppointment: totalMinutes 
+      });
+
       const response = await axios.post(
         `${API_URL}/api/reminders/settings/reminder`,
         {
           name: newReminder.name,
-          hoursBeforeAppointment: totalHours,
+          minutesBeforeAppointment: totalMinutes, // ✅ Changed from hoursBeforeAppointment
           enabled: newReminder.enabled,
           emailSubject: newReminder.emailSubject
         },
         { headers }
       );
+      
       setSettings(response.data);
       setShowAddForm(false);
       setNewReminder({
@@ -157,7 +158,7 @@ const ReminderSettings = () => {
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
-        showMessage('error', 'Failed to add reminder');
+        showMessage('error', error.response?.data?.error || 'Failed to add reminder');
       }
     } finally {
       setSaving(false);
@@ -192,9 +193,18 @@ const ReminderSettings = () => {
       const headers = getAuthHeaders();
       if (!headers) return;
 
+      // ✅ Convert to total minutes (integer only)
+      const totalMinutes = (parseInt(hours) * 60) + parseInt(minutes);
+
+      if (totalMinutes < 0) {
+        showMessage('error', 'Time cannot be negative');
+        return;
+      }
+
       const updatedReminders = [...settings.reminders];
-      const totalHours = parseFloat(hours) + (parseFloat(minutes) / 60);
-      updatedReminders[index].hoursBeforeAppointment = totalHours;
+      updatedReminders[index].minutesBeforeAppointment = totalMinutes; // ✅ Changed
+
+      console.log('📤 Updating to:', totalMinutes, 'minutes');
 
       const response = await axios.put(
         `${API_URL}/api/reminders/settings`,
@@ -213,9 +223,10 @@ const ReminderSettings = () => {
     }
   };
 
-  const convertToHoursMinutes = (totalHours) => {
-    const hours = Math.floor(totalHours);
-    const minutes = Math.round((totalHours - hours) * 60);
+  // ✅ Convert minutes to hours and minutes for display
+  const convertMinutesToHoursMinutes = (totalMinutes) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
     return { hours, minutes };
   };
 
@@ -318,8 +329,9 @@ const ReminderSettings = () => {
             <p className="font-semibold mb-1">💡 How it works:</p>
             <ul className="space-y-1 ml-4 list-disc">
               <li>Reminders are sent automatically based on the time you set</li>
-              <li>The system checks every 30 minutes for upcoming appointments</li>
+              <li>The system checks every 5 minutes for upcoming appointments</li>
               <li>Each reminder is sent only once per appointment</li>
+              <li>Times are stored as total minutes for precision (e.g., 1h 30m = 90 minutes)</li>
             </ul>
           </div>
         </div>
@@ -410,6 +422,15 @@ const ReminderSettings = () => {
                 required
               />
             </div>
+
+            {/* Preview */}
+            <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>Preview:</strong> Reminder will be sent{' '}
+                <strong>{(newReminder.hours * 60) + newReminder.minutes} minutes</strong>{' '}
+                ({newReminder.hours}h {newReminder.minutes}m) before the appointment
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-3 mt-6">
@@ -451,7 +472,11 @@ const ReminderSettings = () => {
           </div>
         ) : (
           settings?.reminders?.map((reminder, index) => {
-            const { hours, minutes } = convertToHoursMinutes(reminder.hoursBeforeAppointment);
+            // ✅ Convert minutes back to hours/minutes for display
+            const { hours, minutes } = convertMinutesToHoursMinutes(
+              reminder.minutesBeforeAppointment
+            );
+            
             return (
               <div
                 key={reminder._id}
@@ -481,7 +506,8 @@ const ReminderSettings = () => {
                       <div className="flex items-center gap-2 text-gray-700">
                         <Clock className="w-4 h-4 text-[#D4AF37]" />
                         <span>
-                          Send <strong className="text-gray-900">{hours}h {minutes}m</strong> before appointment
+                          Send <strong className="text-gray-900">{hours}h {minutes}m</strong>{' '}
+                          ({reminder.minutesBeforeAppointment} minutes) before appointment
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
