@@ -1,9 +1,8 @@
 import React, { useRef } from "react";
 import { Link } from "react-router-dom";
-import LaserFlow from "../LaserFlow";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 import { NavLink } from "react-router-dom";
-
+// import LaserFlow from "../LaserFlow";
 const AnimatedFooter = () => {
   const revealImgRef = useRef(null);
 
@@ -21,11 +20,11 @@ const AnimatedFooter = () => {
         >
           {/* LaserFlow - Hidden on mobile, visible on desktop */}
           <div className="hidden lg:block w-full h-full absolute top-0 left-0">
-            <LaserFlow
+            {/* <LaserFlow
               horizontalBeamOffset={0.2}
               verticalBeamOffset={0.1}
               color="#D4AF37"
-            />
+            /> */}
           </div>
 
           <style>

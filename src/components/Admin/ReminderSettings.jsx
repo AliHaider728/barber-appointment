@@ -19,6 +19,7 @@ const ReminderSettings = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
   
   const [newReminder, setNewReminder] = useState({
     name: '',
@@ -28,12 +29,16 @@ const ReminderSettings = () => {
     emailSubject: 'Appointment Reminder'
   });
 
+  // Hoisted edit state (since only one reminder can be edited at a time)
+  const [editHours, setEditHours] = useState(0);
+  const [editMinutes, setEditMinutes] = useState(0);
+
   const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://barber-appointment-backend.vercel.app';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth-token');
     if (!token) {
-      console.error('  No auth token found in localStorage');
+      console.error('❌ No auth token found');
       showMessage('error', 'Authentication required. Please login again.');
       return null;
     }
@@ -57,15 +62,15 @@ const ReminderSettings = () => {
         return;
       }
 
-      console.log('  Fetching reminder settings...');
+      console.log('📋 Fetching reminder settings...');
       const response = await axios.get(`${API_URL}/api/reminders/settings`, {
         headers
       });
       
-      console.log('  Settings fetched:', response.data);
+      console.log('✅ Settings fetched:', response.data);
       setSettings(response.data);
     } catch (error) {
-      console.error('  Failed to fetch settings:', error);
+      console.error('❌ Failed to fetch settings:', error);
       
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
@@ -94,7 +99,7 @@ const ReminderSettings = () => {
       setSettings(response.data);
       showMessage('success', 'Reminder updated successfully');
     } catch (error) {
-      console.error('  Toggle error:', error);
+      console.error('❌ Toggle error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -111,8 +116,7 @@ const ReminderSettings = () => {
       return;
     }
 
-    //   Convert to total minutes (integer only)
-    const totalMinutes = (newReminder.hours * 60) + newReminder.minutes;
+    const totalMinutes = (parseInt(newReminder.hours) * 60) + parseInt(newReminder.minutes);
 
     if (totalMinutes <= 0) {
       showMessage('error', 'Please set a valid time (must be greater than 0)');
@@ -127,16 +131,18 @@ const ReminderSettings = () => {
         return;
       }
 
-      console.log('Sending:', { 
+      console.log('📤 Sending:', { 
         name: newReminder.name, 
-        minutesBeforeAppointment: totalMinutes 
+        minutesBeforeAppointment: totalMinutes,
+        hours: newReminder.hours,
+        minutes: newReminder.minutes
       });
 
       const response = await axios.post(
         `${API_URL}/api/reminders/settings/reminder`,
         {
           name: newReminder.name,
-          minutesBeforeAppointment: totalMinutes, //   Changed from hoursBeforeAppointment
+          minutesBeforeAppointment: totalMinutes,
           enabled: newReminder.enabled,
           emailSubject: newReminder.emailSubject
         },
@@ -152,9 +158,9 @@ const ReminderSettings = () => {
         enabled: true,
         emailSubject: 'Appointment Reminder'
       });
-      showMessage('success', '  Reminder added successfully');
+      showMessage('success', 'Reminder added successfully');
     } catch (error) {
-      console.error('  Add reminder error:', error);
+      console.error('❌ Add reminder error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -166,7 +172,7 @@ const ReminderSettings = () => {
   };
 
   const handleDeleteReminder = async (reminderId) => {
-    if (!confirm('  Are you sure you want to delete this reminder? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this reminder?')) return;
 
     try {
       const headers = getAuthHeaders();
@@ -177,9 +183,9 @@ const ReminderSettings = () => {
         { headers }
       );
       setSettings(response.data);
-      showMessage('success', '  Reminder deleted successfully');
+      showMessage('success', 'Reminder deleted successfully');
     } catch (error) {
-      console.error('  Delete error:', error);
+      console.error('❌ Delete error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -188,23 +194,27 @@ const ReminderSettings = () => {
     }
   };
 
-  const handleUpdateTime = async (index, hours, minutes) => {
+  const handleUpdateTime = async (index) => {
     try {
       const headers = getAuthHeaders();
       if (!headers) return;
 
-      //   Convert to total minutes (integer only)
-      const totalMinutes = (parseInt(hours) * 60) + parseInt(minutes);
+      const totalMinutes = (parseInt(editHours) * 60) + parseInt(editMinutes);
 
       if (totalMinutes < 0) {
         showMessage('error', 'Time cannot be negative');
         return;
       }
 
-      const updatedReminders = [...settings.reminders];
-      updatedReminders[index].minutesBeforeAppointment = totalMinutes; //   Changed
+      if (totalMinutes === 0) {
+        showMessage('error', 'Time must be greater than 0');
+        return;
+      }
 
-      console.log('  Updating to:', totalMinutes, 'minutes');
+      const updatedReminders = [...settings.reminders];
+      updatedReminders[index].minutesBeforeAppointment = totalMinutes;
+
+      console.log('📤 Updating to:', totalMinutes, 'minutes');
 
       const response = await axios.put(
         `${API_URL}/api/reminders/settings`,
@@ -212,9 +222,10 @@ const ReminderSettings = () => {
         { headers }
       );
       setSettings(response.data);
-      showMessage('success', '  Time updated successfully');
+      setEditingIndex(null);
+      showMessage('success', 'Time updated successfully');
     } catch (error) {
-      console.error('  Update time error:', error);
+      console.error('❌ Update time error:', error);
       if (error.response?.status === 401) {
         showMessage('error', 'Session expired. Please login again.');
       } else {
@@ -223,7 +234,6 @@ const ReminderSettings = () => {
     }
   };
 
-  //   Convert minutes to hours and minutes for display
   const convertMinutesToHoursMinutes = (totalMinutes) => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -328,10 +338,10 @@ const ReminderSettings = () => {
           <div className="text-sm text-blue-800">
             <p className="font-semibold mb-1">💡 How it works:</p>
             <ul className="space-y-1 ml-4 list-disc">
-              <li>Reminders are sent automatically based on the time you set</li>
+              <li>Reminders are sent automatically based on hours and minutes you set</li>
               <li>The system checks every 5 minutes for upcoming appointments</li>
               <li>Each reminder is sent only once per appointment</li>
-              <li>Times are stored as total minutes for precision (e.g., 1h 30m = 90 minutes)</li>
+              <li>Example: Set 1h 30m to send reminder 90 minutes before appointment</li>
             </ul>
           </div>
         </div>
@@ -376,7 +386,7 @@ const ReminderSettings = () => {
                 type="text"
                 value={newReminder.name}
                 onChange={(e) => setNewReminder({ ...newReminder, name: e.target.value })}
-                placeholder="e.g., 24 Hours Before Appointment"
+                placeholder="e.g., 1 Hour 30 Minutes Before"
                 className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                 required
               />
@@ -423,12 +433,11 @@ const ReminderSettings = () => {
               />
             </div>
 
-            {/* Preview */}
             <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
                 <strong>Preview:</strong> Reminder will be sent{' '}
-                <strong>{(newReminder.hours * 60) + newReminder.minutes} minutes</strong>{' '}
-                ({newReminder.hours}h {newReminder.minutes}m) before the appointment
+                <strong>{newReminder.hours}h {newReminder.minutes}m</strong>{' '}
+                ({(parseInt(newReminder.hours) * 60) + parseInt(newReminder.minutes)} minutes) before the appointment
               </p>
             </div>
           </div>
@@ -472,10 +481,8 @@ const ReminderSettings = () => {
           </div>
         ) : (
           settings?.reminders?.map((reminder, index) => {
-            //   Convert minutes back to hours/minutes for display
-            const { hours, minutes } = convertMinutesToHoursMinutes(
-              reminder.minutesBeforeAppointment
-            );
+            const { hours, minutes } = convertMinutesToHoursMinutes(reminder.minutesBeforeAppointment);
+            const isEditing = editingIndex === index;
             
             return (
               <div
@@ -507,7 +514,7 @@ const ReminderSettings = () => {
                         <Clock className="w-4 h-4 text-[#D4AF37]" />
                         <span>
                           Send <strong className="text-gray-900">{hours}h {minutes}m</strong>{' '}
-                          ({reminder.minutesBeforeAppointment} minutes) before appointment
+                          before appointment
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
@@ -516,35 +523,67 @@ const ReminderSettings = () => {
                       </div>
                     </div>
 
-                    {/* Update Time Inputs */}
+                    {/* Edit Time */}
                     <div className="flex items-center gap-3 mt-4 p-4 bg-white rounded-lg border border-gray-200">
                       <Edit className="w-4 h-4 text-gray-500" />
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1">
                         <div>
-                          <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                            Hours:
-                          </label>
+                          <label className="text-xs font-semibold text-gray-600 mb-1 block">Hours:</label>
                           <input
                             type="number"
                             min="0"
-                            value={hours}
-                            onChange={(e) => handleUpdateTime(index, e.target.value, minutes)}
+                            value={isEditing ? editHours : hours}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              if (!isEditing) {
+                                setEditingIndex(index);
+                                setEditHours(newValue);
+                                setEditMinutes(minutes);
+                              } else {
+                                setEditHours(newValue);
+                              }
+                            }}
                             className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                            Minutes:
-                          </label>
+                          <label className="text-xs font-semibold text-gray-600 mb-1 block">Minutes:</label>
                           <input
                             type="number"
                             min="0"
                             max="59"
-                            value={minutes}
-                            onChange={(e) => handleUpdateTime(index, hours, e.target.value)}
+                            value={isEditing ? editMinutes : minutes}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              if (!isEditing) {
+                                setEditingIndex(index);
+                                setEditHours(hours);
+                                setEditMinutes(newValue);
+                              } else {
+                                setEditMinutes(newValue);
+                              }
+                            }}
                             className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all"
                           />
                         </div>
+                        {isEditing && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleUpdateTime(index)}
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingIndex(null);
+                              }}
+                              className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-300 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
