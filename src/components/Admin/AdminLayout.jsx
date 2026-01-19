@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, X, ChevronLeft, ChevronRight, FileText, UserPlus, Clock } from 'lucide-react';
+import { LogOut, BarChart2, Calendar, Users, MapPin, Scissors, Menu, Mail, X, ChevronLeft, ChevronRight, FileText, UserPlus, Clock } from 'lucide-react';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -15,11 +15,12 @@ const AdminLayout = () => {
     { path: '/admin/dashboard/services', label: 'Services', icon: Scissors },
     { path: '/admin/dashboard/leaves', label: 'Leaves', icon: FileText },
     { path: '/admin/dashboard/admins', label: 'Manage Admins', icon: UserPlus },  
-    { path: '/admin/dashboard/ReminderSettings', label: 'Reminder Settings', icon: Clock },  
+    { path: '/admin/dashboard/ReminderSettings', label: 'Reminder Settings', icon: Clock }, 
+    { path: '/admin/dashboard/email-templates', label: 'Email Templates', icon: Mail }, 
   ]
 
   const handleLogout = () => {
-    // ✅ Clear all admin-related data
+    //   Clear all admin-related data
     localStorage.removeItem('adminToken');
     localStorage.removeItem('user-email');
     localStorage.removeItem('user-role');
@@ -233,10 +234,10 @@ const AdminLayout = () => {
               
               <button 
                 onClick={handleLogout}
-                className="flex items-center bg-[#D4AF37] text-black font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-black hover:text-white transition text-sm sm:text-base"
+                className="flex items-center bg-red-600  text-white font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-red-800 hover:text-white transition text-sm sm:text-base"
               >
-                <span className="hidden sm:inline">Logout</span>
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5 sm:ml-2" />
+               <LogOut className="w-4 h-4 sm:w-5 sm:h-5 sm:ml-1" />
+                <span className="hidden sm:inline ml-2">Logout</span>
               </button>
             </header>
 

@@ -25,6 +25,7 @@ import ServicesAdmin from "./components/Admin/ServicesAdmin.jsx";
 import Leaves from "./components/Admin/Leaves.jsx";
 import ManageAdmins from "./components/Admin/Admins.jsx";
 import ReminderSettings from "./components/Admin/ReminderSettings.jsx";
+import EmailTemplateBuilder from "./components/Admin/EmailTemplateBuilder.jsx";
 // Barber Dashboard 
 import BarberDashboard from "./components/Admin/BarberDashboard.jsx";
 
@@ -80,6 +81,7 @@ function AppContent() {
             <Route path="leaves" element={<Leaves/>} />
             <Route path="admins" element={<ManageAdmins/>} />
             <Route path="ReminderSettings" element={<ReminderSettings/>} />
+            <Route path="email-templates" element={<EmailTemplateBuilder />} />
           </Route>
           
           {/* Branch Admin Dashboard */}
